@@ -1,31 +1,106 @@
-import { ArrowRight, ArrowUpRight, Check, ChevronRight, Clock3, House, Menu, ShieldCheck } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowRight, ArrowUpRight, Check, ChevronRight, Clock3, House, Menu, ShieldCheck, X } from 'lucide-react';
 import { Link } from 'wouter';
 import homesHero from '@assets/generated_images/rentwise-houses-hero.jpg';
 import './sign-up.css';
 
 const homes = [
-  { label: 'Townhomes', position: 'left center' },
-  { label: 'Family homes', position: 'center center' },
-  { label: 'Modern homes', position: 'right center' },
+  {
+    label: 'Townhomes',
+    position: '18% center',
+    title: 'A better place',
+    highlight: 'to settle in.',
+    description: 'Find the right space, keep the details together and make every move feel simpler.',
+  },
+  {
+    label: 'Family homes',
+    position: '50% center',
+    title: 'Find a place',
+    highlight: 'to feel at home.',
+    description: 'A better way to manage rent, care for your home and keep everything in one clear place.',
+  },
+  {
+    label: 'Modern homes',
+    position: '82% center',
+    title: 'Make space',
+    highlight: "for what's next.",
+    description: 'From first keys to everyday upkeep, keep your home life moving in the right direction.',
+  },
 ];
 
 export default function SignUpPage() {
+  const [activeHomeIndex, setActiveHomeIndex] = useState(1);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuPanelRef = useRef<HTMLElement>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const activeHome = homes[activeHomeIndex];
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!(event.target instanceof Node)) return;
+      if (
+        !menuPanelRef.current?.contains(event.target) &&
+        !menuTriggerRef.current?.contains(event.target)
+      ) {
+        setMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
+        menuTriggerRef.current?.focus();
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [menuOpen]);
+
+  const showNextHome = () => setActiveHomeIndex(index => (index + 1) % homes.length);
+
   return (
     <main className="signup-page">
       <div className="signup-frame">
         <aside className="signup-rail" aria-label="Welcome navigation">
-          <Link className="signup-round-button signup-menu-button" href="/dashboard" aria-label="Open the demo workspace" data-testid="link-signup-menu">
-            <Menu size={19} />
-          </Link>
-          <Link className="signup-round-button signup-next-button" href="/dashboard" aria-label="Explore the workspace" data-testid="link-signup-explore">
+          <button
+            ref={menuTriggerRef}
+            type="button"
+            className="signup-round-button signup-menu-button"
+            aria-label={menuOpen ? 'Close welcome menu' : 'Open welcome menu'}
+            aria-expanded={menuOpen}
+            aria-controls="signup-menu-panel"
+            onClick={() => setMenuOpen(open => !open)}
+            data-testid="button-signup-menu"
+          >
+            {menuOpen ? <X size={18} /> : <Menu size={19} />}
+          </button>
+          <button
+            type="button"
+            className="signup-round-button signup-next-button"
+            onClick={showNextHome}
+            aria-label={`Show ${homes[(activeHomeIndex + 1) % homes.length].label}`}
+            title="See another home style"
+            data-testid="button-signup-next-home"
+          >
             <ChevronRight size={20} />
-          </Link>
+          </button>
           <span className="signup-rail-caption">FIND HOME. FEEL AT HOME.</span>
         </aside>
 
         <section className="signup-stage" aria-label="Welcome to Rentwise">
           <div className="signup-photo-main">
-            <img src={homesHero} alt="Contemporary homes in a leafy residential compound beneath a bright blue sky" />
+            <img
+              key={activeHomeIndex}
+              src={homesHero}
+              alt={`A bright, leafy residential setting — ${activeHome.label.toLowerCase()}`}
+              style={{ objectPosition: activeHome.position }}
+            />
             <div className="signup-photo-wash" />
           </div>
           <div className="signup-photo-rail">
@@ -52,25 +127,45 @@ export default function SignUpPage() {
           <span className="signup-photo-note signup-photo-note-right">ROOM TO GROW<br />ROOM TO BREATHE</span>
           <span className="signup-location-pin" aria-hidden="true"><House size={21} /></span>
 
+          <nav
+            ref={menuPanelRef}
+            id="signup-menu-panel"
+            className="signup-menu-panel"
+            aria-label="Rentwise welcome menu"
+            hidden={!menuOpen}
+          >
+            <span className="signup-menu-heading">Welcome to Rentwise</span>
+            <span className="signup-menu-copy">A clearer way to care for the places you call home.</span>
+            <Link href="/dashboard" onClick={() => setMenuOpen(false)}>
+              Explore the workspace <ArrowUpRight size={15} />
+            </Link>
+            <a href="#signup-footer" onClick={() => setMenuOpen(false)}>
+              Learn about Rentwise <ChevronRight size={15} />
+            </a>
+          </nav>
+
           <div className="signup-home-thumbs" aria-label="Explore homes">
             <span>Find your place</span>
             <div>
-              {homes.map(home => (
-                <span
-                  className="signup-home-thumb"
+              {homes.map((home, index) => (
+                <button
+                  className={`signup-home-thumb${activeHomeIndex === index ? ' is-active' : ''}`}
                   key={home.label}
-                  role="img"
-                  aria-label={home.label}
+                  type="button"
+                  aria-label={`Show ${home.label}`}
+                  aria-pressed={activeHomeIndex === index}
+                  title={home.label}
+                  onClick={() => setActiveHomeIndex(index)}
                   style={{ backgroundImage: `url("${homesHero}")`, backgroundPosition: home.position }}
                 />
               ))}
             </div>
           </div>
 
-          <section className="signup-story">
-            <span className="signup-eyebrow">RENTWISE · UGANDA</span>
-            <h1>Find a place<br />to <strong>feel at home.</strong></h1>
-            <p>A better way to manage rent, care for your home and keep everything in one clear place.</p>
+          <section className="signup-story" key={activeHomeIndex}>
+            <span className="signup-eyebrow" aria-live="polite">RENTWISE · UGANDA · {activeHome.label.toUpperCase()}</span>
+            <h1>{activeHome.title}<br /><strong>{activeHome.highlight}</strong></h1>
+            <p>{activeHome.description}</p>
           </section>
 
           <section className="signup-join-card" aria-label="Get started with Rentwise">
@@ -82,7 +177,7 @@ export default function SignUpPage() {
           </section>
         </section>
 
-        <footer className="signup-footer">
+        <footer className="signup-footer" id="signup-footer">
           <div className="signup-footer-note">
             <span className="signup-footer-icon"><Check size={13} /></span>
             <span><b>A clearer record for every home.</b><small>Rent, repairs and the details that matter — together.</small></span>
