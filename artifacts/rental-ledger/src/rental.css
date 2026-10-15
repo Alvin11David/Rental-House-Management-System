@@ -1,4 +1,4 @@
-.app-shell { background: hsl(var(--background)); color: hsl(var(--foreground)); font-family: var(--app-font-sans); }
+.app-shell { background: hsl(var(--sidebar)); color: hsl(var(--foreground)); font-family: var(--app-font-sans); }
 .shell-layout { min-height: 100dvh; }
  .sidebar { width: 250px; background: hsl(var(--sidebar)); color: hsl(var(--sidebar-foreground)); padding: 24px 15px 14px; display: flex; flex-direction: column; position: fixed; inset: 0 auto 0 0; z-index: 30; border-right: 1px solid hsl(var(--sidebar-border)); }
 .brand-lockup { display: flex; align-items: center; gap: 11px; padding: 1px 10px 25px; }
@@ -59,10 +59,10 @@
 
 /* Rounded surfaces shared across the rental workspace. */
 .panel,.metric-card,.collection-hero,.collection-form-panel,.unpaid-panel,.tenant-card,.agreement-card,.repair-card,.property-plan,.ledger-summary,.analytics-feature,.analytics-note,.notifications-panel,.portal-home-card,.portal-balance,.receipt-page-card,.settings-intro,.settings-section,.role-summary {
-  border-radius: 18px;
+  border-radius: 21px;
 }
 .panel,.metric-card,.collection-form-panel,.unpaid-panel,.tenant-card,.agreement-card,.repair-card,.property-plan,.ledger-summary,.analytics-feature,.analytics-note,.notifications-panel,.portal-balance,.receipt-page-card,.settings-intro,.settings-section,.role-summary {
-  box-shadow: 0 8px 24px hsl(164 27% 14% / .045);
+  box-shadow: 0 8px 24px hsl(220 24% 16% / .045);
 }
 .collection-hero { border-radius: 22px; }
 .panel { overflow: hidden; }
@@ -79,13 +79,55 @@
 .attention-mark,.activity-symbol,.metric-icon,.building-icon,.form-icon,.method-symbol,.unit-avatar {
   border-radius: 11px;
 }
-.analytics-feature,.analytics-note,.notifications-panel,.settings-section,.settings-intro {
+.analytics-note,.notifications-panel,.settings-section,.settings-intro {
   border: 1px solid hsl(var(--card-border));
   background: hsl(var(--card));
 }
 .panel-head { background: hsl(var(--card)); }
+.text-link:hover { color: hsl(var(--primary) / .82); }
+.button-cream { color: hsl(var(--primary-foreground)); background: hsl(var(--primary)); }
+.button-cream:hover { background: hsl(var(--primary) / .88); }
+.collection-hero {
+  background: linear-gradient(130deg, hsl(219 39% 16%), hsl(215 49% 24%));
+  color: #f0f5fc;
+  border-radius: 25px;
+}
+.hero-label { color: hsl(210 100% 78%); }
+.hero-copy h2 em { color: hsl(210 100% 73%); }
+.hero-copy p { color: hsl(215 25% 82%); }
+.seal-ring { border-color: hsl(210 100% 76% / .55); color: hsl(210 100% 78%); }
+.seal-ring:before { border-color: hsl(210 100% 76% / .38); }
+.seal-caption { color: hsl(215 25% 79%); }
+.hero-orbit { border-color: hsl(210 100% 76% / .12); }
+.analytics-feature {
+  background: linear-gradient(130deg, hsl(219 39% 16%), hsl(215 49% 24%));
+  color: #f0f5fc;
+  border-color: hsl(215 34% 53% / .24);
+}
+.analytics-copy .eyebrow { color: hsl(210 100% 78%); }
+.analytics-copy p,.chart-legend,.bar-group small,.chart-empty { color: hsl(215 25% 82%); }
+.chart-legend i,.bar.collected { background: hsl(var(--primary)); }
+.chart-legend .legend-outstanding,.bar.outstanding { background: hsl(210 100% 78%); }
+.chart-grid-lines i { background: hsl(0 0% 100% / .13); }
 
 @media (min-width: 768px) {
+  .shell-layout { padding: 8px 8px 8px 0; background: hsl(var(--sidebar)); }
+  .sidebar {
+    width: 234px;
+    inset: 8px auto 8px 8px;
+    border: 1px solid hsl(var(--sidebar-border));
+    border-radius: 26px;
+    box-shadow: 0 14px 38px hsl(220 30% 8% / .14);
+  }
+  .main-area {
+    margin: 8px 8px 8px 250px;
+    min-height: calc(100dvh - 16px);
+    border-radius: 28px;
+    overflow: clip;
+    background: hsl(var(--background));
+    box-shadow: 0 0 0 1px hsl(var(--foreground) / .035);
+  }
+  .topbar { border-radius: 28px 28px 0 0; }
   .sidebar { overflow-x: hidden; transition: width .26s cubic-bezier(.2,.7,.2,1), padding .26s ease, inset .26s ease, border-radius .26s ease, box-shadow .26s ease; }
   .main-area { transition: margin-left .26s cubic-bezier(.2,.7,.2,1); }
   .sidebar nav { min-height: 0; flex: 1; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
@@ -180,6 +222,8 @@
 }
 
 @media (max-width: 767px) {
+  .shell-layout { padding: 0; background: hsl(var(--background)); }
+  .main-area { margin: 0; min-height: 100dvh; border-radius: 0; overflow: visible; box-shadow: none; }
   .sidebar-collapse-button { display: none; }
   .panel,.metric-card,.collection-hero,.collection-form-panel,.unpaid-panel,.tenant-card,.agreement-card,.repair-card,.property-plan,.ledger-summary,.analytics-feature,.analytics-note,.notifications-panel,.portal-home-card,.portal-balance,.receipt-page-card,.settings-intro,.settings-section,.role-summary {
     border-radius: 16px;
