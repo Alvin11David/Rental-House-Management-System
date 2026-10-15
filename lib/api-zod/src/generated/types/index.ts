@@ -32,6 +32,7 @@ export * from './repairInput';
 export * from './repairStatus';
 export * from './repairUpdate';
 export * from './repairUpdateStatus';
+export * from './signAgreementInput';
 export * from './tenant';
 export * from './tenantInput';
 export * from './unit';

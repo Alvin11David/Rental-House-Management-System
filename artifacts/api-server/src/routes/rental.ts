@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, sum } from "drizzle-orm";
+import { and, desc, eq, gte, ne, sum } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import {
   CreatePaymentBody,
@@ -25,6 +25,9 @@ import {
   GetTenantsResponse,
   GetUnitsResponse,
   GetUnitsResponseItem,
+  SignAgreementBody,
+  SignAgreementParams,
+  SignAgreementResponse,
   UpdateRepairBody,
   UpdateRepairParams,
   UpdateRepairResponse,
@@ -401,11 +404,55 @@ router.patch("/rental/units/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: body.success ? "Invalid request body" : body.error.message });
     return;
   }
-  const [updated] = await db
-    .update(unitsTable)
-    .set(body.data)
-    .where(eq(unitsTable.id, params.data.id))
-    .returning();
+  const [currentUnit] = await db
+    .select()
+    .from(unitsTable)
+    .where(eq(unitsTable.id, params.data.id));
+  if (!currentUnit) {
+    res.status(404).json({ error: "Unit not found" });
+    return;
+  }
+
+  if (body.data.tenantId != null) {
+    const [tenant] = await db
+      .select({ id: tenantsTable.id })
+      .from(tenantsTable)
+      .where(eq(tenantsTable.id, body.data.tenantId));
+    if (!tenant) {
+      res.status(404).json({ error: "Tenant not found" });
+      return;
+    }
+  }
+
+  const [updated] = await db.transaction(async (tx) => {
+    if (body.data.tenantId !== undefined) {
+      if (body.data.tenantId != null) {
+        await tx
+          .update(unitsTable)
+          .set({ tenantId: null, status: "vacant" })
+          .where(
+            and(
+              eq(unitsTable.tenantId, body.data.tenantId),
+              ne(unitsTable.id, params.data.id),
+            ),
+          );
+      }
+      const nextStatus =
+        body.data.status ??
+        (body.data.tenantId == null ? "vacant" : "pending");
+      return tx
+        .update(unitsTable)
+        .set({ ...body.data, status: nextStatus })
+        .where(eq(unitsTable.id, params.data.id))
+        .returning();
+    }
+
+    return tx
+      .update(unitsTable)
+      .set(body.data)
+      .where(eq(unitsTable.id, params.data.id))
+      .returning();
+  });
   if (!updated) {
     res.status(404).json({ error: "Unit not found" });
     return;
@@ -594,14 +641,15 @@ router.post("/rental/payments", async (req, res): Promise<void> => {
       ),
     )
     .limit(1);
-  if (duplicate) {
+  if (duplicate && !body.data.confirmDuplicate) {
     res.status(409).json({ error: "A payment for this unit and amount was recorded recently" });
     return;
   }
+  const { confirmDuplicate: _confirmDuplicate, ...paymentData } = body.data;
   const [payment] = await db
     .insert(paymentsTable)
     .values({
-      ...body.data,
+      ...paymentData,
       reference: body.data.reference?.trim() || null,
       status: "paid",
     })
@@ -752,6 +800,59 @@ router.get("/rental/agreements", async (_req, res): Promise<void> => {
         signedAt: agreement.signedAt?.toISOString() ?? null,
       })),
     ),
+  );
+});
+
+router.post("/rental/agreements/:id/sign", async (req, res): Promise<void> => {
+  await ensureSeeded();
+  const params = SignAgreementParams.safeParse(req.params);
+  const body = SignAgreementBody.safeParse(req.body);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  const [agreement] = await db
+    .select()
+    .from(agreementsTable)
+    .where(eq(agreementsTable.id, params.data.id));
+  if (!agreement) {
+    res.status(404).json({ error: "Agreement not found" });
+    return;
+  }
+  const [tenant] = await db
+    .select()
+    .from(tenantsTable)
+    .where(eq(tenantsTable.id, agreement.tenantId));
+  if (!tenant) {
+    res.status(404).json({ error: "Tenant not found" });
+    return;
+  }
+  if (body.data.signerName.trim().toLocaleLowerCase() !== tenant.fullName.trim().toLocaleLowerCase()) {
+    res.status(400).json({ error: "Enter the tenant's full name to match this agreement." });
+    return;
+  }
+  const [signed] = agreement.signedAt
+    ? [agreement]
+    : await db
+        .update(agreementsTable)
+        .set({ signedAt: new Date() })
+        .where(eq(agreementsTable.id, agreement.id))
+        .returning();
+  const [unit] = await db
+    .select()
+    .from(unitsTable)
+    .where(eq(unitsTable.id, agreement.unitId));
+  res.json(
+    SignAgreementResponse.parse({
+      ...signed,
+      unitNumber: unit?.unitNumber ?? "—",
+      tenantName: tenant.fullName,
+      signedAt: signed.signedAt?.toISOString() ?? null,
+    }),
   );
 });
 

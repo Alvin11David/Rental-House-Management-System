@@ -163,3 +163,22 @@
 @media(prefers-reduced-motion: reduce) {
   .auth-page *, .auth-page *::before, .auth-page *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+.auth-role-picker { margin:-8px 0 22px; }
+.auth-role-picker h2 { margin:0;color:#36483d;font:700 12px 'Manrope',sans-serif; }
+.auth-role-picker>p { margin:4px 0 9px;color:#73786f;font:400 9px/1.5 'DM Sans',sans-serif; }
+.auth-role-options { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px; }
+.auth-role-options button { min-height:61px;display:flex;align-items:center;justify-content:space-between;gap:5px;padding:8px;border:1px solid #deded5;border-radius:7px;background:#fff;color:#39473d;text-align:left;cursor:pointer;transition:border-color .18s,background .18s,transform .18s; }
+.auth-role-options button:hover { transform:translateY(-1px);border-color:#7d9b83; }
+.auth-role-options button.selected { border-color:#356b50;background:#eff4ee;box-shadow:0 0 0 2px rgb(53 107 80 / 9%); }
+.auth-role-options button>span { min-width:0; }
+.auth-role-options b,.auth-role-options small { display:block; }
+.auth-role-options b { font:700 9px 'Manrope',sans-serif; }
+.auth-role-options small { margin-top:3px;color:#797e75;font:400 8px/1.35 'DM Sans',sans-serif; }
+.auth-role-options svg { flex:0 0 auto;color:#356b50; }
+@media(max-width:390px) {
+  .auth-role-options { grid-template-columns:1fr; }
+  .auth-role-options button { min-height:48px; }
+}
+@media(prefers-reduced-motion: reduce) {
+  .auth-role-options button { transition:none; }
+}

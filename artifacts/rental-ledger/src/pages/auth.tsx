@@ -121,10 +121,18 @@ export default function AuthPage() {
   const [location] = useLocation();
   const mode: Mode = location === '/create-account' ? 'create-account' : location === '/forgot-password' ? 'forgot-password' : 'login';
   const [notice, setNotice] = useState('');
+  const [selectedRole, setSelectedRole] = useState<'Landlord' | 'Caretaker' | 'Tenant'>(() => {
+    const saved = localStorage.getItem('ledger-role');
+    return saved === 'Caretaker' || saved === 'Tenant' ? saved : 'Landlord';
+  });
   useEffect(() => setNotice(''), [mode]);
   const content = pageContent[mode];
   const visual = visualContent[mode];
   const onSubmit = () => setNotice('Account services are not enabled in this demo. Your details have not been sent or saved.');
+  const chooseRole = (role: 'Landlord' | 'Caretaker' | 'Tenant') => {
+    setSelectedRole(role);
+    localStorage.setItem('ledger-role', role);
+  };
   return <main className="auth-page">
     <div className="auth-layout">
       <section className="auth-main">
@@ -139,6 +147,15 @@ export default function AuthPage() {
             <h1>{content.title}</h1>
             <p>{content.intro}</p>
           </div>
+          {mode === 'login' && <section className="auth-role-picker" aria-labelledby="auth-role-heading">
+            <h2 id="auth-role-heading">Choose your workspace</h2>
+            <p>This demo role is selected before sign-in. Account access is not connected yet.</p>
+            <div className="auth-role-options">{([
+              ['Landlord', 'Property overview and records'],
+              ['Caretaker', 'Daily rent collection and repairs'],
+              ['Tenant', 'Your rent, receipts and home care'],
+            ] as const).map(([role, description]) => <button key={role} type="button" onClick={() => chooseRole(role)} aria-pressed={selectedRole === role} className={selectedRole === role ? 'selected' : ''} data-testid={`auth-role-${role.toLowerCase()}`}><span><b>{role}</b><small>{description}</small></span>{selectedRole === role && <ShieldCheck size={17}/>}</button>)}</div>
+          </section>}
           <AuthForm key={mode} mode={mode} onSubmit={onSubmit} notice={notice}/>
           <div className="auth-switch">
             {mode === 'login' ? <>New to Rentwise? <Link href="/create-account" data-testid="link-create-account">Create an account <ArrowRight size={14}/></Link></> :

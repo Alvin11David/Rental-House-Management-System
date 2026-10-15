@@ -281,6 +281,34 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Agreement"
+  /rental/agreements/{id}/sign:
+    post:
+      operationId: signAgreement
+      tags: [rental]
+      summary: Record a tenant's typed agreement acknowledgement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignAgreementInput"
+      responses:
+        "200":
+          description: Agreement marked signed with a timestamp
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Agreement"
+        "400":
+          description: The typed name does not match the tenant on the agreement
+        "404":
+          description: Agreement not found
   /rental/analytics:
     get:
       operationId: getRentalAnalytics
@@ -443,6 +471,9 @@ components:
           enum: [mobile_money, cash, bank]
         recordedBy: { type: string, minLength: 1 }
         reference: { type: string }
+        confirmDuplicate:
+          type: boolean
+          description: Explicitly confirm recording a payment that matches a recent entry for the same unit and amount.
     Repair:
       type: object
       required: [id, unitId, unitNumber, tenantName, title, description, status, cost, reportedAt, assignedTo]
@@ -488,6 +519,11 @@ components:
         endDate: { type: string, format: date }
         nextDueDate: { type: string, format: date }
         signedAt: { type: [string, "null"], format: date-time }
+    SignAgreementInput:
+      type: object
+      required: [signerName]
+      properties:
+        signerName: { type: string, minLength: 2, maxLength: 80 }
     Activity:
       type: object
       required: [id, unitId, unitNumber, title, detail, actor, type, occurredAt]

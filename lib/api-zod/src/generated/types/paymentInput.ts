@@ -15,4 +15,6 @@ export interface PaymentInput {
   /** @minLength 1 */
   recordedBy: string;
   reference?: string;
+  /** Explicitly confirm recording a payment that matches a recent entry for the same unit and amount. */
+  confirmDuplicate?: boolean;
 }
