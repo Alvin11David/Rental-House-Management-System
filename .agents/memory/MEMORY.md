@@ -1,0 +1,1 @@
+- [OpenAPI date-only values](openapi-date-only-values.md) — normalize date strings at the API boundary before Drizzle persistence.

@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Rental House Management"
+description = "A responsive rental-management web app for Ugandan landlords, caretakers, and tenants. Track rent, units, repairs, agreements, and verified receipts with UGX formatting and mobile-friendly workflows."
+version = "1.0.0"
+id = "artifacts/rental-ledger"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25016
+
+[services.development]
+run = "pnpm --filter @workspace/rental-ledger run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/rental-ledger", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/rental-ledger/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25016"
+BASE_PATH = "/"
