@@ -4,6 +4,7 @@ import { MutationCache, QueryClient, QueryClientProvider, useQueryClient } from 
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import SignUpPage from '@/pages/sign-up';
 import {
   useCreateProperty, useCreateUnit, useCreateTenant, useCreatePayment, useCreateRepair, useCreateContactReveal,
   useUpdateUnit, useUpdateRepair, useGetRentalDashboard, useGetProperties, useGetUnits,
@@ -64,7 +65,7 @@ const useData = () => {
 
 const navGroups = [
   { title: 'WORKSPACE', links: [
-    ['/', 'Overview', LayoutDashboard], ['/properties', 'Properties', Building2],
+    ['/dashboard', 'Overview', LayoutDashboard], ['/properties', 'Properties', Building2],
     ['/daily-collection', 'Daily collection', Wallet], ['/payments', 'Payment ledger', ReceiptText],
   ] },
   { title: 'PEOPLE & OPERATIONS', links: [
@@ -170,11 +171,11 @@ function AppShell() {
   </aside>;
   return <div className="app-shell"><div className="shell-layout">{sidebar}{drawer && <button className="scrim" onClick={() => setDrawer(false)} aria-label="Close menu"/>}<main className="main-area">
     <header className="topbar"><button className="mobile-menu icon-button" onClick={() => setDrawer(true)} aria-label="Open menu"><Menu size={20}/></button><div className="crumb"><span>Workspace</span><span>/</span><b>{title}</b></div><div className="top-actions"><span className={classes('connection', !online && 'connection-offline')}><span/>{online ? 'Online' : 'Offline'}</span><button className="icon-button" aria-label="Refresh workspace" onClick={d.refresh} data-testid="button-refresh"><RefreshCw size={17}/></button><Link href="/notifications" className="icon-button notify-button" aria-label="Notifications"><Bell size={18}/><i/></Link><span className="top-divider"/><button className="profile-button" onClick={() => setLocation('/settings')} data-testid="button-profile"><span className="avatar small-avatar">AM</span><span>Agnes M.</span><ChevronDown size={14}/></button></div></header>
-    <div className="content-area"><div className="page-heading"><div><div className="eyebrow">{title === 'Overview' ? `${d.role.toUpperCase()} WORKSPACE · UGANDA` : 'RENTWISE · UGANDA'}</div><h1>{title}</h1>{title === 'Overview' && <p className="heading-sub">{d.role === 'Caretaker' ? 'A practical view of today’s collection and the homes in your care.' : d.role === 'Tenant' ? 'A simple, clear record of home, rent and care.' : 'A clearer view of home, and everything that keeps it running.'}</p>}</div>{path === '/' && <Link href={d.role === 'Tenant' ? '/tenant' : '/daily-collection'} className="button button-primary" data-testid="button-collect-rent">{d.role === 'Tenant' ? <UserRound size={17} /> : <Plus size={17} />}{d.role === 'Tenant' ? 'Open tenant space' : 'Record payment'}</Link>}</div>
+    <div className="content-area"><div className="page-heading"><div><div className="eyebrow">{title === 'Overview' ? `${d.role.toUpperCase()} WORKSPACE · UGANDA` : 'RENTWISE · UGANDA'}</div><h1>{title}</h1>{title === 'Overview' && <p className="heading-sub">{d.role === 'Caretaker' ? 'A practical view of today’s collection and the homes in your care.' : d.role === 'Tenant' ? 'A simple, clear record of home, rent and care.' : 'A clearer view of home, and everything that keeps it running.'}</p>}</div>{path === '/dashboard' && <Link href={d.role === 'Tenant' ? '/tenant' : '/daily-collection'} className="button button-primary" data-testid="button-collect-rent">{d.role === 'Tenant' ? <UserRound size={17} /> : <Plus size={17} />}{d.role === 'Tenant' ? 'Open tenant space' : 'Record payment'}</Link>}</div>
       {d.errors && <div className="inline-alert" role="alert"><WifiOff size={18}/><span>Some records could not be reached. Your saved workspace is unchanged.</span><button onClick={d.refresh}>Try again</button></div>}
       {d.loading && <div className="loading-strip"><span/><span/><span/> Loading your ledger…</div>}
       <div className="page-enter"><Switch>
-        <Route path="/" component={DashboardPage}/><Route path="/properties" component={PropertiesPage}/><Route path="/daily-collection" component={DailyCollectionPage}/>
+        <Route path="/dashboard" component={DashboardPage}/><Route path="/properties" component={PropertiesPage}/><Route path="/daily-collection" component={DailyCollectionPage}/>
         <Route path="/payments" component={PaymentsPage}/><Route path="/tenants" component={TenantsPage}/><Route path="/repairs" component={RepairsPage}/>
         <Route path="/agreements" component={AgreementsPage}/><Route path="/analytics" component={AnalyticsPage}/><Route path="/notifications" component={NotificationsPage}/>
          <Route path="/tenant" component={TenantPortalPage}/><Route path="/receipt/:id" component={ReceiptPage}/><Route path="/settings" component={() => <SettingsPage theme={theme} setTheme={setTheme}/>}/>
@@ -436,8 +437,11 @@ function Modal({ open, close, title, children }: { open: boolean; close: () => v
   return <div className="modal-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div className="modal-head"><h2 id="modal-title">{title}</h2><button className="icon-button" onClick={close} aria-label="Close dialog"><X size={18}/></button></div>{children}</section></div>;
 }
 function ModalActions({ close, busy }: { close: () => void; busy: boolean }) { return <div className="modal-actions"><button type="button" className="button button-quiet" onClick={close}>Cancel</button><button type="submit" className="button button-primary" disabled={busy}>{busy ? <LoaderCircle size={16} className="spin"/> : <Check size={16}/>}Save record</button></div>; }
-function NotFoundPage() { return <div className="not-found"><span className="empty-icon"><Search size={23}/></span><h2>This page is not in the ledger.</h2><p>It may have moved or the address may be mistyped.</p><Link href="/" className="button button-primary"><ArrowLeft size={16}/>Return to overview</Link></div>; }
+function NotFoundPage() { return <div className="not-found"><span className="empty-icon"><Search size={23}/></span><h2>This page is not in the ledger.</h2><p>It may have moved or the address may be mistyped.</p><Link href="/dashboard" className="button button-primary"><ArrowLeft size={16}/>Return to overview</Link></div>; }
 function RoutedErrorBoundary({ children }: { children: ReactNode }) { const [location] = useLocation(); return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>; }
-function Router() { return <RoutedErrorBoundary><WorkspaceData><AppShell/></WorkspaceData></RoutedErrorBoundary>; }
+function Router() {
+  const [path] = useLocation();
+  return <RoutedErrorBoundary>{path === '/' || path === '/signup' ? <SignUpPage/> : <WorkspaceData><AppShell/></WorkspaceData>}</RoutedErrorBoundary>;
+}
 function App() { return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><Router/></WouterRouter><Toaster/></TooltipProvider></QueryClientProvider>; }
 export default App;
