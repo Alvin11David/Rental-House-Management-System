@@ -300,6 +300,7 @@
 .signup-join-button svg { transition: transform .18s ease; }
 .signup-join-button:hover svg { transform: translateX(3px); }
 .signup-join-card>small { color: #687789; font-size: 8px; }
+.signup-join-card>small a { color: var(--signup-blue); font-weight: 800; }
 
 .signup-footer {
   grid-column: 1 / -1;

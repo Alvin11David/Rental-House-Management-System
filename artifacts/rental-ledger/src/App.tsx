@@ -5,6 +5,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import SignUpPage from '@/pages/sign-up';
+import AuthPage from '@/pages/auth';
 import {
   useCreateProperty, useCreateUnit, useCreateTenant, useCreatePayment, useCreateRepair, useCreateContactReveal,
   useUpdateUnit, useUpdateRepair, useGetRentalDashboard, useGetProperties, useGetUnits,
@@ -445,7 +446,9 @@ function NotFoundPage() { return <div className="not-found"><span className="emp
 function RoutedErrorBoundary({ children }: { children: ReactNode }) { const [location] = useLocation(); return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>; }
 function Router() {
   const [path] = useLocation();
-  return <RoutedErrorBoundary>{path === '/' || path === '/signup' ? <SignUpPage/> : <WorkspaceData><AppShell/></WorkspaceData>}</RoutedErrorBoundary>;
+  if (path === '/' || path === '/signup') return <RoutedErrorBoundary><SignUpPage/></RoutedErrorBoundary>;
+  if (path === '/login' || path === '/create-account' || path === '/forgot-password') return <RoutedErrorBoundary><AuthPage/></RoutedErrorBoundary>;
+  return <RoutedErrorBoundary><WorkspaceData><AppShell/></WorkspaceData></RoutedErrorBoundary>;
 }
 function App() { return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><Router/></WouterRouter><Toaster/></TooltipProvider></QueryClientProvider>; }
 export default App;
