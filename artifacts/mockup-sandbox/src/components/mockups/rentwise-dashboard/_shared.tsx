@@ -24,10 +24,10 @@ const navigation = [
   ] },
 ];
 
-export function DashboardFrame({ rounded = false }: { rounded?: boolean }) {
+export function DashboardFrame({ rounded = false, refined = false }: { rounded?: boolean; refined?: boolean }) {
   const [collapsed, setCollapsed] = useState(false);
   return (
-    <div className={`mock-dashboard${rounded ? ' is-rounded' : ''}${collapsed ? ' is-collapsed' : ''}`}>
+    <div className={`mock-dashboard${rounded ? ' is-rounded' : ''}${refined ? ' is-refined' : ''}${collapsed ? ' is-collapsed' : ''}`}>
       <aside className="mock-sidebar" aria-label="Rentwise workspace navigation">
         <div className="mock-brand">
           <span className="mock-brand-icon"><House size={19} /></span>

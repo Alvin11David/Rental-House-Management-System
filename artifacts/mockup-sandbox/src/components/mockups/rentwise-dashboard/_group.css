@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
 
 :root {
   --rw-bg: 42 30% 96%;
@@ -11,14 +11,14 @@
   --rw-sidebar-accent: 164 25% 23%;
   --rw-sidebar-primary: 43 73% 61%;
   --rw-primary: 164 31% 25%;
-  font-family: "DM Sans", sans-serif;
+  font-family: "Inter", sans-serif;
   color: hsl(var(--rw-ink));
   background: hsl(var(--rw-bg));
 }
 
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; background: hsl(var(--rw-bg)); }
-.mock-dashboard { min-height: 100vh; color: hsl(var(--rw-ink)); font: 400 12px/1.5 "DM Sans", sans-serif; background: hsl(var(--rw-bg)); }
+.mock-dashboard { min-height: 100vh; color: hsl(var(--rw-ink)); font: 400 12px/1.5 "Inter", sans-serif; background: hsl(var(--rw-bg)); }
 .mock-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 5; display: flex; flex-direction: column; width: 250px; padding: 20px 14px 12px; color: hsl(var(--rw-sidebar-text)); background: hsl(var(--rw-sidebar)); transition: width .25s ease, inset .25s ease, border-radius .25s ease, box-shadow .25s ease; overflow: hidden; }
 .mock-brand { display: flex; align-items: center; gap: 10px; padding: 3px 8px 23px; }
 .mock-brand-icon { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 auto; color: hsl(var(--rw-sidebar)); border-radius: 12px; background: hsl(var(--rw-sidebar-primary)); }
@@ -69,7 +69,7 @@ body { margin: 0; min-width: 320px; background: hsl(var(--rw-bg)); }
 .mock-metric-icon { display: grid; place-items: center; width: 29px; height: 29px; border-radius: 8px; color: hsl(var(--rw-primary)); background: hsl(140 35% 90%); }
 .mock-metric strong { display: block; margin: 10px 0 3px; font: 700 20px Manrope,sans-serif; letter-spacing: -.5px; }
 .mock-metric small { color: hsl(var(--rw-muted)); font-size: 8px; }
-.mock-hero { grid-column: 1; grid-row: 2; position: relative; display: flex; align-items: center; justify-content: space-between; min-height: 248px; padding: 22px 26px; overflow: hidden; color: #f0eee2; background: hsl(164 31% 22%); border-radius: 11px; }
+.mock-hero { grid-column: 1; grid-row: 2; position: relative; display: flex; align-items: center; justify-content: space-between; min-height: 248px; padding: 22px 26px; overflow: hidden; color: #f0eee2; background: #233652; border-radius: 11px; }
 .mock-hero-copy { position: relative; z-index: 1; max-width: 420px; }
 .mock-hero-label { display: flex; align-items: center; gap: 6px; color: hsl(43 68% 76%); font: 600 8px "IBM Plex Mono",monospace; letter-spacing: 1px; }
 .mock-hero h2 { margin: 16px 0 8px; font: 700 31px/1.08 Manrope,sans-serif; letter-spacing: -1.1px; }
@@ -81,6 +81,8 @@ body { margin: 0; min-width: 320px; background: hsl(var(--rw-bg)); }
 .mock-panel { overflow: hidden; }
 .mock-panel.attention { grid-column: 2; grid-row: 2; }
 .mock-panel.units { grid-column: 1; grid-row: 3; }
+.mock-dashboard.is-refined .mock-hero { background: hsl(var(--rw-sidebar)); }
+.mock-dashboard.is-refined .mock-panel.units { grid-column: 1 / -1; grid-row: auto; }
 .mock-panel.activity { grid-column: 1 / -1; }
 .mock-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 15px 18px 12px; border-bottom: 1px solid hsl(var(--rw-border)); }
 .mock-panel-head h2 { margin: 0; font: 700 13px Manrope,sans-serif; }
@@ -122,7 +124,8 @@ body { margin: 0; min-width: 320px; background: hsl(var(--rw-bg)); }
   .mock-content { padding-inline: 20px; }
   .mock-sidebar { width: 220px; }
   .mock-main { margin-left: 220px; }
-  .mock-grid { grid-template-columns: minmax(0,1fr) minmax(230px,.8fr); }
+  .mock-grid { grid-template-columns: minmax(0,1fr); }
+  .mock-hero,.mock-panel.attention,.mock-panel.units { grid-column: 1 / -1; grid-row: auto; }
 }
 @media (max-width: 700px) {
   .mock-sidebar { width: min(285px,84vw); transform: translateX(-102%); }
