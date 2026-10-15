@@ -74,20 +74,35 @@
 .auth-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #919990; font-size: 9px; }
 .auth-footer span:first-child { font-weight: 700; letter-spacing: .11em; }
 .auth-footer i { padding-inline: 3px; color: #b1b8ae; font-style: normal; }
-.auth-visual { position: relative; min-width: 0; min-height: 670px; margin: 10px 10px 10px 0; overflow: hidden; isolation: isolate; border-radius: 10px 10px 10px 145px; background: #6e826d; }
+.auth-visual { position: relative; min-width: 0; min-height: 670px; margin: 10px 10px 10px 0; overflow: hidden; isolation: isolate; background: #536653; transition: border-radius .35s ease; }
+.auth-visual--login { border-radius: 12px 12px 12px 150px; }
+.auth-visual--create-account { border: 9px solid #f0eadb; border-radius: 180px 12px 12px 12px; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 20%); }
+.auth-visual--forgot-password { margin: 20px 26px 20px 16px; border: 1px solid rgb(255 255 255 / 40%); border-radius: 48% 48% 12px 12px / 31% 31% 12px 12px; box-shadow: 0 0 0 10px #eee9dd, 0 0 0 11px rgb(68 79 60 / 16%); }
+.auth-visual--create-account .auth-image-top { top: 34px; left: 54px; }
+.auth-visual--forgot-password .auth-image-top { top: 50px; left: 50%; right: auto; transform: translateX(-50%); }
+.auth-visual--forgot-password .auth-image-count { display: none; }
 .auth-visual>img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; object-position: 54% center; animation: auth-photo-arrive .7s cubic-bezier(.2,.7,.2,1) both; }
-.auth-image-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgb(20 42 32 / 25%) 0%, transparent 37%, rgb(15 34 27 / 16%) 57%, rgb(16 35 28 / 68%) 100%), linear-gradient(90deg, rgb(24 43 32 / 8%), transparent 65%); }
+.auth-visual--create-account>img { object-position: 55% center; }
+.auth-visual--forgot-password>img { object-position: 56% center; }
+.auth-image-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgb(20 33 28 / 34%) 0%, transparent 37%, rgb(15 34 27 / 10%) 54%, rgb(12 27 23 / 72%) 100%), linear-gradient(90deg, rgb(24 43 32 / 13%), transparent 68%); }
+.auth-visual--create-account .auth-image-shade { background: linear-gradient(180deg, rgb(38 32 20 / 25%) 0%, transparent 38%, rgb(29 30 21 / 13%) 55%, rgb(23 30 23 / 77%) 100%); }
+.auth-visual--forgot-password .auth-image-shade { background: linear-gradient(180deg, rgb(4 15 23 / 32%) 0%, transparent 34%, rgb(4 13 20 / 12%) 54%, rgb(4 13 20 / 82%) 100%); }
 .auth-image-top { position: absolute; top: 31px; left: 34px; right: 32px; display: flex; justify-content: space-between; color: #fff; font-size: 9px; font-weight: 700; letter-spacing: .13em; }
 .auth-image-top>span:first-child { display: flex; align-items: center; gap: 9px; }
 .auth-image-dot,.auth-image-kicker>span { width: 7px; height: 7px; border-radius: 50%; background: #d6c577; box-shadow: 0 0 0 4px rgb(255 255 255 / 17%); }
 .auth-image-count { display: flex; align-items: center; gap: 8px; font: 600 10px 'DM Sans',sans-serif; letter-spacing: .08em; }
 .auth-image-count i { width: 28px; height: 1px; background: rgb(255 255 255 / 65%); }
-.auth-image-copy { position: absolute; left: clamp(35px, 7vw, 100px); right: 40px; bottom: 158px; color: white; }
+.auth-image-copy { position: absolute; left: clamp(35px, 7vw, 100px); right: 40px; bottom: 164px; color: white; }
 .auth-image-kicker { display: inline-flex; align-items: center; gap: 10px; font-size: 9px; font-weight: 700; letter-spacing: .18em; }
 .auth-image-copy h2 { margin: 18px 0 12px; font: 600 clamp(43px, 5vw, 68px)/.99 'Manrope', sans-serif; letter-spacing: -.065em; }
+.auth-visual--create-account .auth-image-copy { left: clamp(40px, 6vw, 86px); bottom: 176px; }
+.auth-visual--forgot-password .auth-image-copy { left: clamp(42px, 6vw, 84px); right: 38px; bottom: 174px; }
+.auth-visual--forgot-password .auth-image-copy h2 { font-size: clamp(40px, 4.6vw, 62px); }
 .auth-image-copy h2 em { color: #e4dbb6; font-family: Georgia, serif; font-weight: 400; }
 .auth-image-copy p { max-width: 310px; margin: 0; color: rgb(255 255 255 / 83%); font-size: 13px; line-height: 1.65; }
-.auth-image-caption { position: absolute; right: 32px; bottom: 32px; left: 32px; display: flex; align-items: center; gap: 12px; padding: 13px 15px; border: 1px solid rgb(255 255 255 / 30%); border-radius: 9px; background: rgb(255 255 255 / 17%); color: #fff; backdrop-filter: blur(12px); }
+.auth-image-caption { position: absolute; right: 32px; bottom: 32px; left: 32px; display: flex; align-items: center; gap: 12px; padding: 13px 15px; border: 1px solid rgb(255 255 255 / 34%); border-radius: 9px; background: rgb(18 32 26 / 72%); color: #fff; box-shadow: 0 12px 30px rgb(0 0 0 / 14%); backdrop-filter: blur(12px); }
+.auth-visual--create-account .auth-image-caption { right: 30px; left: 30px; border-radius: 3px 16px 3px 16px; background: rgb(31 37 27 / 82%); }
+.auth-visual--forgot-password .auth-image-caption { right: 28px; left: 28px; border-radius: 24px 24px 8px 8px; background: rgb(8 20 27 / 85%); }
 .auth-image-caption>span { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: #e9e3ca; color: #315745; }
 .auth-image-caption div { flex: 1; }
 .auth-image-caption b,.auth-image-caption small { display: block; }
@@ -102,7 +117,10 @@
 @media(max-width: 960px) {
   .auth-layout { grid-template-columns: minmax(390px, .95fr) minmax(0, 1.05fr); }
   .auth-main { padding-inline: 35px; }
-  .auth-visual { min-height: 610px; border-bottom-left-radius: 100px; }
+  .auth-visual { min-height: 610px; }
+  .auth-visual--login { border-bottom-left-radius: 100px; }
+  .auth-visual--create-account { border-top-left-radius: 130px; }
+  .auth-visual--forgot-password { margin: 18px 22px; }
   .auth-image-copy { left: 35px; bottom: 150px; }
 }
 @media(max-width: 720px) {
@@ -111,11 +129,29 @@
   .auth-main { min-height: calc(100dvh - 170px); padding: 18px clamp(22px, 7vw, 48px) 14px; }
   .auth-form-wrap { width: min(100%, 460px); padding: 28px 0 30px; }
   .auth-heading { margin-top: 24px; }
-  .auth-visual { display: block; min-height: 170px; height: 170px; margin: 0; border-radius: 0 0 0 62px; }
+  .auth-visual { display: block; min-height: 210px; height: 210px; margin: 0; border-radius: 0 0 0 62px; }
+  .auth-visual--login { border-radius: 0 0 0 62px; }
+  .auth-visual--create-account { height: 220px; min-height: 220px; margin: 0 12px; border-width: 6px; border-radius: 112px 12px 12px 12px; }
+  .auth-visual--forgot-password { height: 220px; min-height: 220px; margin: 10px 28px 14px; border-radius: 50% 50% 10px 10px / 34% 34% 10px 10px; box-shadow: 0 0 0 6px #eee9dd, 0 0 0 7px rgb(68 79 60 / 16%); }
   .auth-image-top { top: 19px; left: 23px; right: 22px; }
-  .auth-image-copy { left: 24px; right: 24px; bottom: 18px; }
-  .auth-image-copy h2 { margin: 9px 0 0; font-size: 31px; }
-  .auth-image-copy p,.auth-image-caption,.auth-image-line { display: none; }
+  .auth-visual--create-account .auth-image-top { top: 19px; left: 30px; right: 22px; }
+  .auth-visual--forgot-password .auth-image-top { top: 19px; left: 23px; right: 22px; transform: none; }
+  .auth-image-top { font-size: 8px; }
+  .auth-image-count { display: none; }
+  .auth-image-copy { left: 24px; right: 24px; bottom: 72px; }
+  .auth-visual--create-account .auth-image-copy { left: 23px; bottom: 78px; }
+  .auth-visual--forgot-password .auth-image-copy { left: 23px; bottom: 76px; }
+  .auth-image-copy h2 { margin: 7px 0 0; font-size: 29px; }
+  .auth-image-kicker { font-size: 8px; }
+  .auth-image-copy p { display: none; }
+  .auth-image-caption { right: 18px; bottom: 12px; left: 18px; gap: 9px; padding: 8px 10px; border-radius: 7px; }
+  .auth-image-caption>span { width: 29px; height: 29px; }
+  .auth-image-caption b { font-size: 10px; }
+  .auth-image-caption small { font-size: 9px; line-height: 1.25; }
+  .auth-image-caption>svg { width: 15px; }
+  .auth-visual--create-account .auth-image-caption { right: 12px; left: 12px; bottom: 12px; }
+  .auth-visual--forgot-password .auth-image-caption { right: 12px; left: 12px; bottom: 12px; }
+  .auth-image-line { display: none; }
   .auth-footer { padding-top: 4px; }
 }
 @media(max-width: 390px) {

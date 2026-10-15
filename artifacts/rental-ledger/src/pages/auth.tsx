@@ -8,7 +8,9 @@ import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import homesHero from '@assets/generated_images/rentwise-houses-hero.jpg';
+import signInHome from '@assets/generated_images/rentwise-signin-living-room.jpg';
+import signUpHome from '@assets/generated_images/rentwise-signup-townhouse.jpg';
+import recoveryHome from '@assets/generated_images/rentwise-recovery-courtyard.jpg';
 import './auth.css';
 
 const normalizeUgandanPhone = (value: string) => {
@@ -38,6 +40,33 @@ const pageContent: Record<Mode, { eyebrow: string; title: string; intro: string;
   login: { eyebrow: 'WELCOME BACK', title: 'Your home records, in one place.', intro: 'Sign in with the Ugandan number connected to your Rentwise account.', button: 'Sign in to Rentwise' },
   'create-account': { eyebrow: 'A CLEARER WAY TO RENT', title: 'Start with the people who make a home.', intro: 'Create your account to keep rent, repairs and the details that matter together.', button: 'Create account' },
   'forgot-password': { eyebrow: 'ACCOUNT RECOVERY', title: 'Let’s get you back to your records.', intro: 'Enter your phone number and we’ll help you find the right next step.', button: 'Continue' },
+};
+
+const visualContent: Record<Mode, { image: string; alt: string; label: string; headline: [string, string]; support: string; caption: string }> = {
+  login: {
+    image: signInHome,
+    alt: 'A bright living room opening onto a leafy garden',
+    label: 'A QUIETER WAY TO KEEP HOME',
+    headline: ['Come back', 'to what matters.'],
+    support: 'Your home details, ready when you are.',
+    caption: 'From Kampala to every corner of home.',
+  },
+  'create-account': {
+    image: signUpHome,
+    alt: 'A welcoming Kampala townhouse in the late afternoon sun',
+    label: 'ROOM TO MAKE IT YOURS',
+    headline: ['A good home', 'starts together.'],
+    support: 'For the people who make a place feel like home.',
+    caption: 'A home shared, and cared for, together.',
+  },
+  'forgot-password': {
+    image: recoveryHome,
+    alt: 'A warmly lit doorway opening onto an intimate courtyard at dusk',
+    label: 'THE LIGHT IS STILL ON',
+    headline: ['There’s always', 'a way back.'],
+    support: 'We’ll help you find your way back to your records.',
+    caption: 'Your place is here when you’re ready.',
+  },
 };
 
 function PhoneField({ control }: { control: any }) {
@@ -94,6 +123,7 @@ export default function AuthPage() {
   const [notice, setNotice] = useState('');
   useEffect(() => setNotice(''), [mode]);
   const content = pageContent[mode];
+  const visual = visualContent[mode];
   const onSubmit = () => setNotice('Account services are not enabled in this demo. Your details have not been sent or saved.');
   return <main className="auth-page">
     <div className="auth-layout">
@@ -118,16 +148,16 @@ export default function AuthPage() {
         </div>
         <footer className="auth-footer"><span>RENTWISE <i>·</i> UGANDA</span><span>Records you can come home to.</span></footer>
       </section>
-      <aside className="auth-visual" aria-label="Rentwise homes in Uganda">
-        <img src={homesHero} alt="Contemporary rental homes surrounded by tropical greenery" />
+      <aside className={`auth-visual auth-visual--${mode}`} aria-label="A place to belong">
+        <img src={visual.image} alt={visual.alt} />
         <div className="auth-image-shade"/>
-        <div className="auth-image-top"><span><span className="auth-image-dot"/> A HOME FOR EVERY CHAPTER</span><span className="auth-image-count">01 <i/> 03</span></div>
+        <div className="auth-image-top"><span><span className="auth-image-dot"/> {visual.label}</span><span className="auth-image-count">{mode === 'login' ? '01' : mode === 'create-account' ? '02' : '03'} <i/> 03</span></div>
         <div className="auth-image-copy">
           <span className="auth-image-kicker"><span/> RENTWISE, UGANDA</span>
-          <h2>Good homes.<br/><em>Clear records.</em></h2>
-          <p>For the people who own, care for and call a place home.</p>
+          <h2>{visual.headline[0]}<br/><em>{visual.headline[1]}</em></h2>
+          <p>{visual.support}</p>
         </div>
-        <div className="auth-image-caption"><span><House size={16}/></span><div><b>A place to belong</b><small>From Kampala to every corner of home.</small></div><ArrowRight size={17}/></div>
+        <div className="auth-image-caption"><span><House size={16}/></span><div><b>A place to belong</b><small>{visual.caption}</small></div><ArrowRight size={17}/></div>
         <div className="auth-image-line" aria-hidden="true"/>
       </aside>
     </div>
