@@ -3,7 +3,17 @@ import './rental.css';
 import './dashboard.css';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import NotFoundPage from '@/pages/not-found';
+import SignUpPage from '@/pages/sign-up';
+import AuthPage from '@/pages/auth';
 import {
   deriveWorkspace,
   parseWorkspaceRecords,
@@ -31,7 +41,7 @@ import {
 import {
   Activity as ActivityIcon, ArrowDownLeft, ArrowLeft, ArrowUpRight, Bell, Building2, CalendarDays,
   Check, CheckCircle2, ChevronDown, ChevronLeft, CircleHelp, ClipboardList, Clock3, Download, FileCheck2,
-  LayoutDashboard, List, Menu, Moon, MoreHorizontal,
+  LayoutDashboard, List, LogOut, Menu, Moon, MoreHorizontal,
   Plus, RefreshCw, Search, Settings, ShieldCheck, Sun, UserRound, Users, Wallet, Wrench, X,
   BarChart3, MapPin, Smartphone, Eye, EyeOff, ReceiptText, House, TrendingUp,
 } from 'lucide-react';
@@ -338,7 +348,19 @@ function AppShell() {
     <div className="sidebar-bottom"><div className="sync-card" title="Records are saved only in this browser"><span className="sync-dot"/><div><b>Saved on this device</b><small>Local storage · no account sync</small></div><Check size={15}/></div><Link href="/settings" aria-label="Preferences" title="Preferences" className={classes('nav-item', path === '/settings' && 'active')} data-testid="nav-settings"><Settings size={18}/><span>Preferences</span></Link><div className="user-mini" title={`Agnes M. · ${d.role} workspace`}><span className="avatar">AM</span><div><b>Agnes M.</b><small>{d.role} workspace</small></div><MoreHorizontal size={18}/></div></div>
   </aside>;
   return <div className="app-shell"><div className={classes('shell-layout', sidebarCollapsed && 'sidebar-is-collapsed')}>{sidebar}{drawer && <button className="scrim" onClick={() => setDrawer(false)} aria-label="Close menu"/>}<main className="main-area">
-     <header className="topbar"><button className="mobile-menu icon-button" onClick={() => setDrawer(true)} aria-label="Open menu"><Menu size={20}/></button><div className="crumb"><span>Workspace</span><span>/</span><b>{title}</b></div><div className="top-actions"><span className="connection"><span/>Browser-only</span><button className="icon-button" aria-label="Refresh workspace" onClick={d.refresh} data-testid="button-refresh"><RefreshCw size={17}/></button><Link href="/notifications" className="icon-button notify-button" aria-label="Notifications"><Bell size={18}/><i/></Link><span className="top-divider"/><button className="profile-button" onClick={() => setLocation('/settings')} data-testid="button-profile"><span className="avatar small-avatar">AM</span><span>Agnes M.</span><ChevronDown size={14}/></button></div></header>
+     <header className="topbar"><button className="mobile-menu icon-button" onClick={() => setDrawer(true)} aria-label="Open menu"><Menu size={20}/></button><div className="crumb"><span>Workspace</span><span>/</span><b>{title}</b></div><div className="top-actions"><span className="connection"><span/>Browser-only</span><button className="icon-button" aria-label="Refresh workspace" onClick={d.refresh} data-testid="button-refresh"><RefreshCw size={17}/></button><Link href="/notifications" className="icon-button notify-button" aria-label="Notifications"><Bell size={18}/><i/></Link><span className="top-divider"/><DropdownMenu>
+        <DropdownMenuTrigger asChild><button className="profile-button" data-testid="button-profile" aria-label="Open account menu"><span className="avatar small-avatar">AM</span><span>Agnes M.</span><ChevronDown size={14}/></button></DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel className="flex items-center gap-2.5 py-2">
+            <span className="avatar small-avatar">AM</span>
+            <span className="flex flex-col gap-0.5"><b className="text-[13px] font-semibold">Agnes M.</b><small className="text-[11px] text-muted-foreground">{d.role} workspace</small></span>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator/>
+          <DropdownMenuItem onSelect={() => setLocation('/settings')} data-testid="menu-preferences"><Settings size={16}/> Preferences</DropdownMenuItem>
+          <DropdownMenuSeparator/>
+          <DropdownMenuItem onSelect={() => setLocation('/')} className="focus:bg-destructive focus:text-destructive-foreground" data-testid="menu-sign-out"><LogOut size={16}/> Sign out</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu></div></header>
     <div className="content-area"><div className="page-heading"><div><div className="eyebrow">{title === 'Overview' ? `${d.role.toUpperCase()} WORKSPACE · UGANDA` : 'RENTWISE · UGANDA'}</div><h1>{title}</h1>{title === 'Overview' && <p className="heading-sub">{d.role === 'Caretaker' ? 'A practical view of today’s collection and the homes in your care.' : d.role === 'Tenant' ? 'A simple, clear record of home, rent and care.' : 'A clearer view of home, and everything that keeps it running.'}</p>}</div>{path === '/dashboard' && <Link href={d.role === 'Tenant' ? '/tenant' : '/daily-collection'} className="button button-primary" data-testid="button-collect-rent">{d.role === 'Tenant' ? <UserRound size={17} /> : <Plus size={17} />}{d.role === 'Tenant' ? 'Open tenant space' : 'Record payment'}</Link>}</div>
       <div className="page-enter"><Switch>
         <Route path="/" component={() => <Redirect to="/dashboard"/>}/>
@@ -699,6 +721,13 @@ function ModalActions({ close }: { close: () => void }) {
   return <div className="modal-actions"><button type="button" className="button button-quiet" onClick={close}>Cancel</button><button type="submit" className="button button-primary">Save</button></div>;
 }
 
+function Router() {
+  const [path] = useLocation();
+  if (path === '/' || path === '/signup') return <SignUpPage />;
+  if (path === '/login' || path === '/create-account' || path === '/forgot-password') return <AuthPage />;
+  return <WorkspaceData><AppShell /></WorkspaceData>;
+}
+
 export default function App() {
-  return <WouterRouter><TooltipProvider><WorkspaceData><AppShell/><Toaster/></WorkspaceData></TooltipProvider></WouterRouter>;
+  return <WouterRouter><TooltipProvider><Router /><Toaster /></TooltipProvider></WouterRouter>;
 }
