@@ -77,6 +77,13 @@ const navGroups = [
 const fmt = (n?: number | null) => `UGX ${(n ?? 0).toLocaleString('en-UG')}`;
 const compact = (n?: number) => `UGX ${(n ?? 0).toLocaleString('en-UG', { notation: 'compact', maximumFractionDigits: 1 })}`;
 const dateFmt = (value?: string | null) => value ? new Date(value).toLocaleDateString('en-UG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+const localDateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+const daysUntilDate = (value: string, today: Date) => {
+  const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+  const targetDay = Date.UTC(year, month - 1, day);
+  const todayDay = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.round((targetDay - todayDay) / 86_400_000);
+};
 const initials = (name?: string | null) => (name || '—').split(' ').slice(0, 2).map(x => x[0]).join('').toUpperCase();
 const statusLabel = (s: string) => s.replaceAll('_', ' ');
 const classes = (...args: (string | false | undefined | null)[]) => args.filter(Boolean).join(' ');
@@ -208,10 +215,36 @@ function DashboardPage() {
      <div className="metrics-grid"><Metric label="Collected this month" value={compact(s?.totalCollected)} note="Across all active properties" icon={Wallet}/><Metric label="Outstanding" value={compact(s?.outstanding)} note={`${s?.lateCount || 0} units need a follow-up`} icon={Clock3} tone="amber"/><Metric label="Occupancy" value={`${s?.occupiedUnits ?? 0} / ${s?.totalUnits ?? 0}`} note={`${s?.totalUnits ? Math.round((s.occupiedUnits / s.totalUnits) * 100) : 0}% of homes occupied`} icon={Building2} tone="blue"/><Metric label="Paid today" value={`${s?.paidToday ?? 0} payment${s?.paidToday === 1 ? '' : 's'}`} note="Verified entries today" icon={CheckCircle2} tone="green"/></div>
     <section className="collection-hero"><div className="hero-copy"><div className="hero-label"><ShieldCheck size={15}/> THE LEDGER IS IN GOOD ORDER</div><h2>Trust, built one<br/><em>record at a time.</em></h2><p>Rent recorded clearly. Agreements kept close. Repairs never forgotten.</p><Link href="/daily-collection" className="button button-cream">Go to daily collection <ArrowUpRight size={16}/></Link></div><div className="trust-seal"><div className="seal-ring"><ShieldCheck size={29}/><strong>{s?.trustPercent ?? 98}%</strong><small>RECORD<br/>CONFIDENCE</small></div><div className="seal-caption">Verified records<br/>this month</div></div><div className="hero-orbit orbit-one"/><div className="hero-orbit orbit-two"/></section>
     <Panel title="Units at a glance" action={<Link href="/properties" className="text-link">View all <ArrowUpRight size={14}/></Link>} className="units-panel"><div className="unit-grid">{(s?.units || d.units || []).slice(0, 8).map(u => <UnitTile key={u.id} unit={u}/>)}</div>{!(s?.units || d.units)?.length && <Empty title="No units to show" text="Add a property and its units to see the monthly picture here." action={<Link className="text-link" href="/properties">Add a property</Link>}/>}</Panel>
-     <Panel title="Needs your attention" className="attention-panel"><div className="attention-list">{(s?.attention || []).slice(0, 4).map((item, i) => <div key={`${item}-${i}`} className="attention-item"><span className={i === 0 ? 'attention-mark warn' : 'attention-mark'}>{i === 0 ? '!' : <ArrowUpRight size={14}/>}</span><span>{item}</span><button onClick={() => setLocation(i === 0 ? '/daily-collection' : '/repairs')} aria-label={`Review ${item}`}><ArrowUpRight size={15}/></button></div>)}{!(s?.attention || []).length && <div className="calm-empty"><CheckCircle2 size={18}/>Nothing needs attention right now.</div>}</div><Link href="/daily-collection" className="panel-foot-link">Review collection <ArrowUpRight size={14}/></Link></Panel>
+     <div className="dashboard-side-stack">
+       <Panel title="Needs your attention" className="attention-panel"><div className="attention-list">{(s?.attention || []).slice(0, 4).map((item, i) => <div key={`${item}-${i}`} className="attention-item"><span className={i === 0 ? 'attention-mark warn' : 'attention-mark'}>{i === 0 ? '!' : <ArrowUpRight size={14}/>}</span><span>{item}</span><button onClick={() => setLocation(i === 0 ? '/daily-collection' : '/repairs')} aria-label={`Review ${item}`}><ArrowUpRight size={15}/></button></div>)}{!(s?.attention || []).length && <div className="calm-empty"><CheckCircle2 size={18}/>Nothing needs attention right now.</div>}</div><Link href="/daily-collection" className="panel-foot-link">Review collection <ArrowUpRight size={14}/></Link></Panel>
+       <UpcomingRentPanel agreements={d.agreements} loading={d.loading} error={d.errors}/>
+     </div>
     <Panel title="Recent activity" action={<Link href="/notifications" className="text-link">See activity <ArrowUpRight size={14}/></Link>} className="activity-panel"><DataState rows={activities}><div className="activity-list">{activities.slice(0, 5).map(a => <ActivityRow key={a.id} item={a}/>)}</div></DataState></Panel>
     <div className="mobile-money-note"><Smartphone size={17}/><span><b>Mobile money, made clear.</b> MTN MoMo and Airtel Money entries are recorded alongside every receipt.</span><Link href="/payments">View ledger</Link></div>
   </div>;
+}
+function UpcomingRentPanel({ agreements, loading, error }: { agreements?: Agreement[]; loading: boolean; error: boolean }) {
+  const today = new Date();
+  const todayKey = localDateKey(today);
+  const upcoming = (agreements || [])
+    .filter(item => item.startDate <= todayKey && item.endDate >= todayKey && item.nextDueDate >= todayKey)
+    .sort((a, b) => a.nextDueDate.localeCompare(b.nextDueDate) || a.unitNumber.localeCompare(b.unitNumber))
+    .slice(0, 3);
+  const renderState = (icon: ReactNode, text: string) => <div className="upcoming-rent-state">{icon}<span>{text}</span></div>;
+  return <Panel title="Upcoming rent" action={<Link href="/agreements" className="text-link">View agreements <ArrowUpRight size={14}/></Link>} className="upcoming-rent-panel" >
+    {!agreements && loading ? renderState(<CalendarDays size={18}/>, 'Checking upcoming due dates…')
+      : !agreements && error ? renderState(<WifiOff size={18}/>, 'Upcoming rent could not be loaded.')
+      : upcoming.length ? <div className="upcoming-rent-list">{upcoming.map(item => {
+        const days = daysUntilDate(item.nextDueDate, today);
+        const dueLabel = days === 0 ? 'Due today' : days === 1 ? 'Due tomorrow' : days < 7 ? `Due in ${days} days` : dateFmt(item.nextDueDate);
+        return <div className="upcoming-rent-item" key={item.id}>
+          <span className="upcoming-rent-icon"><CalendarDays size={16}/></span>
+          <span className="upcoming-rent-tenant"><b>{item.tenantName}</b><small>Unit {item.unitNumber}</small></span>
+          <span className="upcoming-rent-amount"><b>{compact(item.monthlyRent)}</b><small>{dueLabel}</small></span>
+        </div>;
+      })}</div>
+      : renderState(<CalendarDays size={18}/>, 'No upcoming rent due dates are recorded.')}
+  </Panel>;
 }
 function UnitTile({ unit }: { unit: Unit }) {
   return <Link href="/properties" className={`unit-tile unit-${unit.status}`} data-testid={`unit-tile-${unit.id}`}><span>{unit.unitNumber}</span><i/><small>{unit.tenantName || statusLabel(unit.status)}</small><b>{unit.balance > 0 ? fmt(unit.balance) : fmt(unit.rentAmount)}</b></Link>;
