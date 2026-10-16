@@ -333,9 +333,16 @@
 }
 
 @media (min-width: 768px) {
+  .app-shell .sidebar {
+    inset: 10px auto 10px 10px;
+    height: auto;
+    border: 1px solid hsl(var(--sidebar-border));
+    border-radius: 26px;
+    box-shadow: 0 14px 38px hsl(164 30% 8% / .15);
+  }
   .app-shell .main-area {
     min-height: calc(100dvh - 20px);
-    margin: 10px 10px 10px 262px;
+    margin: 10px 10px 10px 272px;
     border: 1px solid hsl(var(--card-border) / .8);
     border-radius: 30px;
     background: hsl(var(--background));
@@ -355,7 +362,7 @@
 }
 
 @media (min-width: 768px) and (max-width: 1120px) {
-  .app-shell .main-area { margin-left: 232px; }
+  .app-shell .main-area { margin-left: 242px; }
 }
 
 .app-shell .page-heading { margin-bottom: 24px; }
@@ -584,6 +591,17 @@
 .app-shell .calm-empty svg { color: hsl(75 50% 36%); }
 
 @media (max-width: 767px) {
+  .app-shell .sidebar {
+    inset: 8px auto 8px 8px;
+    height: auto;
+    border: 1px solid hsl(var(--sidebar-border));
+    border-radius: 24px;
+    transform: translateX(calc(-100% - 16px));
+  }
+  .app-shell .sidebar.sidebar-open {
+    transform: translateX(0);
+    border-radius: 24px;
+  }
   .app-shell .main-area {
     min-height: calc(100dvh - 16px);
     margin: 8px;
