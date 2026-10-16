@@ -270,7 +270,8 @@ export const CreatePaymentBody = zod.object({
   "amount": zod.number().min(1),
   "method": zod.enum(['mobile_money', 'cash', 'bank']),
   "recordedBy": zod.string().min(1),
-  "reference": zod.string().optional()
+  "reference": zod.string().optional(),
+  "confirmDuplicate": zod.boolean().optional().describe('Explicitly confirm recording a payment that matches a recent entry for the same unit and amount.')
 })
 
 export const CreatePaymentResponse = zod.object({
@@ -378,6 +379,35 @@ export const GetAgreementsResponseItem = zod.object({
   "signedAt": zod.coerce.date().nullable()
 })
 export const GetAgreementsResponse = zod.array(GetAgreementsResponseItem)
+
+
+/**
+ * @summary Record a tenant's typed agreement acknowledgement
+ */
+export const SignAgreementParams = zod.object({
+  "id": zod.coerce.number().int()
+})
+
+export const signAgreementBodySignerNameMin = 2;
+export const signAgreementBodySignerNameMax = 80;
+
+
+
+export const SignAgreementBody = zod.object({
+  "signerName": zod.string().min(signAgreementBodySignerNameMin).max(signAgreementBodySignerNameMax)
+})
+
+export const SignAgreementResponse = zod.object({
+  "id": zod.number().int(),
+  "tenantName": zod.string(),
+  "unitNumber": zod.string(),
+  "monthlyRent": zod.number(),
+  "deposit": zod.number(),
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date(),
+  "nextDueDate": zod.coerce.date(),
+  "signedAt": zod.coerce.date().nullable()
+})
 
 
 /**

@@ -194,6 +194,8 @@ export interface PaymentInput {
   /** @minLength 1 */
   recordedBy: string;
   reference?: string;
+  /** Explicitly confirm recording a payment that matches a recent entry for the same unit and amount. */
+  confirmDuplicate?: boolean;
 }
 
 export type RepairStatus = typeof RepairStatus[keyof typeof RepairStatus];
@@ -261,6 +263,14 @@ export interface Agreement {
   nextDueDate: string;
   /** @nullable */
   signedAt: string | null;
+}
+
+export interface SignAgreementInput {
+  /**
+     * @minLength 2
+     * @maxLength 80
+     */
+  signerName: string;
 }
 
 export type ActivityType = typeof ActivityType[keyof typeof ActivityType];

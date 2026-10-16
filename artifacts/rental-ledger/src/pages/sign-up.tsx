@@ -189,6 +189,9 @@ export default function SignUpPage() {
             <Link href="/dashboard" onClick={() => setMenuOpen(false)}>
               Explore the workspace <ArrowUpRight size={15} />
             </Link>
+            <Link href="/login" onClick={() => setMenuOpen(false)} data-testid="link-welcome-sign-in">
+              Sign in to Rentwise <ArrowUpRight size={15} />
+            </Link>
             <a href="#signup-footer" onClick={() => setMenuOpen(false)}>
               Learn about Rentwise <ChevronRight size={15} />
             </a>
@@ -220,10 +223,10 @@ export default function SignUpPage() {
 
           <section className="signup-join-card" aria-label="Get started with Rentwise">
             <span className="signup-join-kicker">HOME, MADE SIMPLER</span>
-            <Link className="signup-join-button" href="/dashboard" data-testid="link-signup-join">
+            <Link className="signup-join-button" href="/create-account" data-testid="link-signup-join">
               JOIN TODAY <ArrowRight size={16} />
             </Link>
-            <small>Explore the demo workspace</small>
+            <small>Already have an account? <Link href="/login" data-testid="link-signup-login">Sign in</Link></small>
           </section>
         </section>
 
