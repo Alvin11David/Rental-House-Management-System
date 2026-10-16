@@ -1,44 +1,42 @@
-# [Project name]
+# Rentwise Rental Ledger
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A rental-management workspace for Ugandan landlords, caretakers, and tenants to track properties, rent, repairs, agreements, and receipts.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- The `artifacts/rental-ledger` web artifact runs through its managed Replit workflow.
+- `pnpm --filter @workspace/rental-ledger run typecheck` — typecheck the app.
+- `pnpm --filter @workspace/rental-ledger run build` — build the static web app.
+- Rental records are stored in this browser's `localStorage`; there is no API server, account sync, or database.
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- pnpm workspaces, React, Vite, TypeScript
+- Client-side persistence: browser `localStorage`
+- Routing: Wouter
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/rental-ledger/src/App.tsx` — app routes, pages, and workspace interactions.
+- `artifacts/rental-ledger/src/lib/local-data.ts` — browser persistence, demo records, and derived ledger data.
+- `artifacts/rental-ledger/src/rental.css` — rental-management styles.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Rental records stay local to the browser and are not transmitted to a server.
+- The dashboard, activity feed, balances, and analytics are derived from the same locally stored records.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+The app supports property and unit setup, tenant assignment, rent collection and receipts, repair tracking, agreement summaries, activity history, and analytics.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Keep the rental workflows browser-only; do not add server APIs or cross-device account sync.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Browser-stored records are isolated to the current browser profile and do not sync to other devices or users.
 
 ## Pointers
 

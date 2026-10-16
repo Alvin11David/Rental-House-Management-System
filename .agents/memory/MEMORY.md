@@ -1,1 +1,1 @@
-- [OpenAPI date-only values](openapi-date-only-values.md) — normalize date strings at the API boundary before Drizzle persistence.
+- [Browser-only rental data](browser-only-rental-data.md) — keep rental records in browser storage without an API or cross-device sync.
