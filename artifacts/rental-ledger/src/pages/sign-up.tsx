@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { ArrowRight, ArrowUpRight, Check, ChevronRight, Clock3, House, Menu, ShieldCheck, X } from 'lucide-react';
 import { Link } from 'wouter';
 import homesHero from '@assets/generated_images/rentwise-houses-hero.jpg';
@@ -31,9 +31,18 @@ const homes = [
 export default function SignUpPage() {
   const [activeHomeIndex, setActiveHomeIndex] = useState(1);
   const [menuOpen, setMenuOpen] = useState(false);
+  const signupStageRef = useRef<HTMLElement>(null);
+  const pointerFrameRef = useRef<number | null>(null);
+  const pendingPointerRef = useRef({ x: 0, y: 0 });
   const menuPanelRef = useRef<HTMLElement>(null);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const activeHome = homes[activeHomeIndex];
+
+  useEffect(() => () => {
+    if (pointerFrameRef.current !== null) {
+      window.cancelAnimationFrame(pointerFrameRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -63,6 +72,33 @@ export default function SignUpPage() {
   }, [menuOpen]);
 
   const showNextHome = () => setActiveHomeIndex(index => (index + 1) % homes.length);
+  const schedulePhotoPointer = (x: number, y: number) => {
+    pendingPointerRef.current = { x, y };
+    if (pointerFrameRef.current !== null) return;
+
+    pointerFrameRef.current = window.requestAnimationFrame(() => {
+      pointerFrameRef.current = null;
+      const stage = signupStageRef.current;
+      if (!stage) return;
+      stage.style.setProperty('--signup-pointer-x', `${pendingPointerRef.current.x.toFixed(1)}px`);
+      stage.style.setProperty('--signup-pointer-y', `${pendingPointerRef.current.y.toFixed(1)}px`);
+      stage.style.setProperty('--signup-rail-pointer-x', `${(pendingPointerRef.current.x * 0.45).toFixed(1)}px`);
+      stage.style.setProperty('--signup-rail-pointer-y', `${(pendingPointerRef.current.y * 0.45).toFixed(1)}px`);
+    });
+  };
+
+  const handlePhotoPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const stage = signupStageRef.current;
+    if (!stage) return;
+    const bounds = stage.getBoundingClientRect();
+    if (!bounds.width || !bounds.height) return;
+
+    const intensity = event.pointerType === 'touch' ? 0.6 : 1;
+    const horizontal = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
+    const vertical = ((event.clientY - bounds.top) / bounds.height) * 2 - 1;
+    schedulePhotoPointer(-horizontal * 18 * intensity, -vertical * 12 * intensity);
+  };
 
   return (
     <main className="signup-page">
@@ -93,18 +129,32 @@ export default function SignUpPage() {
           <span className="signup-rail-caption">FIND HOME. FEEL AT HOME.</span>
         </aside>
 
-        <section className="signup-stage" aria-label="Welcome to Rentwise">
+        <section
+          ref={signupStageRef}
+          className="signup-stage"
+          aria-label="Welcome to Rentwise"
+          onPointerMove={handlePhotoPointerMove}
+          onPointerLeave={() => schedulePhotoPointer(0, 0)}
+        >
           <div className="signup-photo-main">
-            <img
-              key={activeHomeIndex}
-              src={homesHero}
-              alt={`A bright, leafy residential setting — ${activeHome.label.toLowerCase()}`}
-              style={{ objectPosition: activeHome.position }}
-            />
+            <div className="signup-photo-drift">
+              <div className="signup-photo-pointer">
+                <img
+                  key={activeHomeIndex}
+                  src={homesHero}
+                  alt={`A bright, leafy residential setting — ${activeHome.label.toLowerCase()}`}
+                  style={{ objectPosition: activeHome.position }}
+                />
+              </div>
+            </div>
             <div className="signup-photo-wash" />
           </div>
           <div className="signup-photo-rail">
-            <img src={homesHero} alt="" />
+            <div className="signup-photo-drift">
+              <div className="signup-photo-pointer">
+                <img src={homesHero} alt="" />
+              </div>
+            </div>
             <span className="signup-photo-rail-tag"><House size={14} /> YOUR NEXT CHAPTER</span>
           </div>
 
