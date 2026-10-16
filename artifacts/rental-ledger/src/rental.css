@@ -97,6 +97,7 @@
 .hero-label { color: hsl(43 68% 76%); }
 .hero-copy h2 em { color: hsl(43 73% 67%); }
 .hero-copy p { color: hsl(42 22% 81%); }
+.dashboard-grid { row-gap: 22px; }
 .units-panel { grid-column: 1 / -1; grid-row: auto; }
 .attention-panel { grid-column: 2; grid-row: 2; }
 .seal-ring { border-color: hsl(210 100% 76% / .55); color: hsl(210 100% 78%); }

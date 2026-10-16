@@ -82,6 +82,7 @@ body { margin: 0; min-width: 320px; background: hsl(var(--rw-bg)); }
 .mock-panel.attention { grid-column: 2; grid-row: 2; }
 .mock-panel.units { grid-column: 1; grid-row: 3; }
 .mock-dashboard.is-refined .mock-hero { background: hsl(var(--rw-sidebar)); }
+.mock-dashboard.is-refined .mock-grid { row-gap: 22px; }
 .mock-dashboard.is-refined .mock-panel.units { grid-column: 1 / -1; grid-row: auto; }
 .mock-panel.activity { grid-column: 1 / -1; }
 .mock-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 15px 18px 12px; border-bottom: 1px solid hsl(var(--rw-border)); }
@@ -196,8 +197,11 @@ body { margin: 0; min-width: 320px; background: hsl(var(--rw-bg)); }
   color: #f7f7f4;
   border-color: transparent;
   border-radius: 25px;
-  background: hsl(var(--rw-charcoal));
+  background: #233652;
   box-shadow: 0 12px 30px hsl(235 12% 16% / .09);
+}
+.mock-dashboard.is-rounded.is-refined .mock-hero {
+  background: hsl(var(--rw-sidebar));
 }
 .mock-dashboard.is-rounded .mock-hero-label { color: hsl(75 82% 69%); }
 .mock-dashboard.is-rounded .mock-hero h2 em { color: hsl(var(--rw-lime)); }
