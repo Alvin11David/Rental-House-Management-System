@@ -1,0 +1,798 @@
+.role-tour-tenant {
+  --tour-accent: #2c46ce;
+  --tour-action: #263db7;
+  --tour-ink: #fff;
+  --tour-highlight: #ffc96e;
+  --tour-soft: #e9edff;
+  --tour-pattern: rgb(35 55 173 / 14%);
+}
+
+.role-tour-caretaker {
+  --tour-accent: #155e50;
+  --tour-action: #104a40;
+  --tour-ink: #fff;
+  --tour-highlight: #c5ec79;
+  --tour-soft: #e2f3eb;
+  --tour-pattern: rgb(15 89 72 / 13%);
+}
+
+.role-tour-landlord {
+  --tour-accent: #f2ad4c;
+  --tour-action: #2648c7;
+  --tour-ink: #1e2945;
+  --tour-highlight: #2446bd;
+  --tour-soft: #fff4df;
+  --tour-pattern: rgb(51 65 121 / 14%);
+}
+
+.tour-overlay-refined {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: 18px;
+  background: rgb(13 21 34 / 60%);
+  backdrop-filter: blur(7px);
+}
+
+.role-tour-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(285px, .88fr) minmax(0, 1.12fr);
+  width: min(100%, 860px);
+  min-height: 500px;
+  max-height: min(700px, calc(100dvh - 36px));
+  overflow: auto;
+  border: 1px solid rgb(255 255 255 / 72%);
+  border-radius: 25px;
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  box-shadow: 0 34px 90px rgb(5 15 32 / 30%);
+  animation: role-tour-arrive .36s cubic-bezier(.2,.8,.2,1) both;
+}
+
+.role-tour-art {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 31px 30px 24px;
+  background: var(--tour-accent);
+  color: var(--tour-ink);
+  isolation: isolate;
+}
+
+.role-tour-art::before {
+  position: absolute;
+  z-index: -1;
+  right: -90px;
+  bottom: -130px;
+  width: 340px;
+  height: 340px;
+  border: 1px solid rgb(255 255 255 / 21%);
+  border-radius: 50%;
+  content: '';
+}
+
+.role-tour-art::after {
+  position: absolute;
+  z-index: -1;
+  top: 178px;
+  left: -105px;
+  width: 230px;
+  height: 230px;
+  border: 1px dashed rgb(255 255 255 / 26%);
+  border-radius: 50%;
+  content: '';
+}
+
+.role-tour-landlord .role-tour-art::before {
+  border-color: rgb(44 57 120 / 18%);
+}
+
+.role-tour-landlord .role-tour-art::after {
+  border-color: rgb(44 57 120 / 22%);
+}
+
+.role-tour-art-orbit {
+  position: absolute;
+  z-index: -1;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  background: var(--tour-highlight);
+  transform: rotate(45deg);
+}
+
+.role-tour-art-orbit-one {
+  top: 39%;
+  right: 15%;
+}
+
+.role-tour-art-orbit-two {
+  bottom: 18%;
+  left: 13%;
+  width: 6px;
+  height: 6px;
+  opacity: .8;
+}
+
+.role-tour-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.role-tour-brand-mark {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: 10px 10px 10px 3px;
+  background: rgb(255 255 255 / 15%);
+  color: var(--tour-ink);
+}
+
+.role-tour-brand b,
+.role-tour-brand small {
+  display: block;
+}
+
+.role-tour-brand b {
+  font: 800 12px var(--app-font-sans);
+  letter-spacing: .11em;
+}
+
+.role-tour-brand small {
+  margin-top: 3px;
+  font: 500 7px var(--app-font-mono);
+  letter-spacing: .08em;
+  opacity: .72;
+}
+
+.role-tour-art-story {
+  position: relative;
+  z-index: 1;
+  margin-top: 31px;
+}
+
+.role-tour-art-story > span {
+  display: block;
+  max-width: 240px;
+  color: var(--tour-highlight);
+  font: 600 8px var(--app-font-mono);
+  letter-spacing: .1em;
+  line-height: 1.5;
+}
+
+.role-tour-landlord .role-tour-art-story > span {
+  color: #283d9a;
+}
+
+.role-tour-art-story h3 {
+  max-width: 295px;
+  margin: 10px 0 0;
+  white-space: pre-line;
+  font: 700 25px/1.18 var(--app-font-serif);
+  letter-spacing: -.7px;
+}
+
+.role-tour-art-scene {
+  position: relative;
+  min-height: 225px;
+  flex: 1;
+  margin: auto 0 0;
+}
+
+.role-tour-icon-tile {
+  position: absolute;
+  top: 14px;
+  left: 49%;
+  display: grid;
+  width: 142px;
+  height: 138px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 55%);
+  border-radius: 29px;
+  background-color: var(--tour-soft);
+  background-image: radial-gradient(var(--tour-pattern) .8px, transparent .8px);
+  background-size: 13px 13px;
+  color: var(--tour-action);
+  box-shadow: 0 15px 35px rgb(11 22 51 / 16%);
+  transform: translateX(-50%) rotate(-7deg);
+  transition: transform .3s cubic-bezier(.2,.8,.2,1);
+}
+
+.role-tour-card:hover .role-tour-icon-tile {
+  transform: translateX(-50%) rotate(-4deg) translateY(-2px);
+}
+
+.role-tour-art-spark {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  width: 37px;
+  height: 37px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: 12px;
+  background: var(--tour-highlight);
+  color: var(--tour-action);
+  box-shadow: 0 8px 20px rgb(12 22 41 / 15%);
+}
+
+.role-tour-art-spark-one {
+  top: 4px;
+  right: 12%;
+  transform: rotate(8deg);
+}
+
+.role-tour-art-spark-two {
+  top: 94px;
+  left: 9%;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  transform: rotate(-8deg);
+}
+
+.role-tour-feature-card {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 6%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 61px;
+  padding: 10px 11px;
+  border: 1px solid rgb(30 41 69 / 7%);
+  border-radius: 13px;
+  background: white;
+  color: #24324a;
+  box-shadow: 0 12px 31px rgb(12 22 41 / 18%);
+  transform: rotate(1.5deg);
+}
+
+.role-tour-feature-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--tour-soft);
+  color: var(--tour-action);
+}
+
+.role-tour-feature-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.role-tour-feature-copy small,
+.role-tour-feature-copy b {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.role-tour-feature-copy small {
+  margin-bottom: 4px;
+  color: #7a8495;
+  font: 600 7px var(--app-font-mono);
+  letter-spacing: .06em;
+}
+
+.role-tour-feature-copy b {
+  font: 700 10px var(--app-font-sans);
+}
+
+.role-tour-feature-check {
+  flex: 0 0 auto;
+  color: #238360;
+}
+
+.role-tour-art-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 15px;
+  color: currentColor;
+  font: 600 7px var(--app-font-mono);
+  letter-spacing: .04em;
+  opacity: .75;
+}
+
+.role-tour-art-foot > span,
+.role-tour-art-foot > b {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.role-tour-art-foot > span i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--tour-highlight);
+}
+
+.role-tour-art-foot > b {
+  gap: 5px;
+  white-space: nowrap;
+  font: inherit;
+}
+
+.role-tour-art-foot > b i {
+  width: 13px;
+  height: 1px;
+  background: currentColor;
+}
+
+.role-tour-content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 27px 31px 23px;
+  background: hsl(var(--card));
+}
+
+.role-tour-header,
+.role-tour-wordmark {
+  display: flex;
+  align-items: center;
+}
+
+.role-tour-header {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.role-tour-wordmark {
+  min-width: 0;
+  gap: 8px;
+  color: hsl(var(--foreground));
+  font: 800 9px var(--app-font-sans);
+  letter-spacing: .1em;
+}
+
+.role-tour-header-mark {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 9px 9px 9px 3px;
+  background: var(--tour-soft);
+  color: var(--tour-action);
+}
+
+.role-tour-wordmark > i {
+  width: 1px;
+  height: 16px;
+  margin: 0 2px;
+  background: hsl(var(--border));
+}
+
+.role-tour-wordmark small {
+  overflow: hidden;
+  color: hsl(var(--muted-foreground));
+  font: 500 9px var(--app-font-sans);
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.role-tour-close {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  background: hsl(var(--card));
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  transition: background .18s, color .18s, border-color .18s;
+}
+
+.role-tour-close:hover,
+.role-tour-close:focus-visible {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.role-tour-progress-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 27px;
+}
+
+.role-tour-progress-wrap > span:first-child {
+  flex: 0 0 auto;
+  color: var(--tour-action);
+  font: 600 8px var(--app-font-mono);
+  letter-spacing: .11em;
+}
+
+.role-tour-progress-track {
+  display: block;
+  width: 49%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: hsl(var(--muted));
+}
+
+.role-tour-progress-track > i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--tour-action);
+  transition: width .32s cubic-bezier(.2,.8,.2,1);
+}
+
+.role-tour-copy {
+  flex: 1;
+  min-height: 177px;
+  padding-top: 29px;
+  animation: role-tour-copy-in .3s ease both;
+}
+
+.role-tour-step-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--tour-action);
+  font: 600 8px var(--app-font-mono);
+  letter-spacing: .08em;
+}
+
+.role-tour-step-label > svg {
+  flex: 0 0 auto;
+}
+
+.role-tour-copy h2 {
+  max-width: 430px;
+  margin: 13px 0 9px;
+  color: hsl(var(--foreground));
+  font: 700 clamp(25px, 3vw, 31px)/1.13 var(--app-font-serif);
+  letter-spacing: -1.15px;
+}
+
+.role-tour-copy p {
+  max-width: 410px;
+  margin: 0;
+  color: hsl(var(--muted-foreground));
+  font: 400 12px/1.7 var(--app-font-sans);
+}
+
+.role-tour-local-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 9px 10px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 9px;
+  color: hsl(var(--muted-foreground));
+  font: 400 8px/1.5 var(--app-font-sans);
+}
+
+.role-tour-local-note > svg {
+  flex: 0 0 auto;
+  color: var(--tour-action);
+}
+
+.role-tour-local-note b {
+  color: hsl(var(--foreground));
+  font-weight: 600;
+}
+
+.role-tour-actions,
+.role-tour-actions > div {
+  display: flex;
+  align-items: center;
+}
+
+.role-tour-actions {
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 17px;
+  padding-top: 2px;
+}
+
+.role-tour-actions > div {
+  gap: 7px;
+}
+
+.role-tour-skip,
+.role-tour-back {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  font: 600 10px var(--app-font-sans);
+  cursor: pointer;
+  transition: color .16s, background .16s, transform .16s;
+}
+
+.role-tour-skip {
+  padding: 0 7px 0 0;
+}
+
+.role-tour-back {
+  padding: 0 10px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  color: hsl(var(--foreground));
+}
+
+.role-tour-skip:hover,
+.role-tour-back:hover {
+  color: var(--tour-action);
+}
+
+.role-tour-back:hover {
+  background: hsl(var(--muted) / .6);
+}
+
+.role-tour-next {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 15px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: var(--tour-action);
+  color: #fff;
+  box-shadow: 0 5px 12px rgb(21 37 85 / 16%);
+  font: 600 10px var(--app-font-sans);
+  cursor: pointer;
+  transition: box-shadow .18s, transform .18s, filter .18s;
+}
+
+.role-tour-next:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 8px 18px rgb(21 37 85 / 21%);
+  transform: translateY(-1px);
+}
+
+.role-tour-next:active {
+  transform: translateY(0);
+}
+
+.role-tour-close:focus-visible,
+.role-tour-skip:focus-visible,
+.role-tour-back:focus-visible,
+.role-tour-next:focus-visible {
+  outline: 3px solid hsl(210 100% 65% / .7);
+  outline-offset: 3px;
+}
+
+@keyframes role-tour-arrive {
+  from { opacity: 0; transform: translateY(12px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes role-tour-copy-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 680px) {
+  .tour-overlay-refined {
+    padding: 13px;
+  }
+
+  .role-tour-card {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 158px minmax(0, 1fr);
+    width: min(100%, 510px);
+    min-height: 0;
+    max-height: calc(100dvh - 26px);
+    border-radius: 22px;
+  }
+
+  .role-tour-art {
+    min-height: 0;
+    padding: 17px 21px;
+  }
+
+  .role-tour-art::after {
+    top: 30px;
+    left: auto;
+    right: 12px;
+    width: 132px;
+    height: 132px;
+  }
+
+  .role-tour-art::before {
+    right: -40px;
+    bottom: -112px;
+    width: 200px;
+    height: 200px;
+  }
+
+  .role-tour-brand-mark {
+    width: 29px;
+    height: 29px;
+    border-radius: 9px 9px 9px 3px;
+  }
+
+  .role-tour-brand b {
+    font-size: 10px;
+  }
+
+  .role-tour-brand small {
+    font-size: 6px;
+  }
+
+  .role-tour-art-story {
+    max-width: 205px;
+    margin-top: 15px;
+  }
+
+  .role-tour-art-story > span {
+    max-width: 180px;
+    font-size: 6px;
+  }
+
+  .role-tour-art-story h3 {
+    max-width: 200px;
+    margin-top: 5px;
+    font-size: 17px;
+    letter-spacing: -.4px;
+  }
+
+  .role-tour-art-scene {
+    position: absolute;
+    right: 15px;
+    bottom: 7px;
+    width: 120px;
+    min-height: 105px;
+    margin: 0;
+  }
+
+  .role-tour-icon-tile {
+    top: 11px;
+    left: 50%;
+    width: 77px;
+    height: 75px;
+    border-radius: 19px;
+  }
+
+  .role-tour-icon-tile > svg {
+    width: 38px;
+    height: 38px;
+  }
+
+  .role-tour-art-spark {
+    width: 25px;
+    height: 25px;
+    border-radius: 8px;
+  }
+
+  .role-tour-art-spark-one {
+    top: 2px;
+    right: 5px;
+  }
+
+  .role-tour-art-spark-two {
+    top: 58px;
+    left: 0;
+    width: 22px;
+    height: 22px;
+  }
+
+  .role-tour-art-spark > svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .role-tour-feature-card,
+  .role-tour-art-foot {
+    display: none;
+  }
+
+  .role-tour-content {
+    min-height: 345px;
+    overflow-y: auto;
+    padding: 18px 21px 18px;
+  }
+
+  .role-tour-header-mark {
+    width: 27px;
+    height: 27px;
+  }
+
+  .role-tour-progress-wrap {
+    margin-top: 19px;
+  }
+
+  .role-tour-copy {
+    min-height: 153px;
+    padding-top: 22px;
+  }
+
+  .role-tour-copy h2 {
+    margin-top: 10px;
+    font-size: clamp(23px, 6.6vw, 28px);
+    letter-spacing: -.8px;
+  }
+
+  .role-tour-copy p {
+    font-size: 11px;
+    line-height: 1.6;
+  }
+
+  .role-tour-local-note {
+    margin-top: 5px;
+    padding: 8px 9px;
+    font-size: 7px;
+  }
+
+  .role-tour-actions {
+    margin-top: 12px;
+  }
+
+  .role-tour-next {
+    min-height: 42px;
+    gap: 7px;
+    padding: 0 11px;
+    font-size: 9px;
+  }
+}
+
+@media (max-height: 590px) and (min-width: 681px) {
+  .role-tour-card {
+    min-height: 0;
+    max-height: calc(100dvh - 24px);
+  }
+
+  .role-tour-art {
+    padding-top: 22px;
+    padding-bottom: 18px;
+  }
+
+  .role-tour-art-story {
+    margin-top: 21px;
+  }
+
+  .role-tour-art-scene {
+    min-height: 185px;
+  }
+
+  .role-tour-copy {
+    min-height: 140px;
+    padding-top: 21px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .role-tour-card,
+  .role-tour-card *,
+  .role-tour-copy {
+    animation: none !important;
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
