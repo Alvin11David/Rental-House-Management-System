@@ -931,8 +931,6 @@
 .floor-unit>em { position:absolute;z-index:4;left:50%;bottom:calc(100% + 5px);width:max-content;max-width:140px;transform:translateX(-50%);padding:5px 7px;border-radius:5px;background:hsl(var(--foreground));color:hsl(var(--background));font:600 8px var(--app-font-sans);font-style:normal;box-shadow:0 4px 12px hsl(var(--foreground) / .18); }
 .confirm-assignment>p { margin:0 0 12px;color:hsl(var(--muted-foreground));font-size:12px;line-height:1.55; }
 .confirm-assignment>p:first-child { color:hsl(var(--foreground)); }
-.duplicate-warning>p { color:hsl(var(--muted-foreground));font-size:12px;line-height:1.6; }
-.duplicate-warning>.attention-mark { display:grid;width:32px;height:32px; }
 .date-filter { font-size:9px;color:hsl(var(--muted-foreground)); }
 .date-filter label { display:flex;align-items:center;gap:5px; }
 .date-filter input { min-height:36px;max-width:145px;padding:6px 8px;border:1px solid hsl(var(--input));border-radius:6px;background:hsl(var(--background));color:hsl(var(--foreground));font:10px var(--app-font-sans); }
@@ -1066,8 +1064,6 @@
 .collection-readonly-summary>span { color:hsl(var(--muted-foreground));font-size:11px; }
 .collection-readonly-summary>div { width:100%;padding:13px 0;border-top:1px solid hsl(var(--border));color:hsl(var(--muted-foreground));font-size:11px; }
 .collection-readonly-summary>div strong { color:hsl(var(--foreground));font:700 18px var(--app-font-mono); }
-.duplicate-warning { display:flex;flex-direction:column;gap:13px; }
-.duplicate-warning p { margin:0;color:hsl(var(--muted-foreground));font-size:12px;line-height:1.6; }
 .ledger-date-tools { justify-content:flex-end;gap:10px; }
 .ledger-date-tools>label { display:flex;align-items:center;gap:7px;color:hsl(var(--muted-foreground));font-size:10px; }
 .ledger-date-tools input { min-height:36px;padding:5px 8px;border:1px solid hsl(var(--input));border-radius:7px;background:hsl(var(--background));color:hsl(var(--foreground));font:400 10px var(--app-font-sans); }
@@ -1168,4 +1164,20 @@
 }
 @media (prefers-reduced-motion:reduce) {
   .caretaker-home-tile,.wizard-photo-grid>div,.wizard-photo-skeleton i,.tour-card,.tour-card h2 { animation:none !important;transition:none !important; }
+}
+
+/* Motion and interaction enhancements. */
+.assignment-cursor { position:fixed;z-index:120;pointer-events:none;transform:translate(12px,-50%);padding:6px 9px;border-radius:6px;background:hsl(var(--foreground));color:hsl(var(--background));font:600 9px var(--app-font-sans);box-shadow:0 6px 18px hsl(var(--foreground) / .22);white-space:nowrap; }
+.assignment-cursor.invalid { background:hsl(2 60% 45%); }
+.toast-message { flex:1;min-width:0; }
+.toast-undo { border:0;background:transparent;color:inherit;font:700 10px var(--app-font-sans);text-decoration:underline;cursor:pointer;padding:3px 4px;white-space:nowrap; }
+@keyframes rise-in { from { opacity:0;transform:translateY(10px); } to { opacity:1;transform:translateY(0); } }
+.tenant-grid > .tenant-card,.agreement-grid > .agreement-card,.unit-grid > .unit-tile,.role-record-list > .role-record-row,.caretaker-followup-list > .caretaker-followup { animation:rise-in .4s ease both; }
+.tenant-grid > .tenant-card:nth-child(2){animation-delay:.05s}.tenant-grid > .tenant-card:nth-child(3){animation-delay:.1s}.tenant-grid > .tenant-card:nth-child(4){animation-delay:.15s}.tenant-grid > .tenant-card:nth-child(5){animation-delay:.2s}.tenant-grid > .tenant-card:nth-child(6){animation-delay:.25s}
+.agreement-grid > .agreement-card:nth-child(2){animation-delay:.05s}.agreement-grid > .agreement-card:nth-child(3){animation-delay:.1s}.agreement-grid > .agreement-card:nth-child(4){animation-delay:.15s}
+.unit-grid > .unit-tile:nth-child(2){animation-delay:.04s}.unit-grid > .unit-tile:nth-child(3){animation-delay:.08s}.unit-grid > .unit-tile:nth-child(4){animation-delay:.12s}.unit-grid > .unit-tile:nth-child(5){animation-delay:.16s}.unit-grid > .unit-tile:nth-child(6){animation-delay:.2s}.unit-grid > .unit-tile:nth-child(7){animation-delay:.24s}.unit-grid > .unit-tile:nth-child(8){animation-delay:.28s}
+.skeleton-block { display:block;border-radius:8px;background:linear-gradient(100deg,hsl(var(--muted)) 25%,hsl(var(--card)) 48%,hsl(var(--muted)) 70%);background-size:220% 100%;animation:photo-shimmer 1.1s linear infinite; }
+@media (prefers-reduced-motion:reduce) {
+  .assignment-cursor { transition:none !important; }
+  .tenant-grid > .tenant-card,.agreement-grid > .agreement-card,.unit-grid > .unit-tile,.role-record-list > .role-record-row,.caretaker-followup-list > .caretaker-followup,.skeleton-block { animation:none !important; }
 }

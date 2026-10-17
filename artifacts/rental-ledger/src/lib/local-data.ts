@@ -94,7 +94,6 @@ export interface PaymentInput {
   method: PaymentMethod;
   recordedBy: string;
   reference?: string;
-  confirmDuplicate?: boolean;
 }
 
 export interface Repair {

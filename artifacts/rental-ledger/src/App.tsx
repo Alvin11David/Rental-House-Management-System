@@ -60,7 +60,9 @@ type DataContextValue = {
   createContactReveal: (input: ContactRevealInput) => void;
   createRepair: (input: RepairInput) => Repair;
   updateRepair: (id: number, update: RepairUpdate) => Repair;
-  notify: (message: string) => void;
+  removePayment: (id: number) => void;
+  assignTenant: (tenantId: number, unitId: number) => void;
+  notify: (message: string, undo?: () => void) => void;
 } & WorkspaceView;
 const DataContext = createContext<DataContextValue | null>(null);
 const useData = () => {
@@ -97,13 +99,50 @@ const daysUntilDate = (value: string, today: Date) => {
 const initials = (name?: string | null) => (name || '—').split(' ').slice(0, 2).map(x => x[0]).join('').toUpperCase();
 const statusLabel = (s: string) => s.replaceAll('_', ' ');
 const classes = (...args: (string | false | undefined | null)[]) => args.filter(Boolean).join(' ');
+const usePrefersReducedMotion = () => {
+  const [reduced, setReduced] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const onChange = () => setReduced(query.matches);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
+  return reduced;
+};
+const useCountUp = (target: number, duration = 850) => {
+  const reduced = usePrefersReducedMotion();
+  const [value, setValue] = useState(reduced ? target : 0);
+  useEffect(() => {
+    if (reduced || !Number.isFinite(target)) { setValue(target); return; }
+    let frame = 0; const start = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(target * eased);
+      if (t < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [target, reduced, duration]);
+  return value;
+};
+const useSimulatedLoad = (delay = 520) => {
+  const [loading, setLoading] = useState(true);
+  useEffect(() => { const timer = window.setTimeout(() => setLoading(false), delay); return () => window.clearTimeout(timer); }, [delay]);
+  return loading;
+};
 
 function WorkspaceData({ children }: { children: ReactNode }) {
   const [records, setRecords] = useState(readWorkspaceRecords);
   const recordsRef = useRef(records);
   const [role, setRole] = useState<Role>(() => (localStorage.getItem('ledger-role') as Role) || 'Landlord');
-  const [notice, setNotice] = useState('');
-  const notify = (s: string) => { setNotice(s); window.setTimeout(() => setNotice(''), 3600); };
+  const [notice, setNotice] = useState<{ message: string; undo?: () => void } | null>(null);
+  const noticeTimer = useRef<number | null>(null);
+  const notify = (message: string, undo?: () => void) => {
+    if (noticeTimer.current) window.clearTimeout(noticeTimer.current);
+    setNotice({ message, undo });
+    noticeTimer.current = window.setTimeout(() => setNotice(null), undo ? 10000 : 3600);
+  };
   const commitRecords = (update: (current: WorkspaceRecords) => WorkspaceRecords) => {
     const next = update(recordsRef.current);
     saveWorkspaceRecords(next);
@@ -124,9 +163,6 @@ function WorkspaceData({ children }: { children: ReactNode }) {
     let created!: Unit;
     commitRecords(current => {
       if (!current.properties.some(property => property.id === input.propertyId)) throw new Error('Choose a property before adding a unit.');
-      if (current.units.some(unit => unit.propertyId === input.propertyId && unit.unitNumber.trim().toLowerCase() === input.unitNumber.trim().toLowerCase())) {
-        throw new Error('That unit number is already used at this property.');
-      }
       const id = current.nextId;
       created = { ...input, id, unitNumber: input.unitNumber.trim(), status: 'vacant', tenantId: null, tenantName: null, balance: 0 };
       return { ...current, nextId: id + 1, units: [...current.units, { id, propertyId: input.propertyId, unitNumber: created.unitNumber, bedrooms: input.bedrooms, rentAmount: input.rentAmount, status: 'vacant', tenantId: null }] };
@@ -185,10 +221,6 @@ function WorkspaceData({ children }: { children: ReactNode }) {
     commitRecords(current => {
       const unit = current.units.find(item => item.id === input.unitId);
       if (!unit || unit.tenantId == null) throw new Error('Choose an occupied unit before recording rent.');
-      const duplicateSince = Date.now() - 60 * 60 * 1000;
-      const duplicate = current.payments.some(payment => payment.unitId === input.unitId
-        && payment.amount === input.amount && new Date(payment.recordedAt).getTime() >= duplicateSince);
-      if (duplicate && !input.confirmDuplicate) throw new Error('A payment for this unit and amount was recorded recently.');
       const id = current.nextId;
       const tenantName = current.tenants.find(tenant => tenant.id === unit.tenantId)?.fullName ?? 'Tenant';
       created = {
@@ -331,6 +363,25 @@ function WorkspaceData({ children }: { children: ReactNode }) {
     });
     return updated;
   };
+  const removePayment = (id: number) => {
+    commitRecords(current => ({ ...current, payments: current.payments.filter(payment => payment.id !== id) }));
+  };
+  const assignTenant = (tenantId: number, unitId: number) => {
+    commitRecords(current => {
+      const tenant = current.tenants.find(item => item.id === tenantId);
+      const unit = current.units.find(item => item.id === unitId);
+      if (!tenant || !unit) return current;
+      return {
+        ...current,
+        units: current.units.map(item => {
+          if (item.id === unitId) return { ...item, tenantId, status: 'pending' as const };
+          if (item.tenantId === tenantId) return { ...item, tenantId: null, status: 'vacant' as const };
+          return item;
+        }),
+        tenants: current.tenants.map(item => item.id === tenantId ? { ...item, unitId, unitNumber: unit.unitNumber } : item),
+      };
+    });
+  };
   const refresh = () => {
     const latest = readWorkspaceRecords();
     recordsRef.current = latest;
@@ -365,9 +416,11 @@ function WorkspaceData({ children }: { children: ReactNode }) {
     createContactReveal,
     createRepair,
     updateRepair,
+    removePayment,
+    assignTenant,
     notify,
   };
-  return <DataContext.Provider value={data}>{children}{notice && <div role="status" className="toast-note" data-testid="status-feedback"><CheckCircle2 size={17}/>{notice}<button aria-label="Dismiss notification" onClick={() => setNotice('')}><X size={16}/></button></div>}</DataContext.Provider>;
+  return <DataContext.Provider value={data}>{children}{notice && <div role="status" aria-live="polite" className="toast-note" data-testid="status-feedback"><CheckCircle2 size={17}/><span className="toast-message">{notice.message}</span>{notice.undo && <button type="button" className="toast-undo" onClick={() => { notice.undo?.(); setNotice(null); }}>Undo</button>}<button aria-label="Dismiss notification" onClick={() => setNotice(null)}><X size={16}/></button></div>}</DataContext.Provider>;
 }
 
 function AppShell() {
@@ -453,7 +506,7 @@ const onboardingByRole: Record<Role, { title: string; text: string }[]> = {
   Caretaker: [
     { title: 'Start with today’s follow-ups', text: 'Your home screen puts unpaid units and open repairs near the top, ready for a quick check.' },
     { title: 'Record a payment in a few steps', text: 'Open Daily collection, choose an occupied unit, enter the amount, select cash, bank, or mobile money, then confirm.' },
-    { title: 'Keep the receipt details', text: 'Add the MTN or Airtel transaction reference when available. A matching recent entry will ask you to confirm before saving.' },
+    { title: 'Keep the receipt details', text: 'Add the MTN or Airtel transaction reference when available, so the receipt is easy to trace later.' },
     { title: 'Move repair work forward', text: 'Update a repair stage, record who is handling it, and add the cost when it is known.' },
   ],
   Tenant: [
@@ -484,12 +537,15 @@ function OnboardingTour({ role }: { role: Role }) {
   </div>;
 }
 
-function Metric({ label, value, note, icon: Icon, tone = 'green' }: { label: string; value: string; note: string; icon: typeof Wallet; tone?: string }) {
-  return <div className="metric-card" data-testid={`metric-${label.toLowerCase().replaceAll(' ', '-')}`}><div className="metric-top"><span>{label}</span><span className={`metric-icon ${tone}`}><Icon size={17}/></span></div><strong>{value}</strong><small>{note}</small></div>;
+function Metric({ label, value, numeric, format, note, icon: Icon, tone = 'green' }: { label: string; value?: string; numeric?: number; format?: (n: number) => string; note: string; icon: typeof Wallet; tone?: string }) {
+  const animated = useCountUp(numeric ?? 0);
+  const display = numeric != null && format ? format(animated) : value;
+  return <div className="metric-card" data-testid={`metric-${label.toLowerCase().replaceAll(' ', '-')}`}><div className="metric-top"><span>{label}</span><span className={`metric-icon ${tone}`}><Icon size={17}/></span></div><strong>{display}</strong><small>{note}</small></div>;
 }
 function Panel({ title, action, children, className = '' }: { title: string; action?: ReactNode; children: ReactNode; className?: string }) {
   return <section className={`panel ${className}`}><div className="panel-head"><h2>{title}</h2>{action}</div>{children}</section>;
 }
+function Skeleton({ height, width, radius }: { height?: number; width?: number | string; radius?: number }) { return <span className="skeleton-block" style={{ height, width, borderRadius: radius }} aria-hidden="true"/>; }
 function Status({ value }: { value: string }) { return <span className={`status-pill status-${value.replaceAll('_', '-')}`}><i/>{statusLabel(value)}</span>; }
 function Empty({ title, text, action }: { title: string; text: string; action?: ReactNode }) { return <div className="empty-state"><span className="empty-icon"><ClipboardList size={22}/></span><b>{title}</b><p>{text}</p>{action}</div>; }
 function DataState({ rows, children, title = 'No records yet', text = 'When new activity is recorded, it will appear here.' }: { rows?: unknown[]; children: ReactNode; title?: string; text?: string }) {
@@ -645,12 +701,14 @@ function RepairWorkflowActions({ repair }: { repair: Repair }) {
   const nextStatus = repair.status === 'reported' ? 'assigned' : repair.status === 'assigned' ? 'in_progress' : 'done';
   const advance = () => {
     try {
+      const previousStatus = repair.status;
+      const previousAssignedTo = repair.assignedTo;
       d.updateRepair(repair.id, {
         status: nextStatus,
         actor,
         ...(repair.status === 'reported' && assignee.trim() ? { assignedTo: assignee.trim() } : {}),
       });
-      d.notify(`Repair moved to ${statusLabel(nextStatus)}`);
+      d.notify(`Repair moved to ${statusLabel(nextStatus)}`, () => { d.updateRepair(repair.id, { status: previousStatus, assignedTo: previousAssignedTo, actor }); });
     } catch (error) {
       d.notify(error instanceof Error ? error.message : 'Could not update repair status.');
     }
@@ -762,9 +820,10 @@ function PrivateActivityPage() {
   return <div className="page-stack"><div className="role-page-intro"><span className="role-page-icon"><Bell size={19}/></span><div><span className="eyebrow">{isTenant ? 'YOUR HOME' : 'YOUR RECENT WORK'}</span><h2>{isTenant ? 'Receipts and updates' : 'Activity and receipts'}</h2><p>{isTenant ? 'Only activity connected with your home appears here.' : 'A record of caretaker collection and repair activity.'}</p></div></div><section className="panel notifications-panel"><DataState rows={activities} title="You are up to date" text="Relevant payments and repair updates will appear here."><div className="timeline">{activities.map((item, index) => <div className="timeline-entry" key={item.id}><div className="timeline-rail"><span className={`timeline-icon type-${item.type}`}>{item.type === 'payment' ? <Wallet size={16}/> : <Wrench size={16}/>}</span>{index < activities.length - 1 && <i/>}</div><div className="timeline-body"><div className="timeline-title"><b>{item.title}</b><time>{dateFmt(item.occurredAt)}</time></div><p>{item.detail}</p><div className="timeline-meta"><span>{isTenant ? `Unit ${item.unitNumber}` : `Unit ${item.unitNumber}`}</span>{!isTenant && <span>{item.actor}</span>}</div>{item.type === 'payment' && isTenant && <Link className="receipt-link" href={`/receipt/${item.id}`}><ReceiptText size={14}/>View receipt <ArrowUpRight size={13}/></Link>}</div></div>)}</div></DataState></section></div>;
 }
 function DashboardPage() {
-  const d = useData(); const s = d.dashboard; const activities = d.activity || s?.activity || []; const [, setLocation] = useLocation();
+  const d = useData(); const s = d.dashboard; const activities = d.activity || s?.activity || []; const [, setLocation] = useLocation(); const loading = useSimulatedLoad(500);
+  if (loading) return <div className="dashboard-grid"><div className="metrics-grid">{[0, 1, 2, 3].map(index => <div className="metric-card" key={index}><div className="metric-top"><span><Skeleton height={10} width="62%"/></span><Skeleton height={30} width={30} radius={8}/></div><div style={{ margin: '11px 0 6px' }}><Skeleton height={22} width="70%"/></div><Skeleton height={9} width="48%"/></div>)}</div><Panel title="Loading overview"><Skeleton height={130}/></Panel><Panel title="Recent activity"><Skeleton height={96}/></Panel></div>;
   return <div className="dashboard-grid">
-     <div className="metrics-grid"><Metric label="Collected this month" value={compact(s?.totalCollected)} note="Across all active properties" icon={Wallet}/><Metric label="Outstanding" value={compact(s?.outstanding)} note={`${s?.lateCount || 0} units need a follow-up`} icon={Clock3} tone="amber"/><Metric label="Occupancy" value={`${s?.occupiedUnits ?? 0} / ${s?.totalUnits ?? 0}`} note={`${s?.totalUnits ? Math.round((s.occupiedUnits / s.totalUnits) * 100) : 0}% of homes occupied`} icon={Building2} tone="blue"/><Metric label="Paid today" value={`${s?.paidToday ?? 0} payment${s?.paidToday === 1 ? '' : 's'}`} note="Verified entries today" icon={CheckCircle2} tone="green"/></div>
+     <div className="metrics-grid"><Metric label="Collected this month" numeric={s?.totalCollected ?? 0} format={compact} note="Across all active properties" icon={Wallet}/><Metric label="Outstanding" numeric={s?.outstanding ?? 0} format={compact} note={`${s?.lateCount || 0} units need a follow-up`} icon={Clock3} tone="amber"/><Metric label="Occupancy" value={`${s?.occupiedUnits ?? 0} / ${s?.totalUnits ?? 0}`} note={`${s?.totalUnits ? Math.round((s.occupiedUnits / s.totalUnits) * 100) : 0}% of homes occupied`} icon={Building2} tone="blue"/><Metric label="Paid today" numeric={s?.paidToday ?? 0} format={n => `${Math.round(n)} payment${Math.round(n) === 1 ? '' : 's'}`} note="Verified entries today" icon={CheckCircle2} tone="green"/></div>
     <section className="collection-hero"><div className="hero-copy"><div className="hero-label"><ShieldCheck size={15}/> THE LEDGER IS IN GOOD ORDER</div><h2>Trust, built one<br/><em>record at a time.</em></h2><p>Rent recorded clearly. Agreements kept close. Repairs never forgotten.</p><Link href="/daily-collection" className="button button-cream">Go to daily collection <ArrowUpRight size={16}/></Link></div><div className="trust-seal"><div className="seal-ring"><ShieldCheck size={29}/><strong>{s?.trustPercent ?? 98}%</strong><small>RECORD<br/>CONFIDENCE</small></div><div className="seal-caption">Verified records<br/>this month</div></div><div className="hero-orbit orbit-one"/><div className="hero-orbit orbit-two"/></section>
      <Panel title="Needs your attention" className="attention-panel"><div className="attention-list">{(s?.attention || []).slice(0, 4).map((item, i) => <div key={`${item}-${i}`} className="attention-item"><span className={i === 0 ? 'attention-mark warn' : 'attention-mark'}>{i === 0 ? '!' : <ArrowUpRight size={14}/>}</span><span>{item}</span><button onClick={() => setLocation(i === 0 ? '/daily-collection' : '/repairs')} aria-label={`Review ${item}`}><ArrowUpRight size={15}/></button></div>)}{!(s?.attention || []).length && <div className="calm-empty"><CheckCircle2 size={18}/>Nothing needs attention right now.</div>}</div><Link href="/daily-collection" className="panel-foot-link">Review collection <ArrowUpRight size={14}/></Link></Panel>
      <Panel title="Units at a glance" action={<Link href="/properties" className="text-link">View all <ArrowUpRight size={14}/></Link>} className="units-panel"><div className="unit-grid">{(s?.units || d.units || []).slice(0, 8).map(u => <UnitTile key={u.id} unit={u}/>)}</div>{!(s?.units || d.units)?.length && <Empty title="No units to show" text="Add a property and its units to see the monthly picture here." action={<Link className="text-link" href="/properties">Add a property</Link>}/>}</Panel>
@@ -804,6 +863,82 @@ function PropertiesPage() {
   const d = useData(); const [mode, setMode] = useState<'plan' | 'list'>('plan'); const [open, setOpen] = useState(false); const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null); const [unitSearch, setUnitSearch] = useState(''); const [statusFilter, setStatusFilter] = useState('all');
   const [propertyId, setPropertyId] = useState<number | ''>(''); const [unitNo, setUnitNo] = useState(''); const [beds, setBeds] = useState('1'); const [rent, setRent] = useState('');
   const [addingUnit, setAddingUnit] = useState(false);
+  const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
+  const [dragTenant, setDragTenant] = useState<Tenant | null>(null);
+  const [dragOverUnitId, setDragOverUnitId] = useState<number | null>(null);
+  const [dragValid, setDragValid] = useState(false);
+  const [hoverUnitId, setHoverUnitId] = useState<number | null>(null);
+  const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
+  const [assignTarget, setAssignTarget] = useState<{ tenant: Tenant; unit: Unit } | null>(null);
+  const dragOverUnitIdRef = useRef<number | null>(null);
+  const dragValidRef = useRef(false);
+  const pendingDrag = useRef<Tenant | null>(null);
+  const draggingRef = useRef(false);
+  const suppressClickRef = useRef(false);
+  const downX = useRef(0);
+  const downY = useRef(0);
+  const updateDrag = (tenant: Tenant, x: number, y: number) => {
+    setCursor({ x, y });
+    const el = document.elementFromPoint(x, y) as HTMLElement | null;
+    const unitEl = el?.closest('[data-unit-id]') as HTMLElement | null;
+    const unitId = unitEl ? Number(unitEl.dataset.unitId) : null;
+    const unit = unitId != null ? (d.units || []).find(u => u.id === unitId) : undefined;
+    const valid = Boolean(unit) && (unit?.tenantId == null || unit?.tenantId === tenant.id);
+    setDragOverUnitId(unit ? unitId : null);
+    setDragValid(valid);
+    dragOverUnitIdRef.current = unit ? unitId : null;
+    dragValidRef.current = valid;
+  };
+  useEffect(() => {
+    const move = (event: PointerEvent) => {
+      if (!pendingDrag.current) return;
+      if (!draggingRef.current) {
+        if (Math.hypot(event.clientX - downX.current, event.clientY - downY.current) > 6) {
+          draggingRef.current = true;
+          setDragTenant(pendingDrag.current);
+        }
+      }
+      if (draggingRef.current) updateDrag(pendingDrag.current, event.clientX, event.clientY);
+    };
+    const up = () => {
+      if (draggingRef.current && pendingDrag.current) {
+        suppressClickRef.current = true;
+        const tenant = pendingDrag.current;
+        const unit = dragOverUnitIdRef.current != null ? (d.units || []).find(u => u.id === dragOverUnitIdRef.current) : undefined;
+        const valid = dragValidRef.current;
+        pendingDrag.current = null;
+        draggingRef.current = false;
+        setDragTenant(null);
+        setDragOverUnitId(null);
+        setDragValid(false);
+        setCursor(null);
+        if (valid && unit) setAssignTarget({ tenant, unit });
+      } else {
+        pendingDrag.current = null;
+      }
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+  }, [d.units]);
+  const currentAssignTenant = d.tenants.find(t => t.id === (dragTenant ? dragTenant.id : selectedTenantId ?? -1));
+  const assignStateFor = (unit: Unit) => {
+    if (!currentAssignTenant) return { cls: '', label: null as string | null };
+    const valid = unit.tenantId == null || unit.tenantId === currentAssignTenant.id;
+    const activeId = dragTenant ? dragOverUnitId : hoverUnitId;
+    const hovered = activeId === unit.id;
+    return { cls: hovered ? (valid ? 'assignment-hover' : 'assignment-invalid') : '', label: hovered ? (valid ? (currentAssignTenant.unitId != null ? 'Move here' : 'Drop to assign') : 'Not allowed') : null };
+  };
+  const onUnitClick = (unit: Unit) => {
+    const tenant = currentAssignTenant;
+    if (tenant && selectedTenantId != null && !dragTenant) {
+      const valid = unit.tenantId == null || unit.tenantId === tenant.id;
+      if (!valid) { d.notify('That home is occupied. Choose a vacant home to assign this tenant.'); return; }
+      setAssignTarget({ tenant, unit });
+      return;
+    }
+    setSelectedUnit(unit);
+  };
   const addUnit = (e: FormEvent) => {
     e.preventDefault();
     const id = Number(propertyId || d.properties[0]?.id);
@@ -820,12 +955,15 @@ function PropertiesPage() {
   };
   return <div className="page-stack"><div className="toolbar"><div className="toolbar-meta"><b>{d.properties?.length ?? 0} properties</b><span>·</span><span>{d.units?.length ?? 0} units tracked</span></div><div className="toolbar-right"><div className="segmented"><button className={mode === 'plan' ? 'selected' : ''} onClick={() => setMode('plan')} aria-pressed={mode === 'plan'} data-testid="toggle-floorplan"><LayoutDashboard size={15}/>Floor plan</button><button className={mode === 'list' ? 'selected' : ''} onClick={() => setMode('list')} aria-pressed={mode === 'list'} data-testid="toggle-list"><List size={16}/>List</button></div><button className="button button-primary" onClick={() => setOpen(true)} data-testid="button-add-property"><Plus size={16}/>Add property</button></div></div>
      {mode === 'plan' && <div className="toolbar map-filter"><label className="filter-search"><Search size={16}/><input aria-label="Search units or tenants" placeholder="Search unit or tenant" value={unitSearch} onChange={e => setUnitSearch(e.target.value)} data-testid="search-units"/></label><select aria-label="Filter units by status" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} data-testid="filter-unit-status"><option value="all">All unit states</option><option value="paid">Paid</option><option value="pending">Pending</option><option value="late">Late</option><option value="vacant">Vacant</option><option value="repair">Under repair</option></select></div>}
+    {mode === 'plan' && (d.tenants?.length ?? 0) > 0 && <div className="assignment-tray" role="group" aria-label="Assign a tenant to a home"><div><b>Assign a tenant</b><small>Drag a person onto a home, or tap a person then a home.</small></div><div className="assignment-people">{d.tenants.map(t => <button type="button" key={t.id} className={classes('assignment-person', selectedTenantId === t.id && 'selected')} onPointerDown={event => { pendingDrag.current = t; downX.current = event.clientX; downY.current = event.clientY; draggingRef.current = false; suppressClickRef.current = false; }} onClick={() => { if (suppressClickRef.current) { suppressClickRef.current = false; return; } setSelectedTenantId(prev => prev === t.id ? null : t.id); }} aria-pressed={selectedTenantId === t.id} data-testid={`assign-person-${t.id}`}><span className="tenant-avatar">{initials(t.fullName)}</span><span><b>{t.fullName}</b><small>{t.unitNumber ? `Unit ${t.unitNumber}` : 'No unit yet'}</small></span></button>)}</div>{selectedTenantId != null && <button type="button" className="button button-quiet assignment-cancel" onClick={() => setSelectedTenantId(null)}>Cancel</button>}</div>}
     <DataState rows={d.properties} title="Your first property starts here" text="Create a property, then add units and keep every rent record in one place.">
-        {mode === 'plan' ? <div className="property-plan-grid">{d.properties?.map((p, idx) => <section className="property-plan panel" key={p.id}><div className="property-plan-head"><div className={`building-icon building-${idx % 3}`}><Building2 size={20}/></div><div><h2>{p.name}</h2><span><MapPin size={13}/>{p.address}</span></div><button className="icon-button" aria-label={`More options for ${p.name}`}><MoreHorizontal size={18}/></button></div><p className="property-description">{p.description || 'Homes, managed with care.'}</p>{p.photoDataUrls?.length ? <div className="property-photo-strip" aria-label={`${p.photoDataUrls.length} property photos`}>{p.photoDataUrls.slice(0, 4).map((photo, photoIndex) => <img key={`${p.id}-photo-${photoIndex}`} src={photo} alt={`${p.name} photo ${photoIndex + 1}`}/>)}</div> : null}<div className="floorplan" data-testid={`floorplan-${p.id}`}><div className="floorplan-label">UNIT MAP <span>Tap a home to review</span></div><div className="floorplan-units">{(d.units || []).filter(u => u.propertyId === p.id && (statusFilter === 'all' || u.status === statusFilter) && `${u.unitNumber} ${u.tenantName || ''}`.toLowerCase().includes(unitSearch.toLowerCase())).map(unit => <button key={unit.id} onClick={() => setSelectedUnit(unit)} className={`floor-unit floor-${unit.status}`} aria-label={`Unit ${unit.unitNumber}, ${statusLabel(unit.status)}. View details`} data-testid={`floor-unit-${unit.id}`}><span>{unit.unitNumber}</span><small>{unit.bedrooms} bed</small><i>{unit.status === 'paid' ? <Check size={12}/> : unit.status === 'late' ? 'Due' : statusLabel(unit.status)}</i></button>)}</div><div className="floor-legend" aria-label="Unit status legend"><span><i className="paid-dot"/>Paid</span><span><i className="pending-dot"/>Pending</span><span><i className="late-dot"/>Late</span><span><i className="vacant-dot"/>Vacant</span><span><i className="repair-dot"/>Under repair</span></div></div><div className="property-foot"><span><b>{p.unitCount}</b> total units</span><button className="text-link" onClick={() => { setPropertyId(p.id); setAddingUnit(true); }}>Add unit <Plus size={14}/></button></div></section>)}</div> : <div className="panel table-panel"><table><thead><tr><th>Property</th><th>Address</th><th>Units</th><th>Occupancy</th><th>Actions</th></tr></thead><tbody>{d.properties?.map(p => { const units = (d.units || []).filter(u => u.propertyId === p.id); return <tr key={p.id}><td><b>{p.name}</b><small>{p.description}</small></td><td>{p.address}</td><td>{p.unitCount}</td><td>{units.filter(u => u.tenantId).length} occupied</td><td><button className="text-link" onClick={() => { setPropertyId(p.id); setAddingUnit(true); }}>Add unit <Plus size={14}/></button></td></tr>; })}</tbody></table></div>}
+        {mode === 'plan' ? <div className="property-plan-grid">{d.properties?.map((p, idx) => <section className="property-plan panel" key={p.id}><div className="property-plan-head"><div className={`building-icon building-${idx % 3}`}><Building2 size={20}/></div><div><h2>{p.name}</h2><span><MapPin size={13}/>{p.address}</span></div><button className="icon-button" aria-label={`More options for ${p.name}`}><MoreHorizontal size={18}/></button></div><p className="property-description">{p.description || 'Homes, managed with care.'}</p>{p.photoDataUrls?.length ? <div className="property-photo-strip" aria-label={`${p.photoDataUrls.length} property photos`}>{p.photoDataUrls.slice(0, 4).map((photo, photoIndex) => <img key={`${p.id}-photo-${photoIndex}`} src={photo} alt={`${p.name} photo ${photoIndex + 1}`}/>)}</div> : null}<div className="floorplan" data-testid={`floorplan-${p.id}`}><div className="floorplan-label">UNIT MAP <span>Tap a home to review</span></div><div className="floorplan-units">{(d.units || []).filter(u => u.propertyId === p.id && (statusFilter === 'all' || u.status === statusFilter) && `${u.unitNumber} ${u.tenantName || ''}`.toLowerCase().includes(unitSearch.toLowerCase())).map(unit => <button key={unit.id} data-unit-id={unit.id} onClick={() => onUnitClick(unit)} onPointerEnter={() => setHoverUnitId(unit.id)} onPointerLeave={() => setHoverUnitId(id => (id === unit.id ? null : id))} className={classes(`floor-unit floor-${unit.status}`, assignStateFor(unit).cls)} aria-label={`Unit ${unit.unitNumber}, ${statusLabel(unit.status)}. View details`} data-testid={`floor-unit-${unit.id}`}><span>{unit.unitNumber}</span><small>{unit.bedrooms} bed</small><i>{unit.status === 'paid' ? <Check size={12}/> : unit.status === 'late' ? 'Due' : statusLabel(unit.status)}</i>{assignStateFor(unit).label && <em>{assignStateFor(unit).label}</em>}</button>)}</div><div className="floor-legend" aria-label="Unit status legend"><span><i className="paid-dot"/>Paid</span><span><i className="pending-dot"/>Pending</span><span><i className="late-dot"/>Late</span><span><i className="vacant-dot"/>Vacant</span><span><i className="repair-dot"/>Under repair</span></div></div><div className="property-foot"><span><b>{p.unitCount}</b> total units</span><button className="text-link" onClick={() => { setPropertyId(p.id); setAddingUnit(true); }}>Add unit <Plus size={14}/></button></div></section>)}</div> : <div className="panel table-panel"><table><thead><tr><th>Property</th><th>Address</th><th>Units</th><th>Occupancy</th><th>Actions</th></tr></thead><tbody>{d.properties?.map(p => { const units = (d.units || []).filter(u => u.propertyId === p.id); return <tr key={p.id}><td><b>{p.name}</b><small>{p.description}</small></td><td>{p.address}</td><td>{p.unitCount}</td><td>{units.filter(u => u.tenantId).length} occupied</td><td><button className="text-link" onClick={() => { setPropertyId(p.id); setAddingUnit(true); }}>Add unit <Plus size={14}/></button></td></tr>; })}</tbody></table></div>}
     </DataState>
     <PropertyWizardModal open={open} close={() => setOpen(false)}/>
     <Modal open={addingUnit} title="Add a unit" close={() => setAddingUnit(false)}><form onSubmit={addUnit} className="form-stack"><Field label="Property"><select value={propertyId || d.properties[0]?.id || ''} onChange={e => setPropertyId(Number(e.target.value))}>{d.properties.map(p => <option value={p.id} key={p.id}>{p.name}</option>)}</select></Field><Field label="Unit number"><input required value={unitNo} onChange={e => setUnitNo(e.target.value)} placeholder="B-04"/></Field><div className="form-row"><Field label="Bedrooms"><input type="number" min="0" value={beds} onChange={e => setBeds(e.target.value)}/></Field><Field label="Monthly rent (UGX)"><input type="number" min="0" required value={rent} onChange={e => setRent(e.target.value)}/></Field></div><ModalActions close={() => setAddingUnit(false)}/></form></Modal>
     <UnitDrawer unit={selectedUnit} onClose={() => setSelectedUnit(null)}/>
+    {dragTenant && cursor && <div className={classes('assignment-cursor', !dragValid && 'invalid')} style={{ left: cursor.x, top: cursor.y }} aria-hidden="true">{dragValid ? (dragTenant.unitId != null ? 'Move here' : 'Drop to assign') : 'Not allowed'}</div>}
+    {assignTarget && <Modal open title="Assign tenant" close={() => setAssignTarget(null)}><div className="confirm-assignment"><p>Assign <b>{assignTarget.tenant.fullName}</b> to Unit <b>{assignTarget.unit.unitNumber}</b>?</p><p>This links the tenant to the home and marks it awaiting confirmation.</p><div className="modal-actions"><button type="button" className="button button-quiet" onClick={() => setAssignTarget(null)}>Cancel</button><button type="button" className="button button-primary" onClick={() => { d.assignTenant(assignTarget.tenant.id, assignTarget.unit.id); d.notify(`${assignTarget.tenant.fullName} assigned to Unit ${assignTarget.unit.unitNumber}`); setSelectedTenantId(null); setAssignTarget(null); }}>Assign</button></div></div></Modal>}
   </div>;
 }
 type PropertyDraft = {
@@ -942,11 +1080,14 @@ function PropertyWizardModal({ open, close }: { open: boolean; close: () => void
 }
 function UnitDrawer({ unit, onClose }: { unit: Unit | null; onClose: () => void }) {
   const d = useData(); const [, setLocation] = useLocation(); const touchStartX = useRef<number | null>(null); const [phoneVisible, setPhoneVisible] = useState(false);
+  const asideRef = useRef<HTMLElement | null>(null); const previousFocus = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (!unit) return;
+    previousFocus.current = document.activeElement as HTMLElement | null;
+    window.setTimeout(() => asideRef.current?.focus(), 0);
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => { window.removeEventListener('keydown', onKey); previousFocus.current?.focus?.(); };
   }, [unit, onClose]);
   if (!unit) return null;
   const isLandlord = d.role === 'Landlord';
@@ -966,7 +1107,7 @@ function UnitDrawer({ unit, onClose }: { unit: Unit | null; onClose: () => void 
   const payments = (d.payments || []).filter(p => p.unitId === unit.id).slice(0, 5);
   const repairs = (d.repairs || []).filter(r => r.unitId === unit.id && r.status !== 'done');
   const timeline = (d.activity || []).filter(item => item.unitId === unit.id).slice(0, 6);
-  return <div className="drawer-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}><aside className="unit-drawer" role="dialog" aria-modal="true" aria-labelledby="unit-drawer-title" onTouchStart={event => { touchStartX.current = event.touches[0]?.clientX ?? null; }} onTouchEnd={event => { const endX = event.changedTouches[0]?.clientX; if (touchStartX.current != null && endX != null && endX - touchStartX.current > 80) onClose(); touchStartX.current = null; }}>
+  return <div className="drawer-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}><aside ref={asideRef} tabIndex={-1} className="unit-drawer" role="dialog" aria-modal="true" aria-labelledby="unit-drawer-title" onTouchStart={event => { touchStartX.current = event.touches[0]?.clientX ?? null; }} onTouchEnd={event => { const endX = event.changedTouches[0]?.clientX; if (touchStartX.current != null && endX != null && endX - touchStartX.current > 80) onClose(); touchStartX.current = null; }}>
     <div className="drawer-heading"><div><span className="eyebrow">UNIT RECORD</span><h2 id="unit-drawer-title">{unit.unitNumber}</h2><p>{d.properties?.find(p => p.id === unit.propertyId)?.name || 'Property'} · {unit.bedrooms} bedroom{unit.bedrooms === 1 ? '' : 's'}</p></div><button className="icon-button" aria-label="Close unit details" onClick={onClose}><X size={19}/></button></div>
     <div className="drawer-status-row"><Status value={unit.status}/>{isLandlord && <b>{fmt(unit.rentAmount)} <small>/ month</small></b>}</div>
     <section className="drawer-section"><div className="drawer-section-head"><h3>Tenant</h3>{tenant && <span className="privacy-check"><ShieldCheck size={14}/> Private</span>}</div>{tenant ? <div className="drawer-tenant"><span className="tenant-avatar">{initials(tenant.fullName)}</span><div><b>{tenant.fullName}</b><small>{phoneVisible ? tenant.phone : maskPhone(tenant.phone)}</small></div><button type="button" className="icon-button" aria-label={phoneVisible ? 'Hide tenant phone number' : 'Reveal tenant phone number'} onClick={revealPhone}>{phoneVisible ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div> : <p className="drawer-empty">This unit is currently vacant.</p>}</section>
@@ -985,7 +1126,6 @@ function DailyCollectionPage() {
   const [reference, setReference] = useState('');
   const [filter, setFilter] = useState('');
   const [confirmed, setConfirmed] = useState<Payment | null>(null);
-  const [duplicatePending, setDuplicatePending] = useState<PaymentInput | null>(null);
   const unpaid = (d.units || []).filter(u => u.tenantId != null && (u.balance > 0 || ['pending', 'late'].includes(u.status)))
     .filter(u => `${u.unitNumber} ${u.tenantName || ''}`.toLowerCase().includes(filter.toLowerCase()));
   const chosen = d.units?.find(u => String(u.id) === unitId);
@@ -998,14 +1138,11 @@ function DailyCollectionPage() {
   const recordPayment = (input: PaymentInput) => {
     try {
       const payment = d.createPayment(input);
-      setDuplicatePending(null);
       setConfirmed(payment);
-      d.notify('Payment recorded in this browser. Receipt added to the ledger.');
+      d.notify('Payment recorded in this browser. Receipt added to the ledger.', () => { d.removePayment(payment.id); setConfirmed(null); });
       resetForm();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Payment could not be saved in this browser.';
-      if (message.includes('recorded recently') && !input.confirmDuplicate) setDuplicatePending(input);
-      else d.notify(message);
+      d.notify(error instanceof Error ? error.message : 'Payment could not be saved in this browser.');
     }
   };
   const submit = (e: FormEvent) => {
@@ -1045,7 +1182,6 @@ function DailyCollectionPage() {
       </section>
     </div>
     {confirmed && <Modal open title="Payment recorded" close={() => setConfirmed(null)}><div className="receipt-confirmation"><div className="paid-stamp" aria-label="Payment paid">PAID</div><span className="eyebrow">RENTWISE RECEIPT</span><h3>{fmt(confirmed.amount)}</h3><p>Unit {confirmed.unitNumber} · {confirmed.tenantName}</p><div className="receipt-meta"><span>Recorded {dateFmt(confirmed.recordedAt)}</span><span>{confirmed.method === 'mobile_money' ? 'MTN / Airtel mobile money' : statusLabel(confirmed.method)}</span>{confirmed.reference && <span>Reference {confirmed.reference}</span>}</div><div className="receipt-actions"><button type="button" className="button button-quiet" onClick={() => window.print()}><ReceiptText size={15}/>Print</button><button type="button" className="button button-primary" onClick={async () => { const url = `${window.location.origin}${import.meta.env.BASE_URL}receipt/${confirmed.id}`; try { await navigator.clipboard.writeText(url); d.notify('Receipt link copied'); } catch { d.notify('Could not copy the receipt link on this device.'); } }}><ArrowUpRight size={15}/>Copy share link</button></div></div></Modal>}
-    {duplicatePending && <Modal open title="Similar payment found" close={() => setDuplicatePending(null)}><div className="duplicate-warning"><span className="role-page-icon"><CircleHelp size={20}/></span><p>A payment for <b>{fmt(duplicatePending.amount)}</b> on this unit was recorded in the last hour. Check the ledger before saving another entry.</p><div className="modal-actions"><button type="button" className="button button-quiet" onClick={() => setDuplicatePending(null)}>Cancel</button><button type="button" className="button button-primary" onClick={() => recordPayment({ ...duplicatePending, confirmDuplicate: true })}>Record another payment</button></div></div></Modal>}
   </>;
 }
 function PaymentsPage() {
@@ -1279,11 +1415,58 @@ function AgreementSignatureModal({ agreement, close }: { agreement: Agreement; c
     </form>
   </Modal>;
 }
+function MorphingLineChart({ points, format }: { points: { label: string; collected: number; outstanding: number }[]; format: (n: number) => string }) {
+  const reduced = usePrefersReducedMotion();
+  const [active, setActive] = useState<number | null>(null);
+  const [render, setRender] = useState(points);
+  const prevRef = useRef(points);
+  const pointsKey = points.map(p => `${p.label}|${Math.round(p.collected)}|${Math.round(p.outstanding)}`).join(',');
+  useEffect(() => {
+    const from = prevRef.current;
+    if (reduced || from.length !== points.length || !points.length) { setRender(points); prevRef.current = points; return; }
+    let frame = 0; const start = performance.now(); const duration = 640;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setRender(points.map((point, index) => ({
+        label: point.label,
+        collected: from[index].collected + (point.collected - from[index].collected) * eased,
+        outstanding: from[index].outstanding + (point.outstanding - from[index].outstanding) * eased,
+      })));
+      if (t < 1) frame = requestAnimationFrame(tick); else prevRef.current = points;
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [pointsKey, reduced]);
+  if (!render.length) return <div className="chart-area line-chart-area" data-testid="analytics-chart"><div className="chart-empty">Trend data will appear here once collection is recorded.</div></div>;
+  const max = Math.max(1, ...render.map(point => point.collected + point.outstanding));
+  const width = 600; const height = 205; const padX = 26; const padY = 18;
+  const innerW = width - padX * 2; const innerH = height - padY * 2;
+  const step = render.length > 1 ? innerW / (render.length - 1) : 0;
+  const xFor = (index: number) => padX + index * step;
+  const yFor = (value: number) => padY + innerH - (value / max) * innerH;
+  const pathFor = (key: 'collected' | 'outstanding') => render.map((point, index) => `${index === 0 ? 'M' : 'L'} ${xFor(index).toFixed(1)} ${yFor(point[key]).toFixed(1)}`).join(' ');
+  const setFromPoint = (index: number) => setActive(prev => prev === index ? null : index);
+  const activePoint = active != null ? render[active] : null;
+  return <div className="chart-area line-chart-area" data-testid="analytics-chart">
+    <svg className="line-chart" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" role="img" aria-label="Collected and outstanding rent over time">
+      {[0, 1, 2, 3].map(line => <line key={line} className="chart-grid-line" x1={padX} x2={width - padX} y1={padY + (innerH / 3) * line} y2={padY + (innerH / 3) * line}/>)}
+      <path className="chart-line-collected" d={pathFor('collected')} fill="none" vectorEffect="non-scaling-stroke"/>
+      <path className="chart-line-outstanding" d={pathFor('outstanding')} fill="none" vectorEffect="non-scaling-stroke"/>
+      {render.map((point, index) => <g key={`${point.label}-${index}`}>
+        <circle className="chart-point-collected" cx={xFor(index)} cy={yFor(point.collected)} r={4} vectorEffect="non-scaling-stroke"/>
+        <circle className="chart-point-outstanding" cx={xFor(index)} cy={yFor(point.outstanding)} r={4} vectorEffect="non-scaling-stroke"/>
+        <circle className="chart-point-hit" cx={xFor(index)} cy={padY + innerH / 2} r={Math.max(14, step / 2)} tabIndex={0} role="button" aria-label={`${point.label}: collected ${format(point.collected)}, outstanding ${format(point.outstanding)}`} onMouseEnter={() => setActive(index)} onMouseLeave={() => setActive(null)} onFocus={() => setActive(index)} onBlur={() => setActive(null)} onClick={() => setFromPoint(index)}/>
+      </g>)}
+    </svg>
+    {activePoint && <div className="chart-tooltip" role="status"><b>{activePoint.label}</b><span>Collected <strong>{format(activePoint.collected)}</strong></span><span>Outstanding <strong>{format(activePoint.outstanding)}</strong></span></div>}
+    <div className="chart-x-labels">{render.map((point, index) => <button key={`${point.label}-label-${index}`} type="button" onMouseEnter={() => setActive(index)} onMouseLeave={() => setActive(null)} onFocus={() => setActive(index)} onBlur={() => setActive(null)} onClick={() => setFromPoint(index)}>{point.label}</button>)}</div>
+  </div>;
+}
 function AnalyticsPage() {
   const d = useData();
   const [period, setPeriod] = useState<'month' | 'year'>('month');
   const analytics = d.getAnalytics(period);
-  const max = Math.max(1, ...analytics.points.map(point => point.collected + point.outstanding));
   const collected = analytics.points.reduce((total, point) => total + point.collected, 0);
   const outstanding = analytics.points.reduce((total, point) => total + point.outstanding, 0);
   const exportAnalytics = () => {
@@ -1304,9 +1487,9 @@ function AnalyticsPage() {
     <div className="toolbar"><div className="toolbar-meta"><span>Collection performance</span><span>·</span><span>Values in UGX</span></div><div className="toolbar-right"><div className="segmented"><button onClick={() => setPeriod('month')} className={period === 'month' ? 'selected' : ''} aria-pressed={period === 'month'}>Monthly</button><button onClick={() => setPeriod('year')} className={period === 'year' ? 'selected' : ''} aria-pressed={period === 'year'}>Yearly</button></div><button className="button button-quiet" onClick={exportAnalytics}><Download size={15}/>Export CSV</button></div></div>
     <div className="analytics-feature">
       <div className="analytics-copy"><span className="eyebrow">COLLECTION OVER TIME</span><h2>{period === 'month' ? 'A month, made visible.' : 'The year in perspective.'}</h2><p>{analytics.insight}</p><div className="chart-legend"><span><i className="legend-collected"/>Collected</span><span><i className="legend-outstanding"/>Outstanding</span></div></div>
-      <div className="chart-area" data-testid="analytics-chart"><div className="chart-grid-lines"><i/><i/><i/><i/></div><div className="bars">{analytics.points.map((point, index) => <div className="bar-group" key={`${point.label}-${index}`}><div className="bar-pair"><span className="bar collected" style={{ height: `${Math.max(3, point.collected / max * 100)}%` }} title={`Collected ${fmt(point.collected)}`} aria-label={`${point.label}: collected ${fmt(point.collected)}`}/><span className="bar outstanding" style={{ height: `${Math.max(2, point.outstanding / max * 100)}%` }} title={`Outstanding ${fmt(point.outstanding)}`} aria-label={`${point.label}: outstanding ${fmt(point.outstanding)}`}/></div><small>{point.label}</small></div>)}</div>{!analytics.points.length && <div className="chart-empty">Trend data will appear here once collection is recorded.</div>}</div>
+      <MorphingLineChart points={analytics.points} format={fmt}/>
     </div>
-    <div className="metrics-grid analytics-metrics"><Metric label="Collected this period" value={compact(collected)} note="Recorded payments" icon={TrendingUp}/><Metric label="Outstanding this period" value={compact(outstanding)} note="Still expected" icon={Clock3} tone="amber"/><Metric label="Collection trust" value={`${d.dashboard.trustPercent}%`} note="Verified records this month" icon={ShieldCheck}/><Metric label="Late units" value={String(d.dashboard.lateCount)} note="May need a follow-up" icon={CalendarDays} tone="blue"/></div>
+    <div className="metrics-grid analytics-metrics"><Metric label="Collected this period" numeric={collected} format={compact} note="Recorded payments" icon={TrendingUp}/><Metric label="Outstanding this period" numeric={outstanding} format={compact} note="Still expected" icon={Clock3} tone="amber"/><Metric label="Collection trust" value={`${d.dashboard.trustPercent}%`} note="Verified records this month" icon={ShieldCheck}/><Metric label="Late units" value={String(d.dashboard.lateCount)} note="May need a follow-up" icon={CalendarDays} tone="blue"/></div>
     <div className="analytics-note"><span><ShieldCheck size={17}/></span><p><b>Numbers you can stand behind.</b><br/>Each figure comes from payment records made in this browser. Download your payment history from the Payment ledger.</p><Link href="/payments" className="text-link">Open ledger <ArrowUpRight size={14}/></Link></div>
   </div>;
 }
@@ -1422,17 +1605,28 @@ function SettingsPage({ theme, setTheme }: { theme: string; setTheme: (s: string
 function Field({ label, children }: { label: string; children: ReactNode }) { return <label className="form-field"><span>{label}</span>{children}</label>; }
 
 function Modal({ open, title, close, children }: { open: boolean; title: string; close: () => void; children: ReactNode }) {
+  const dialogRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (!open) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const node = dialogRef.current;
+    const focusables = () => Array.from(node?.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])') ?? []);
+    window.setTimeout(() => (focusables()[0] ?? node)?.focus(), 0);
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') close();
+      if (event.key === 'Escape') { close(); return; }
+      if (event.key !== 'Tab') return;
+      const items = focusables();
+      if (!items.length) return;
+      const firstItem = items[0]; const lastItem = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === firstItem) { event.preventDefault(); lastItem.focus(); }
+      else if (!event.shiftKey && document.activeElement === lastItem) { event.preventDefault(); firstItem.focus(); }
     };
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    return () => { window.removeEventListener('keydown', onKeyDown); previous?.focus?.(); };
   }, [open, close]);
   if (!open) return null;
   return <div className="modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) close(); }}>
-    <section className="modal" role="dialog" aria-modal="true" aria-labelledby="active-modal-title">
+    <section ref={dialogRef} tabIndex={-1} className="modal" role="dialog" aria-modal="true" aria-labelledby="active-modal-title">
       <div className="modal-head"><h2 id="active-modal-title">{title}</h2><button type="button" className="icon-button" aria-label="Close dialog" onClick={close}><X size={17}/></button></div>
       {children}
     </section>
