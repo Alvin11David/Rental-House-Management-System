@@ -458,7 +458,19 @@ function AppShell() {
     <div className="workspace-label">{d.role === 'Landlord' ? 'MANAGEMENT DESK' : d.role === 'Caretaker' ? 'ON-SITE DESK' : 'PRIVATE HOME'}</div>
     <div className="property-picker" title={d.role === 'Tenant' ? 'Your home' : `${workspaceProperty} · ${d.role === 'Landlord' ? 'All properties' : 'Property in your care'}`}><span className="property-symbol">{workspaceProperty[0]}</span><span><b>{workspaceProperty}</b><small>{d.role === 'Landlord' ? 'All properties' : d.role === 'Caretaker' ? 'Property in your care' : 'Your rented home'}</small></span>{d.role === 'Landlord' && <ChevronDown size={15}/>}</div>
     <nav aria-label="Main navigation">{roleNav.map(group => <div className="nav-group" key={group.title}><p>{group.title}</p>{group.links.map(([href, label, Icon]) => <Link key={href} href={href} onClick={() => setDrawer(false)} aria-label={label} title={label} className={classes('nav-item', path === href && 'active')} data-testid={`nav-${label.toLowerCase().replaceAll(' ', '-')}`}><Icon size={18}/><span>{label}</span>{href === '/daily-collection' && d.dashboard?.lateCount ? <em>{d.dashboard.lateCount}</em> : null}</Link>)}</div>)}</nav>
-    <div className="sidebar-bottom"><div className="sync-card" title="Records are saved only in this browser"><span className="sync-dot"/><div><b>Saved on this device</b><small>Local storage · no account sync</small></div><Check size={15}/></div><Link href="/settings" aria-label="Preferences" title="Preferences" className={classes('nav-item', path === '/settings' && 'active')} data-testid="nav-settings"><Settings size={18}/><span>Preferences</span></Link><div className="user-mini" title={`${d.role} demo workspace`}><span className="avatar">{initials(displayName)}</span><div><b>{displayName}</b><small>{d.role} workspace</small></div><MoreHorizontal size={18}/></div></div>
+     <div className="sidebar-bottom">
+       <div className="sync-card" title="Records are saved only in this browser"><span className="sync-dot"/><div><b>Saved on this device</b><small>Local storage · no account sync</small></div><Check size={15}/></div>
+       <Link href="/settings" aria-label="Preferences" title="Preferences" className={classes('nav-item', path === '/settings' && 'active')} data-testid="nav-settings"><Settings size={18}/><span>Preferences</span></Link>
+       <section className="sidebar-account" aria-label="Current workspace profile" data-testid="sidebar-account">
+         <div className="sidebar-account-kicker"><span>WORKSPACE PROFILE</span><i>DEMO</i></div>
+         <div className="sidebar-account-identity">
+           <span className="avatar sidebar-account-avatar" aria-hidden="true">{initials(displayName)}</span>
+           <span className="sidebar-account-copy"><b>{displayName}</b><small>{d.role} workspace</small></span>
+         </div>
+         <div className="sidebar-account-property"><span className="sidebar-account-property-icon"><Building2 size={14}/></span><span><small>{d.role === 'Tenant' ? 'YOUR RENTAL HOME' : 'CURRENT PROPERTY'}</small><b title={workspaceProperty}>{workspaceProperty}</b></span></div>
+         <button type="button" className="sidebar-signout" onClick={() => { setDrawer(false); setLocation('/'); }} aria-label="Sign out of Rentwise" data-testid="sidebar-sign-out"><LogOut size={15}/><span>Sign out</span><small>Leave workspace</small></button>
+       </section>
+     </div>
   </aside>;
   return <div className="app-shell"><div className={classes('shell-layout', sidebarCollapsed && 'sidebar-is-collapsed')}>{sidebar}{drawer && <button className="scrim" onClick={() => setDrawer(false)} aria-label="Close menu"/>}<main className="main-area">
     {d.role !== 'Tenant' && <div className="ambient-status" role="progressbar" aria-label="Today’s collection progress" aria-valuenow={collectionProgress} aria-valuemin={0} aria-valuemax={100} title={`${collectionProgress}% of occupied homes recorded a payment today`}><i style={{ width: `${collectionProgress}%`, backgroundColor: `hsl(${Math.round(collectionProgress * 1.2)} 43% 46%)` }}/></div>}
