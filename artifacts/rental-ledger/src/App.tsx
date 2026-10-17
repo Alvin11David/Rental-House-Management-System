@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactNode, createContext, useContext, useEffect, useRef, useState } from 'react';
+import { type ChangeEvent, type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode, createContext, useContext, useEffect, useRef, useState } from 'react';
 import './rental.css';
 import './dashboard.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -22,6 +22,7 @@ import {
   workspaceStorageKey,
   type Activity,
   type Agreement,
+  type AgreementSignatureInput,
   type ContactRevealInput,
   type Payment,
   type PaymentInput,
@@ -54,6 +55,7 @@ type DataContextValue = {
   createProperty: (input: PropertyInput) => Property;
   createUnit: (input: UnitInput) => Unit;
   createTenant: (input: TenantInput) => Tenant;
+  signAgreement: (id: number, input: AgreementSignatureInput) => void;
   createPayment: (input: PaymentInput) => Payment;
   createContactReveal: (input: ContactRevealInput) => void;
   createRepair: (input: RepairInput) => Repair;
@@ -79,7 +81,7 @@ const navGroupsByRole: Record<Role, { title: string; links: NavLink[] }[]> = {
     { title: 'PROPERTY CARE', links: [['/payments', 'Recorded payments', ReceiptText], ['/tenants', 'Tenant contacts', Users], ['/repairs', 'Repair activity', Wrench], ['/agreements', 'Rent summaries', FileCheck2], ['/notifications', 'Activity & receipts', Bell]] },
   ],
   Tenant: [
-    { title: 'YOUR HOME', links: [['/dashboard', 'My home', House], ['/tenant', 'Home details', Building2], ['/payments', 'My payments', ReceiptText], ['/repairs', 'My repairs', Wrench], ['/agreements', 'My agreement', FileCheck2], ['/notifications', 'Receipts & activity', Bell]] },
+    { title: 'YOUR HOME', links: [['/dashboard', 'My home', House], ['/properties', 'My unit', Building2], ['/tenant', 'Home details', Building2], ['/payments', 'My payments', ReceiptText], ['/repairs', 'My repairs', Wrench], ['/agreements', 'My agreement', FileCheck2], ['/notifications', 'Receipts & activity', Bell]] },
   ],
 };
 const fmt = (n?: number | null) => `UGX ${(n ?? 0).toLocaleString('en-UG')}`;
@@ -113,8 +115,8 @@ function WorkspaceData({ children }: { children: ReactNode }) {
     let created!: Property;
     commitRecords(current => {
       const id = current.nextId;
-      created = { id, name: input.name.trim(), address: input.address.trim(), description: input.description?.trim() || '', unitCount: 0 };
-      return { ...current, nextId: id + 1, properties: [...current.properties, { id, name: created.name, address: created.address, description: created.description }] };
+      created = { id, name: input.name.trim(), address: input.address.trim(), description: input.description?.trim() || '', unitCount: 0, photoDataUrls: input.photoDataUrls ?? [] };
+      return { ...current, nextId: id + 1, properties: [...current.properties, { id, name: created.name, address: created.address, description: created.description, photoDataUrls: created.photoDataUrls }] };
     });
     return created;
   };
@@ -216,6 +218,20 @@ function WorkspaceData({ children }: { children: ReactNode }) {
     });
     return created;
   };
+  const signAgreement = (id: number, input: AgreementSignatureInput) => {
+    commitRecords(current => {
+      const agreement = current.agreements.find(item => item.id === id);
+      if (!agreement) throw new Error('Agreement not found.');
+      if (agreement.signedAt) throw new Error('This agreement has already been signed.');
+      if (!input.signedBy.trim()) throw new Error('Enter the signer’s name before saving.');
+      return {
+        ...current,
+        agreements: current.agreements.map(item => item.id === id
+          ? { ...item, signedAt: new Date().toISOString(), signedBy: input.signedBy.trim(), signatureDataUrl: input.signatureDataUrl }
+          : item),
+      };
+    });
+  };
   const createContactReveal = (input: ContactRevealInput) => {
     commitRecords(current => {
       const tenant = current.tenants.find(item => item.id === input.tenantId);
@@ -240,6 +256,8 @@ function WorkspaceData({ children }: { children: ReactNode }) {
       const unit = current.units.find(item => item.id === input.unitId);
       if (!unit) throw new Error('Choose a unit before logging a repair.');
       const id = current.nextId;
+      const reportedAt = new Date().toISOString();
+      const reportedBy = input.reportedBy?.trim() || 'Tenant report';
       created = {
         id,
         unitId: unit.id,
@@ -249,8 +267,10 @@ function WorkspaceData({ children }: { children: ReactNode }) {
         description: input.description.trim(),
         status: 'reported',
         cost: null,
-        reportedAt: new Date().toISOString(),
+        reportedAt,
         assignedTo: null,
+        photoDataUrl: input.photoDataUrl ?? null,
+        history: [{ status: 'reported', detail: 'Repair reported', actor: reportedBy, occurredAt: reportedAt }],
       };
       return {
         ...current,
@@ -264,6 +284,8 @@ function WorkspaceData({ children }: { children: ReactNode }) {
           cost: null,
           reportedAt: created.reportedAt,
           assignedTo: null,
+          photoDataUrl: created.photoDataUrl,
+          history: created.history,
         }],
         units: current.units.map(item => item.id === unit.id ? { ...item, status: 'repair' as const } : item),
       };
@@ -275,7 +297,24 @@ function WorkspaceData({ children }: { children: ReactNode }) {
     commitRecords(current => {
       const repair = current.repairs.find(item => item.id === id);
       if (!repair) throw new Error('Repair not found.');
-      const nextRepair = { ...repair, ...update };
+      const { actor = 'Workspace team', detail, ...changes } = update;
+      const status = changes.status ?? repair.status;
+      const occurredAt = new Date().toISOString();
+      const defaultDetail = changes.status && changes.status !== repair.status
+        ? `Repair moved to ${changes.status.replaceAll('_', ' ')}`
+        : changes.cost !== undefined
+          ? changes.cost == null ? 'Repair cost removed' : `Repair cost recorded: UGX ${changes.cost.toLocaleString('en-UG')}`
+          : changes.assignedTo !== undefined
+            ? changes.assignedTo ? `Assigned to ${changes.assignedTo}` : 'Repair assignment cleared'
+            : 'Repair details updated';
+      const history = repair.history?.length
+        ? repair.history
+        : [{ status: repair.status, detail: 'Repair reported', actor: repair.assignedTo ?? 'Tenant report', occurredAt: repair.reportedAt }];
+      const nextRepair = {
+        ...repair,
+        ...changes,
+        history: [...history, { status, detail: detail ?? defaultDetail, actor, occurredAt }],
+      };
       const unit = current.units.find(item => item.id === repair.unitId);
       updated = {
         ...nextRepair,
@@ -321,6 +360,7 @@ function WorkspaceData({ children }: { children: ReactNode }) {
     createProperty,
     createUnit,
     createTenant,
+    signAgreement,
     createPayment,
     createContactReveal,
     createRepair,
@@ -355,6 +395,10 @@ function AppShell() {
   const workspaceProperty = d.role === 'Tenant'
     ? d.properties.find(property => property.id === tenantUnit?.propertyId)?.name || 'Your home'
     : d.dashboard?.propertyName || d.properties?.[0]?.name || 'Mirembe Court';
+  const todayKey = localDateKey(new Date());
+  const occupiedUnits = d.units.filter(unit => unit.tenantId != null);
+  const collectedUnitIds = new Set(d.payments.filter(payment => payment.recordedAt.slice(0, 10) === todayKey).map(payment => payment.unitId));
+  const collectionProgress = occupiedUnits.length ? Math.round(occupiedUnits.filter(unit => collectedUnitIds.has(unit.id)).length / occupiedUnits.length * 100) : 0;
   const sidebar = <aside id="workspace-sidebar" className={classes('sidebar', drawer && 'sidebar-open')} aria-label="Rentwise workspace sidebar">
     <div className="brand-lockup"><span className="brand-mark"><House size={19}/></span><span><b>rentwise</b><small>PROPERTY LEDGER</small></span><button className="sidebar-collapse-button" type="button" onClick={() => setSidebarCollapsed(value => !value)} aria-label={sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={!sidebarCollapsed} aria-controls="workspace-sidebar" title={sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'} data-testid="button-sidebar-collapse"><ChevronLeft size={17}/></button><button className="sidebar-close" onClick={() => setDrawer(false)} aria-label="Close navigation"><X size={19}/></button></div>
     <div className="workspace-label">{d.role === 'Landlord' ? 'MANAGEMENT DESK' : d.role === 'Caretaker' ? 'ON-SITE DESK' : 'PRIVATE HOME'}</div>
@@ -363,6 +407,7 @@ function AppShell() {
     <div className="sidebar-bottom"><div className="sync-card" title="Records are saved only in this browser"><span className="sync-dot"/><div><b>Saved on this device</b><small>Local storage · no account sync</small></div><Check size={15}/></div><Link href="/settings" aria-label="Preferences" title="Preferences" className={classes('nav-item', path === '/settings' && 'active')} data-testid="nav-settings"><Settings size={18}/><span>Preferences</span></Link><div className="user-mini" title={`${d.role} demo workspace`}><span className="avatar">{initials(displayName)}</span><div><b>{displayName}</b><small>{d.role} workspace</small></div><MoreHorizontal size={18}/></div></div>
   </aside>;
   return <div className="app-shell"><div className={classes('shell-layout', sidebarCollapsed && 'sidebar-is-collapsed')}>{sidebar}{drawer && <button className="scrim" onClick={() => setDrawer(false)} aria-label="Close menu"/>}<main className="main-area">
+    {d.role !== 'Tenant' && <div className="ambient-status" role="progressbar" aria-label="Today’s collection progress" aria-valuenow={collectionProgress} aria-valuemin={0} aria-valuemax={100} title={`${collectionProgress}% of occupied homes recorded a payment today`}><i style={{ width: `${collectionProgress}%`, backgroundColor: `hsl(${Math.round(collectionProgress * 1.2)} 43% 46%)` }}/></div>}
     <header className="topbar"><button className="mobile-menu icon-button" onClick={() => setDrawer(true)} aria-label="Open menu"><Menu size={20}/></button><div className="crumb"><span>{d.role === 'Tenant' ? 'My home' : 'Workspace'}</span><span>/</span><b>{title}</b></div><div className="top-actions"><span className="connection"><span/>Browser-only</span><button className="icon-button" aria-label="Refresh workspace" onClick={d.refresh} data-testid="button-refresh"><RefreshCw size={17}/></button><Link href="/notifications" className="icon-button notify-button" aria-label="Receipts and activity"><Bell size={18}/><i/></Link><span className="top-divider"/><DropdownMenu>
         <DropdownMenuTrigger asChild><button className="profile-button" data-testid="button-profile" aria-label="Open account menu"><span className="avatar small-avatar">{initials(displayName)}</span><span>{displayName}</span><ChevronDown size={14}/></button></DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
@@ -376,7 +421,7 @@ function AppShell() {
           <DropdownMenuItem onSelect={() => setLocation('/')} className="focus:bg-destructive focus:text-destructive-foreground" data-testid="menu-sign-out"><LogOut size={16}/> Sign out</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu></div></header>
-    <div className="content-area"><div className="page-heading"><div><div className="eyebrow">{path === '/dashboard' ? `${d.role.toUpperCase()} WORKSPACE · UGANDA` : 'RENTWISE · UGANDA'}</div><h1>{title}</h1>{path === '/dashboard' && <p className="heading-sub">{roleSubtitle}</p>}</div>{path === '/dashboard' && d.role === 'Landlord' && <Link href="/daily-collection" className="button button-primary" data-testid="button-collect-rent"><Plus size={17}/>Record payment</Link>}</div>
+      <div className="content-area"><div className="page-heading"><div><div className="eyebrow">{path === '/dashboard' ? `${d.role.toUpperCase()} WORKSPACE · UGANDA` : 'RENTWISE · UGANDA'}</div><h1>{title}</h1>{path === '/dashboard' && <p className="heading-sub">{roleSubtitle}</p>}</div>{path === '/dashboard' && d.role === 'Landlord' && <Link href="/daily-collection" className="button button-primary" data-testid="button-collect-rent"><Wallet size={17}/>View collection</Link>}</div>
       <div className="page-enter"><Switch>
         <Route path="/" component={() => <Redirect to="/dashboard"/>}/>
         <Route path="/dashboard" component={RoleDashboardPage}/>
@@ -394,7 +439,49 @@ function AppShell() {
       </Switch></div>
       <footer className="footer"><span>Rentwise <i>·</i> A reliable record, for everyone under one roof.</span><span>UGX <i>·</i> Kampala, Uganda</span></footer>
     </div>
+    <OnboardingTour key={d.role} role={d.role}/>
   </main></div></div>;
+}
+
+const onboardingByRole: Record<Role, { title: string; text: string }[]> = {
+  Landlord: [
+    { title: 'A clear view of the whole property', text: 'Your overview brings rent, occupancy, and repairs together so you can see what needs attention first.' },
+    { title: 'Keep unit records together', text: 'Add a property, create its units, and connect tenant and agreement details in a guided setup.' },
+    { title: 'Every payment has a trail', text: 'Receipts, timestamps, and the person who recorded a payment make the ledger easier to verify.' },
+    { title: 'Your records stay on this device', text: 'This demo saves data in this browser only. It does not sync to an account or another device.' },
+  ],
+  Caretaker: [
+    { title: 'Start with today’s follow-ups', text: 'Your home screen puts unpaid units and open repairs near the top, ready for a quick check.' },
+    { title: 'Record a payment in a few steps', text: 'Open Daily collection, choose an occupied unit, enter the amount, select cash, bank, or mobile money, then confirm.' },
+    { title: 'Keep the receipt details', text: 'Add the MTN or Airtel transaction reference when available. A matching recent entry will ask you to confirm before saving.' },
+    { title: 'Move repair work forward', text: 'Update a repair stage, record who is handling it, and add the cost when it is known.' },
+  ],
+  Tenant: [
+    { title: 'Your home, in one place', text: 'See your rent balance, due date, receipts, and repair updates for your own unit.' },
+    { title: 'Keep your receipts close', text: 'Open a payment receipt to print it or copy its link from this browser.' },
+    { title: 'Report a repair problem', text: 'Describe what needs attention and optionally add a photo. The property team can follow each update.' },
+    { title: 'Your information stays on this device', text: 'This demo stores records in the current browser profile; there is no account sign-in or cross-device sync.' },
+  ],
+};
+function OnboardingTour({ role }: { role: Role }) {
+  const [step, setStep] = useState(0);
+  const storageKey = `rentwise-tour-${role.toLowerCase()}`;
+  const [open, setOpen] = useState(() => localStorage.getItem(storageKey) !== 'done');
+  const steps = onboardingByRole[role];
+  const finish = () => {
+    localStorage.setItem(storageKey, 'done');
+    setOpen(false);
+  };
+  if (!open) return null;
+  const current = steps[step];
+  return <div className="tour-overlay" role="presentation">
+    <section className="tour-card" role="dialog" aria-modal="true" aria-labelledby="tour-title" aria-describedby="tour-description">
+      <div className="tour-topline"><span className="tour-mark"><House size={17}/></span><span>RENTWISE · {role.toUpperCase()} TOUR</span><button type="button" className="icon-button" onClick={finish} aria-label="Skip tour"><X size={16}/></button></div>
+      <div className="tour-progress" aria-label={`Step ${step + 1} of ${steps.length}`}>{steps.map((item, index) => <i key={item.title} className={index <= step ? 'complete' : ''}/>)}</div>
+      <p className="eyebrow">STEP {step + 1} OF {steps.length}</p><h2 id="tour-title" key={current.title}>{current.title}</h2><p id="tour-description">{current.text}</p>
+      <div className="tour-actions"><button type="button" className="text-link" onClick={finish}>Skip tour</button><button type="button" className="button button-primary" onClick={() => step === steps.length - 1 ? finish() : setStep(value => value + 1)}>{step === steps.length - 1 ? 'Get started' : 'Next'} <ArrowUpRight size={14}/></button></div>
+    </section>
+  </div>;
 }
 
 function Metric({ label, value, note, icon: Icon, tone = 'green' }: { label: string; value: string; note: string; icon: typeof Wallet; tone?: string }) {
@@ -434,7 +521,7 @@ function RolePropertiesPage() {
   const { role } = useData();
   if (role === 'Landlord') return <PropertiesPage/>;
   if (role === 'Caretaker') return <CaretakerHomesPage/>;
-  return <RoleGate allow={['Landlord','Caretaker']}><PropertiesPage/></RoleGate>;
+  return <TenantUnitPage/>;
 }
 function RolePaymentsPage() {
   const { role } = useData();
@@ -503,10 +590,27 @@ function CaretakerDayPage() {
 }
 function CaretakerHomesPage() {
   const d = useData();
+  const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   return <div className="page-stack">
     <div className="role-page-intro"><span className="role-page-icon"><Building2 size={19}/></span><div><span className="eyebrow">MIREMBE COURT · KISAASI</span><h2>Homes in your care</h2><p>A simple unit view for collection follow-up and on-site repairs.</p></div></div>
-    <section className="panel caretaker-homes-panel"><div className="panel-head"><h2>Unit status</h2><span className="toolbar-meta">{d.units.length} homes</span></div><DataState rows={d.units} title="No homes recorded" text="Home records for this property will appear here."><div className="caretaker-homes-grid" role="list" aria-label="Homes and current status">{d.units.map(unit => <article className={`caretaker-home-tile unit-${unit.status}`} key={unit.id} role="listitem" data-testid={`caretaker-home-${unit.id}`}><div><b>{unit.unitNumber}</b><Status value={unit.status}/></div><span>{unit.tenantName || 'Vacant home'}</span><strong>{unit.tenantId ? fmt(unit.balance > 0 ? unit.balance : unit.rentAmount) : '—'}</strong><small>{unit.tenantId ? unit.balance > 0 ? 'Balance to follow up' : 'Monthly rent' : 'No tenant assigned'}</small></article>)}</div></DataState>
+    <section className="panel caretaker-homes-panel"><div className="panel-head"><h2>Unit status</h2><span className="toolbar-meta">{d.units.length} homes</span></div><DataState rows={d.units} title="No homes recorded" text="Home records for this property will appear here."><div className="caretaker-homes-grid" role="list" aria-label="Homes and current status">{d.units.map(unit => <div key={unit.id} role="listitem"><button type="button" className={`caretaker-home-tile unit-${unit.status}`} onClick={() => setSelectedUnit(unit)} aria-label={`Unit ${unit.unitNumber}, ${statusLabel(unit.status)}. View collection and repair details`} data-testid={`caretaker-home-${unit.id}`}><span className="caretaker-home-tile-head"><b>{unit.unitNumber}</b><Status value={unit.status}/></span><span>{unit.tenantName || 'Vacant home'}</span><strong>{unit.tenantId ? fmt(unit.balance > 0 ? unit.balance : unit.rentAmount) : '—'}</strong><small>{unit.tenantId ? unit.balance > 0 ? 'Balance to follow up' : 'Monthly rent' : 'No tenant assigned'}</small></button></div>)}</div></DataState>
       <div className="caretaker-unit-legend" aria-label="Unit status legend"><span><i className="legend-paid"/>Up to date</span><span><i className="legend-pending"/>Needs follow-up</span><span><i className="legend-repair"/>Repair</span><span><i className="legend-vacant"/>Vacant</span></div>
+    </section>
+    <UnitDrawer unit={selectedUnit} onClose={() => setSelectedUnit(null)}/>
+  </div>;
+}
+function TenantUnitPage() {
+  const d = useData();
+  const tenant = getDemoTenant(d);
+  const unit = d.units.find(item => item.id === tenant?.unitId);
+  const property = d.properties.find(item => item.id === unit?.propertyId);
+  if (!unit) return <Empty title="Your home is not linked yet" text="Ask the property team to connect your tenant record to a unit." action={<Link href="/tenant" className="button button-primary">Open home details <ArrowUpRight size={15}/></Link>} />;
+  return <div className="page-stack">
+    <div className="role-page-intro"><span className="role-page-icon"><Building2 size={19}/></span><div><span className="eyebrow">PRIVATE HOME · YOUR UNIT ONLY</span><h2>{property?.name || 'Your home'}</h2><p>{property?.address || 'Your rented home'} · Unit {unit.unitNumber}</p></div></div>
+    <section className="panel tenant-unit-map" aria-label="Your unit status">
+      <div className={`tenant-unit-map-tile unit-${unit.status}`}><span className="tenant-unit-number">{unit.unitNumber}</span><Status value={unit.status}/><b>{unit.bedrooms} bedroom{unit.bedrooms === 1 ? '' : 's'}</b><small>{fmt(unit.rentAmount)} / month</small></div>
+      <div className="floor-legend" aria-label="Unit status legend"><span><i className="paid-dot"/>Paid</span><span><i className="pending-dot"/>Pending</span><span><i className="late-dot"/>Late</span><span><i className="vacant-dot"/>Vacant</span><span><i className="repair-dot"/>Under repair</span></div>
+      <Link href="/tenant" className="button button-quiet">View home details <ArrowUpRight size={14}/></Link>
     </section>
   </div>;
 }
@@ -529,8 +633,48 @@ function CaretakerContactsPage() {
 function CaretakerRepairsPage() {
   const d = useData();
   const repairs = d.repairs;
-  return <div className="page-stack"><div className="role-page-intro"><span className="role-page-icon"><Wrench size={19}/></span><div><span className="eyebrow">PROPERTY CARE</span><h2>Repair activity</h2><p>A read-only view of repair reports and their latest recorded status.</p></div></div>
-    <section className="panel role-record-panel"><DataState rows={repairs} title="No repair records yet" text="Repair updates for the property will appear here."><div className="role-record-list">{repairs.map(repair => <article className="role-repair-row" key={repair.id} data-testid={`caretaker-repair-record-${repair.id}`}><span className="repair-activity-icon"><Wrench size={16}/></span><div><b>{repair.title}</b><small>Unit {repair.unitNumber} · Reported {dateFmt(repair.reportedAt)}{repair.assignedTo ? ` · ${repair.assignedTo}` : ''}</small><p>{repair.description}</p></div><Status value={repair.status}/></article>)}</div></DataState></section>
+  return <div className="page-stack"><div className="role-page-intro"><span className="role-page-icon"><Wrench size={19}/></span><div><span className="eyebrow">PROPERTY CARE</span><h2>Repair activity</h2><p>Move each request forward and record the work cost when it is known.</p></div></div>
+    <section className="panel role-record-panel"><DataState rows={repairs} title="No repair records yet" text="Repair reports from tenants will appear here."><div className="role-record-list">{repairs.map(repair => <article className="role-repair-row" key={repair.id} data-testid={`caretaker-repair-record-${repair.id}`}><span className="repair-activity-icon"><Wrench size={16}/></span><div><b>{repair.title}</b><small>Unit {repair.unitNumber} · Reported {dateFmt(repair.reportedAt)}{repair.assignedTo ? ` · ${repair.assignedTo}` : ''}</small><p>{repair.description}</p>{repair.photoDataUrl && <img className="repair-photo" src={repair.photoDataUrl} alt={`Photo attached to ${repair.title}`}/>}<RepairWorkflowActions repair={repair}/></div><Status value={repair.status}/></article>)}</div></DataState></section>
+  </div>;
+}
+function RepairWorkflowActions({ repair }: { repair: Repair }) {
+  const d = useData();
+  const actor = d.role === 'Caretaker' ? 'Amina · Caretaker' : 'Agnes M. · Landlord';
+  const [cost, setCost] = useState(repair.cost == null ? '' : String(repair.cost));
+  const [assignee, setAssignee] = useState(repair.assignedTo ?? '');
+  const nextStatus = repair.status === 'reported' ? 'assigned' : repair.status === 'assigned' ? 'in_progress' : 'done';
+  const advance = () => {
+    try {
+      d.updateRepair(repair.id, {
+        status: nextStatus,
+        actor,
+        ...(repair.status === 'reported' && assignee.trim() ? { assignedTo: assignee.trim() } : {}),
+      });
+      d.notify(`Repair moved to ${statusLabel(nextStatus)}`);
+    } catch (error) {
+      d.notify(error instanceof Error ? error.message : 'Could not update repair status.');
+    }
+  };
+  const saveDetails = (event: FormEvent) => {
+    event.preventDefault();
+    try {
+      d.updateRepair(repair.id, {
+        cost: cost.trim() ? Number(cost) : null,
+        assignedTo: assignee.trim() || null,
+        actor,
+      });
+      d.notify('Repair details saved');
+    } catch (error) {
+      d.notify(error instanceof Error ? error.message : 'Could not save repair details.');
+    }
+  };
+  return <div className="repair-workflow-controls">
+    <form className="repair-detail-form" onSubmit={saveDetails}>
+      <label>Assigned to<input value={assignee} onChange={event => setAssignee(event.target.value)} placeholder="Name or trade"/></label>
+      <label>Cost (UGX)<input type="number" min="0" inputMode="numeric" value={cost} onChange={event => setCost(event.target.value)} placeholder="Add when known"/></label>
+      <button className="button button-quiet" type="submit">Save details</button>
+    </form>
+    {repair.status !== 'done' && <button className="repair-action" type="button" onClick={advance} data-testid={`advance-repair-${repair.id}`}>{repair.status === 'reported' ? 'Assign repair' : repair.status === 'assigned' ? 'Start work' : 'Mark complete'} <ArrowUpRight size={14}/></button>}
   </div>;
 }
 function CaretakerAgreementsPage() {
@@ -548,16 +692,65 @@ function TenantPaymentsPage() {
   </div>;
 }
 function TenantRepairsPage() {
-  const d = useData(); const tenant = getDemoTenant(d); const repairs = d.repairs.filter(repair => repair.unitId === tenant?.unitId);
-  return <div className="page-stack"><div className="role-page-intro"><span className="role-page-icon"><Wrench size={19}/></span><div><span className="eyebrow">YOUR HOME</span><h2>Repair updates</h2><p>Only reports linked to your home are shown here.</p></div></div>
-    <section className="tenant-report-card" aria-labelledby="tenant-report-title"><div className="tenant-report-heading"><span className="role-page-icon"><ImagePlus size={18}/></span><div><h2 id="tenant-report-title">Report a problem</h2><p>Share what needs attention at home.</p></div></div><form className="form-stack" onSubmit={event => event.preventDefault()}><Field label="What needs attention?"><input placeholder="e.g. Kitchen tap is leaking" readOnly aria-label="What needs attention"/></Field><Field label="Add a few details"><textarea placeholder="Tell us what happened and where…" readOnly aria-label="Repair details"/></Field><label className="tenant-photo-upload"><ImagePlus size={16}/><span>Add a photo <small>Optional · JPG or PNG</small></span><input type="file" accept="image/*" aria-label="Add a repair photo" disabled/></label><button className="button button-primary full-button" type="button" disabled>Send to caretaker</button><p className="tenant-report-note">This screen is a visual preview; sending repair requests is not connected.</p></form></section>
-    <section className="panel role-record-panel"><DataState rows={repairs} title="No repair reports" text="There are no repair records for your home yet."><div className="role-record-list">{repairs.map(repair => <article className="role-repair-row" key={repair.id} data-testid={`tenant-repair-${repair.id}`}><span className="repair-activity-icon"><Wrench size={16}/></span><div><b>{repair.title}</b><small>Reported {dateFmt(repair.reportedAt)} · Unit {repair.unitNumber}</small><p>{repair.description}</p></div><Status value={repair.status}/></article>)}</div></DataState></section>
+  const d = useData();
+  const tenant = getDemoTenant(d);
+  const repairs = d.repairs.filter(repair => repair.unitId === tenant?.unitId);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (tenant?.unitId == null) return;
+    try {
+      d.createRepair({
+        unitId: tenant.unitId,
+        title,
+        description,
+        reportedBy: tenant.fullName,
+        photoDataUrl,
+      });
+      setTitle('');
+      setDescription('');
+      setPhotoDataUrl(null);
+      d.notify('Repair request sent to the property team');
+    } catch (error) {
+      d.notify(error instanceof Error ? error.message : 'The repair request could not be saved on this device.');
+    }
+  };
+  const selectPhoto = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = '';
+    if (!file) return;
+    setPhotoBusy(true);
+    try {
+      setPhotoDataUrl(await resizePhotoToDataUrl(file));
+    } catch (error) {
+      d.notify(error instanceof Error ? error.message : 'This photo could not be prepared. Try another image.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+  return <div className="page-stack"><div className="role-page-intro"><span className="role-page-icon"><Wrench size={19}/></span><div><span className="eyebrow">YOUR HOME</span><h2>Repair updates</h2><p>Send a report to the property team and follow its progress here.</p></div></div>
+    <section className="tenant-report-card" aria-labelledby="tenant-report-title">
+      <div className="tenant-report-heading"><span className="role-page-icon"><ImagePlus size={18}/></span><div><h2 id="tenant-report-title">Report a problem</h2><p>Share what needs attention at home.</p></div></div>
+      <form className="form-stack" onSubmit={submit}>
+        <Field label="What needs attention?"><input required maxLength={100} value={title} onChange={event => setTitle(event.target.value)} placeholder="e.g. Kitchen tap is leaking" aria-label="What needs attention"/></Field>
+        <Field label="Add a few details"><textarea maxLength={1000} value={description} onChange={event => setDescription(event.target.value)} placeholder="Tell us what happened and where…" aria-label="Repair details"/></Field>
+        <label className="tenant-photo-upload"><ImagePlus size={16}/><span>{photoBusy ? 'Preparing photo…' : photoDataUrl ? 'Photo attached' : 'Add a photo'} <small>Optional · JPG or PNG · up to 10 MB</small></span><input type="file" accept="image/*" aria-label="Add a repair photo" onChange={selectPhoto} disabled={photoBusy}/></label>
+        {photoDataUrl && <div className="repair-photo-preview"><img src={photoDataUrl} alt="Preview of repair photo"/><button type="button" className="button button-quiet" onClick={() => setPhotoDataUrl(null)}>Remove photo</button></div>}
+        <button className="button button-primary full-button" type="submit" disabled={photoBusy || !title.trim() || tenant?.unitId == null} data-testid="button-submit-repair"><Wrench size={16}/>Send to caretaker</button>
+        {tenant?.unitId == null && <p className="tenant-report-note">A home must be assigned to this tenant before a repair can be reported.</p>}
+      </form>
+    </section>
+    <section className="panel role-record-panel"><DataState rows={repairs} title="No repair reports" text="There are no repair records for your home yet."><div className="role-record-list">{repairs.map(repair => <article className="role-repair-row" key={repair.id} data-testid={`tenant-repair-${repair.id}`}><span className="repair-activity-icon"><Wrench size={16}/></span><div><b>{repair.title}</b><small>Reported {dateFmt(repair.reportedAt)} · Unit {repair.unitNumber}</small><p>{repair.description}</p>{repair.photoDataUrl && <img className="repair-photo" src={repair.photoDataUrl} alt={`Photo attached to ${repair.title}`}/>}<RepairHistoryList repair={repair}/></div><Status value={repair.status}/></article>)}</div></DataState></section>
   </div>;
 }
 function TenantAgreementPage() {
-  const d = useData(); const tenant = getDemoTenant(d); const agreement = d.agreements.find(item => item.tenantName === tenant?.fullName);
+  const d = useData(); const tenant = getDemoTenant(d); const agreement = d.agreements.find(item => item.tenantId === tenant?.id);
+  const [signing, setSigning] = useState(false);
   if (!agreement) return <Empty title="No agreement summary yet" text="Your agreement details will appear here once they are recorded." />;
-  return <div className="page-stack"><div className="role-page-intro"><span className="role-page-icon"><FileCheck2 size={19}/></span><div><span className="eyebrow">YOUR HOME · UNIT {agreement.unitNumber}</span><h2>Agreement summary</h2><p>A clear reference for your rent and tenancy dates.</p></div></div><article className="agreement-card tenant-own-agreement"><div className="agreement-card-head"><span className="agreement-file"><FileCheck2 size={18}/></span><span className={agreement.signedAt ? 'signed-label' : 'unsigned-label'}>{agreement.signedAt ? 'Signed' : 'Awaiting signature'}</span></div><div className="agreement-rent">{fmt(agreement.monthlyRent)}<small>/ month</small></div><div className="agreement-details"><div><span>Security deposit</span><b>{fmt(agreement.deposit)}</b></div><div><span>Agreement term</span><b>{dateFmt(agreement.startDate)} — {dateFmt(agreement.endDate)}</b></div><div><span>Next rent due</span><b className="due-date"><CalendarDays size={14}/>{dateFmt(agreement.nextDueDate)}</b></div></div><div className="agreement-card-foot"><span>{agreement.signedAt ? `Signed ${dateFmt(agreement.signedAt)}` : 'Agreement summary on file'}</span></div></article></div>;
+  return <div className="page-stack"><div className="role-page-intro"><span className="role-page-icon"><FileCheck2 size={19}/></span><div><span className="eyebrow">YOUR HOME · UNIT {agreement.unitNumber}</span><h2>Agreement summary</h2><p>A clear reference for your rent and tenancy dates.</p></div></div><article className="agreement-card tenant-own-agreement"><div className="agreement-card-head"><span className="agreement-file"><FileCheck2 size={18}/></span><span className={agreement.signedAt ? 'signed-label' : 'unsigned-label'}>{agreement.signedAt ? 'Signed' : 'Awaiting signature'}</span></div><div className="agreement-rent">{fmt(agreement.monthlyRent)}<small>/ month</small></div><div className="agreement-details"><div><span>Security deposit</span><b>{fmt(agreement.deposit)}</b></div><div><span>Agreement term</span><b>{dateFmt(agreement.startDate)} — {dateFmt(agreement.endDate)}</b></div><div><span>Next rent due</span><b className="due-date"><CalendarDays size={14}/>{dateFmt(agreement.nextDueDate)}</b></div></div><div className="agreement-card-foot"><span>{agreement.signedAt ? `Signed ${dateFmt(agreement.signedAt)}${agreement.signedBy ? ` by ${agreement.signedBy}` : ''}` : 'Agreement summary on file'}</span>{!agreement.signedAt && <button type="button" className="button button-primary" onClick={() => setSigning(true)}>Sign agreement <ArrowUpRight size={14}/></button>}</div>{agreement.signatureDataUrl && <div className="agreement-signature"><img src={agreement.signatureDataUrl} alt={`Signature for ${agreement.signedBy || 'tenant'}`}/></div>}</article>{signing && <AgreementSignatureModal agreement={agreement} close={() => setSigning(false)}/>}</div>;
 }
 function PrivateActivityPage() {
   const d = useData(); const tenant = getDemoTenant(d); const isTenant = d.role === 'Tenant';
@@ -628,7 +821,7 @@ function PropertiesPage() {
   return <div className="page-stack"><div className="toolbar"><div className="toolbar-meta"><b>{d.properties?.length ?? 0} properties</b><span>·</span><span>{d.units?.length ?? 0} units tracked</span></div><div className="toolbar-right"><div className="segmented"><button className={mode === 'plan' ? 'selected' : ''} onClick={() => setMode('plan')} aria-pressed={mode === 'plan'} data-testid="toggle-floorplan"><LayoutDashboard size={15}/>Floor plan</button><button className={mode === 'list' ? 'selected' : ''} onClick={() => setMode('list')} aria-pressed={mode === 'list'} data-testid="toggle-list"><List size={16}/>List</button></div><button className="button button-primary" onClick={() => setOpen(true)} data-testid="button-add-property"><Plus size={16}/>Add property</button></div></div>
      {mode === 'plan' && <div className="toolbar map-filter"><label className="filter-search"><Search size={16}/><input aria-label="Search units or tenants" placeholder="Search unit or tenant" value={unitSearch} onChange={e => setUnitSearch(e.target.value)} data-testid="search-units"/></label><select aria-label="Filter units by status" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} data-testid="filter-unit-status"><option value="all">All unit states</option><option value="paid">Paid</option><option value="pending">Pending</option><option value="late">Late</option><option value="vacant">Vacant</option><option value="repair">Under repair</option></select></div>}
     <DataState rows={d.properties} title="Your first property starts here" text="Create a property, then add units and keep every rent record in one place.">
-       {mode === 'plan' ? <div className="property-plan-grid">{d.properties?.map((p, idx) => <section className="property-plan panel" key={p.id}><div className="property-plan-head"><div className={`building-icon building-${idx % 3}`}><Building2 size={20}/></div><div><h2>{p.name}</h2><span><MapPin size={13}/>{p.address}</span></div><button className="icon-button" aria-label={`More options for ${p.name}`}><MoreHorizontal size={18}/></button></div><p className="property-description">{p.description || 'Homes, managed with care.'}</p><div className="floorplan" data-testid={`floorplan-${p.id}`}><div className="floorplan-label">UNIT MAP <span>Tap a home to review</span></div><div className="floorplan-units">{(d.units || []).filter(u => u.propertyId === p.id && (statusFilter === 'all' || u.status === statusFilter) && `${u.unitNumber} ${u.tenantName || ''}`.toLowerCase().includes(unitSearch.toLowerCase())).map(unit => <button key={unit.id} onClick={() => setSelectedUnit(unit)} className={`floor-unit floor-${unit.status}`} aria-label={`Unit ${unit.unitNumber}, ${statusLabel(unit.status)}. View details`} data-testid={`floor-unit-${unit.id}`}><span>{unit.unitNumber}</span><small>{unit.bedrooms} bed</small><i>{unit.status === 'paid' ? <Check size={12}/> : unit.status === 'late' ? 'Due' : statusLabel(unit.status)}</i></button>)}</div><div className="floor-legend" aria-label="Unit status legend"><span><i className="paid-dot"/>Paid</span><span><i className="pending-dot"/>Pending</span><span><i className="late-dot"/>Late</span><span><i className="vacant-dot"/>Vacant</span><span><i className="repair-dot"/>Under repair</span></div></div><div className="property-foot"><span><b>{p.unitCount}</b> total units</span><button className="text-link" onClick={() => { setPropertyId(p.id); setAddingUnit(true); }}>Add unit <Plus size={14}/></button></div></section>)}</div> : <div className="panel table-panel"><table><thead><tr><th>Property</th><th>Address</th><th>Units</th><th>Occupancy</th><th>Actions</th></tr></thead><tbody>{d.properties?.map(p => { const units = (d.units || []).filter(u => u.propertyId === p.id); return <tr key={p.id}><td><b>{p.name}</b><small>{p.description}</small></td><td>{p.address}</td><td>{p.unitCount}</td><td>{units.filter(u => u.tenantId).length} occupied</td><td><button className="text-link" onClick={() => { setPropertyId(p.id); setAddingUnit(true); }}>Add unit <Plus size={14}/></button></td></tr>; })}</tbody></table></div>}
+        {mode === 'plan' ? <div className="property-plan-grid">{d.properties?.map((p, idx) => <section className="property-plan panel" key={p.id}><div className="property-plan-head"><div className={`building-icon building-${idx % 3}`}><Building2 size={20}/></div><div><h2>{p.name}</h2><span><MapPin size={13}/>{p.address}</span></div><button className="icon-button" aria-label={`More options for ${p.name}`}><MoreHorizontal size={18}/></button></div><p className="property-description">{p.description || 'Homes, managed with care.'}</p>{p.photoDataUrls?.length ? <div className="property-photo-strip" aria-label={`${p.photoDataUrls.length} property photos`}>{p.photoDataUrls.slice(0, 4).map((photo, photoIndex) => <img key={`${p.id}-photo-${photoIndex}`} src={photo} alt={`${p.name} photo ${photoIndex + 1}`}/>)}</div> : null}<div className="floorplan" data-testid={`floorplan-${p.id}`}><div className="floorplan-label">UNIT MAP <span>Tap a home to review</span></div><div className="floorplan-units">{(d.units || []).filter(u => u.propertyId === p.id && (statusFilter === 'all' || u.status === statusFilter) && `${u.unitNumber} ${u.tenantName || ''}`.toLowerCase().includes(unitSearch.toLowerCase())).map(unit => <button key={unit.id} onClick={() => setSelectedUnit(unit)} className={`floor-unit floor-${unit.status}`} aria-label={`Unit ${unit.unitNumber}, ${statusLabel(unit.status)}. View details`} data-testid={`floor-unit-${unit.id}`}><span>{unit.unitNumber}</span><small>{unit.bedrooms} bed</small><i>{unit.status === 'paid' ? <Check size={12}/> : unit.status === 'late' ? 'Due' : statusLabel(unit.status)}</i></button>)}</div><div className="floor-legend" aria-label="Unit status legend"><span><i className="paid-dot"/>Paid</span><span><i className="pending-dot"/>Pending</span><span><i className="late-dot"/>Late</span><span><i className="vacant-dot"/>Vacant</span><span><i className="repair-dot"/>Under repair</span></div></div><div className="property-foot"><span><b>{p.unitCount}</b> total units</span><button className="text-link" onClick={() => { setPropertyId(p.id); setAddingUnit(true); }}>Add unit <Plus size={14}/></button></div></section>)}</div> : <div className="panel table-panel"><table><thead><tr><th>Property</th><th>Address</th><th>Units</th><th>Occupancy</th><th>Actions</th></tr></thead><tbody>{d.properties?.map(p => { const units = (d.units || []).filter(u => u.propertyId === p.id); return <tr key={p.id}><td><b>{p.name}</b><small>{p.description}</small></td><td>{p.address}</td><td>{p.unitCount}</td><td>{units.filter(u => u.tenantId).length} occupied</td><td><button className="text-link" onClick={() => { setPropertyId(p.id); setAddingUnit(true); }}>Add unit <Plus size={14}/></button></td></tr>; })}</tbody></table></div>}
     </DataState>
     <PropertyWizardModal open={open} close={() => setOpen(false)}/>
     <Modal open={addingUnit} title="Add a unit" close={() => setAddingUnit(false)}><form onSubmit={addUnit} className="form-stack"><Field label="Property"><select value={propertyId || d.properties[0]?.id || ''} onChange={e => setPropertyId(Number(e.target.value))}>{d.properties.map(p => <option value={p.id} key={p.id}>{p.name}</option>)}</select></Field><Field label="Unit number"><input required value={unitNo} onChange={e => setUnitNo(e.target.value)} placeholder="B-04"/></Field><div className="form-row"><Field label="Bedrooms"><input type="number" min="0" value={beds} onChange={e => setBeds(e.target.value)}/></Field><Field label="Monthly rent (UGX)"><input type="number" min="0" required value={rent} onChange={e => setRent(e.target.value)}/></Field></div><ModalActions close={() => setAddingUnit(false)}/></form></Modal>
@@ -638,35 +831,69 @@ function PropertiesPage() {
 type PropertyDraft = {
   step: number; propertyName: string; address: string; description: string; unitNumber: string;
   bedrooms: string; rentAmount: string; tenantName: string; phone: string; startDate: string;
-  endDate: string; deposit: string; propertyId?: number; unitId?: number;
+  endDate: string; deposit: string; propertyId?: number; unitId?: number; photoDataUrls: string[];
 };
 const emptyPropertyDraft: PropertyDraft = {
   step: 0, propertyName: '', address: '', description: '', unitNumber: '', bedrooms: '1',
-  rentAmount: '', tenantName: '', phone: '', startDate: '', endDate: '', deposit: '',
+  rentAmount: '', tenantName: '', phone: '', startDate: '', endDate: '', deposit: '', photoDataUrls: [],
 };
 function PropertyWizardModal({ open, close }: { open: boolean; close: () => void }) {
   const d = useData();
+  const photoInput = useRef<HTMLInputElement | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState('');
   const [draft, setDraft] = useState<PropertyDraft>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('rentwise-property-draft') || 'null') as PropertyDraft | null;
-      return saved ? { ...emptyPropertyDraft, ...saved } : emptyPropertyDraft;
+      return saved ? { ...emptyPropertyDraft, ...saved, photoDataUrls: saved.photoDataUrls ?? [] } : emptyPropertyDraft;
     } catch { return emptyPropertyDraft; }
   });
   useEffect(() => { localStorage.setItem('rentwise-property-draft', JSON.stringify(draft)); }, [draft]);
   const update = (key: keyof PropertyDraft, value: string | number) => setDraft(current => ({ ...current, [key]: value }));
+  const addPhotos = async (files: FileList | File[]) => {
+    const remaining = Math.max(0, 6 - draft.photoDataUrls.length);
+    const selected = Array.from(files).slice(0, remaining);
+    if (!selected.length) {
+      setPhotoError(remaining === 0 ? 'You can attach up to six property photos.' : '');
+      return;
+    }
+    setPhotoBusy(true);
+    setPhotoError('');
+    const prepared: string[] = [];
+    let failure = '';
+    for (const file of selected) {
+      try {
+        prepared.push(await resizePhotoToDataUrl(file));
+      } catch (error) {
+        failure = error instanceof Error ? error.message : `Could not prepare ${file.name}.`;
+        break;
+      }
+    }
+    setDraft(current => ({ ...current, photoDataUrls: [...current.photoDataUrls, ...prepared] }));
+    setPhotoError(failure);
+    setPhotoBusy(false);
+  };
   const reset = () => { localStorage.removeItem('rentwise-property-draft'); setDraft(emptyPropertyDraft); close(); };
   const saveStep = async (event: FormEvent) => {
     event.preventDefault();
     try {
       if (draft.step === 0) {
-        const property = d.createProperty({ name: draft.propertyName, address: draft.address, description: draft.description });
-        setDraft(current => ({ ...current, propertyId: property.id, step: 1 }));
-        d.notify('Property saved. Continue with its units.');
+        if (draft.propertyId && d.properties.some(property => property.id === draft.propertyId)) {
+          setDraft(current => ({ ...current, step: 1 }));
+        } else {
+          const property = d.createProperty({ name: draft.propertyName, address: draft.address, description: draft.description, photoDataUrls: draft.photoDataUrls });
+          setDraft(current => ({ ...current, propertyId: property.id, step: 1 }));
+          d.notify('Property saved. Continue with its units.');
+        }
       } else if (draft.step === 1) {
         if (!draft.propertyId) throw new Error('Save the property before adding a unit.');
-        const unit = d.createUnit({ propertyId: draft.propertyId, unitNumber: draft.unitNumber, bedrooms: Number(draft.bedrooms), rentAmount: Number(draft.rentAmount) });
-        setDraft(current => ({ ...current, unitId: unit.id, step: 2 }));
-        d.notify(`Unit ${unit.unitNumber} saved`);
+        if (draft.unitId && d.units.some(unit => unit.id === draft.unitId)) {
+          setDraft(current => ({ ...current, step: 2 }));
+        } else {
+          const unit = d.createUnit({ propertyId: draft.propertyId, unitNumber: draft.unitNumber, bedrooms: Number(draft.bedrooms), rentAmount: Number(draft.rentAmount) });
+          setDraft(current => ({ ...current, unitId: unit.id, step: 2 }));
+          d.notify(`Unit ${unit.unitNumber} saved`);
+        }
       } else if (draft.step === 3) {
         if ((draft.startDate || draft.endDate) && (!draft.startDate || !draft.endDate)) {
           throw new Error('Add both agreement dates, or leave both blank.');
@@ -704,11 +931,11 @@ function PropertyWizardModal({ open, close }: { open: boolean; close: () => void
       {steps.map((label, index) => <div className={classes('wizard-progress-step', index < draft.step && 'done', index === draft.step && 'current')} key={label}><i>{index < draft.step ? <Check size={12}/> : index + 1}</i><span>{label}</span></div>)}
     </div>
     <form onSubmit={saveStep} className="form-stack wizard-step" key={draft.step}>
-      {draft.step === 0 && <><p className="wizard-intro">Start with the details people use to identify this home.</p><Field label="Property name"><input required value={draft.propertyName} onChange={e => update('propertyName', e.target.value)} placeholder="e.g. Kintu Court" data-testid="input-property-name"/></Field><Field label="Address"><input required value={draft.address} onChange={e => update('address', e.target.value)} placeholder="Area, Kampala" data-testid="input-property-address"/></Field><Field label="Description"><textarea value={draft.description} onChange={e => update('description', e.target.value)} placeholder="A note about the property" data-testid="input-property-description"/></Field></>}
+      {draft.step === 0 && <><p className="wizard-intro">Start with the details people use to identify this home.</p><Field label="Property name"><input required value={draft.propertyName} onChange={e => update('propertyName', e.target.value)} placeholder="e.g. Kintu Court" data-testid="input-property-name"/></Field><Field label="Address"><input required value={draft.address} onChange={e => update('address', e.target.value)} placeholder="Area, Kampala" data-testid="input-property-address"/></Field><Field label="Description"><textarea value={draft.description} onChange={e => update('description', e.target.value)} placeholder="A note about the property" data-testid="input-property-description"/></Field><div className="wizard-photo-section"><span className="wizard-field-label">Property photos <small>Optional · up to six photos</small></span><label className="wizard-photo-drop" onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); void addPhotos(event.dataTransfer.files); }}><ImagePlus size={18}/><span>Drop photos here or <b>choose files</b><small>Images are resized and saved in this browser.</small></span><input ref={photoInput} type="file" accept="image/*" multiple aria-label="Add property photos" onChange={event => { if (event.currentTarget.files) void addPhotos(event.currentTarget.files); event.currentTarget.value = ''; }}/></label>{photoBusy && <div className="wizard-photo-skeleton" aria-live="polite"><i/><i/><i/><span>Preparing your photos…</span></div>}{photoError && <div className="wizard-photo-error" role="alert">{photoError}<button type="button" className="text-link" onClick={() => photoInput.current?.click()}>Try another photo</button></div>}{draft.photoDataUrls.length > 0 && <div className="wizard-photo-grid" aria-label={`${draft.photoDataUrls.length} property photos`}>{draft.photoDataUrls.map((photo, index) => <div key={`${photo.slice(-24)}-${index}`}><img src={photo} alt={`Property photo ${index + 1}`}/><button type="button" aria-label={`Remove property photo ${index + 1}`} onClick={() => setDraft(current => ({ ...current, photoDataUrls: current.photoDataUrls.filter((_, photoIndex) => photoIndex !== index) }))}><X size={13}/></button></div>)}</div>}</div></>}
       {draft.step === 1 && <><p className="wizard-intro">Add the first unit and its monthly rent. You can add more from the property map later.</p><Field label="Unit number"><input required value={draft.unitNumber} onChange={e => update('unitNumber', e.target.value)} placeholder="A1"/></Field><div className="form-row"><Field label="Bedrooms"><input type="number" min="0" value={draft.bedrooms} onChange={e => update('bedrooms', e.target.value)}/></Field><Field label="Monthly rent (UGX)"><input type="number" min="1" required value={draft.rentAmount} onChange={e => update('rentAmount', e.target.value)}/></Field></div></>}
       {draft.step === 2 && <><p className="wizard-intro">Add a tenant now, or leave these fields blank and assign someone later.</p><Field label="Tenant name (optional)"><input value={draft.tenantName} onChange={e => update('tenantName', e.target.value)} placeholder="Full name"/></Field><Field label="Phone number (optional)"><input type="tel" value={draft.phone} onChange={e => update('phone', e.target.value)} placeholder="+256 7…"/></Field></>}
       {draft.step === 3 && <><p className="wizard-intro">Keep the agreement dates and deposit beside the rent record.</p><div className="form-row"><Field label="Agreement starts"><input type="date" value={draft.startDate} onChange={e => update('startDate', e.target.value)}/></Field><Field label="Agreement ends"><input type="date" value={draft.endDate} onChange={e => update('endDate', e.target.value)}/></Field></div><Field label="Security deposit (UGX)"><input type="number" min="0" value={draft.deposit} onChange={e => update('deposit', e.target.value)}/></Field><p className="wizard-hint">Dates and deposit are saved when you finish this setup.</p></>}
-      {draft.step === 4 && <><p className="wizard-intro">Check the details before finishing.</p><div className="wizard-review"><div><span>Property</span><b>{draft.propertyName || '—'}</b><small>{draft.address}</small></div><div><span>First unit</span><b>{draft.unitNumber || '—'} · {draft.bedrooms} bedroom</b><small>{draft.rentAmount ? fmt(Number(draft.rentAmount)) : 'Rent not set'} / month</small></div><div><span>Tenant</span><b>{draft.tenantName || 'Add later'}</b><small>{draft.phone || 'No phone added'}</small></div><div><span>Agreement</span><b>{draft.startDate && draft.endDate ? `${dateFmt(draft.startDate)} — ${dateFmt(draft.endDate)}` : 'Add dates later'}</b><small>Deposit {fmt(Number(draft.deposit || 0))}</small></div></div></>}
+      {draft.step === 4 && <><p className="wizard-intro">Check the details before finishing.</p><div className="wizard-review"><div><span>Property</span><b>{draft.propertyName || '—'}</b><small>{draft.address}</small></div><div><span>First unit</span><b>{draft.unitNumber || '—'} · {draft.bedrooms} bedroom</b><small>{draft.rentAmount ? fmt(Number(draft.rentAmount)) : 'Rent not set'} / month</small></div><div><span>Tenant</span><b>{draft.tenantName || 'Add later'}</b><small>{draft.phone || 'No phone added'}</small></div><div><span>Agreement</span><b>{draft.startDate && draft.endDate ? `${dateFmt(draft.startDate)} — ${dateFmt(draft.endDate)}` : 'Add dates later'}</b><small>Deposit {fmt(Number(draft.deposit || 0))}</small></div><div><span>Property photos</span><b>{draft.photoDataUrls.length} attached</b><small>Saved on this device</small></div></div></>}
       <div className="wizard-footer"><span>Draft autosaved on this device</span><div>{draft.step > 0 && <button type="button" className="button button-quiet" onClick={() => setDraft(current => ({ ...current, step: current.step - 1 }))}>Back</button>}<button type="submit" className="button button-primary" data-testid="button-wizard-next">{draft.step === 4 ? <Check size={15}/> : <ArrowUpRight size={15}/>} {draft.step === 4 ? 'Finish setup' : 'Continue'}</button></div></div>
     </form>
   </Modal>;
@@ -722,6 +949,8 @@ function UnitDrawer({ unit, onClose }: { unit: Unit | null; onClose: () => void 
     return () => window.removeEventListener('keydown', onKey);
   }, [unit, onClose]);
   if (!unit) return null;
+  const isLandlord = d.role === 'Landlord';
+  const isCaretaker = d.role === 'Caretaker';
   const tenant = d.tenants?.find(t => t.id === unit.tenantId);
   const revealPhone = () => {
     if (phoneVisible) { setPhoneVisible(false); return; }
@@ -739,17 +968,26 @@ function UnitDrawer({ unit, onClose }: { unit: Unit | null; onClose: () => void 
   const timeline = (d.activity || []).filter(item => item.unitId === unit.id).slice(0, 6);
   return <div className="drawer-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}><aside className="unit-drawer" role="dialog" aria-modal="true" aria-labelledby="unit-drawer-title" onTouchStart={event => { touchStartX.current = event.touches[0]?.clientX ?? null; }} onTouchEnd={event => { const endX = event.changedTouches[0]?.clientX; if (touchStartX.current != null && endX != null && endX - touchStartX.current > 80) onClose(); touchStartX.current = null; }}>
     <div className="drawer-heading"><div><span className="eyebrow">UNIT RECORD</span><h2 id="unit-drawer-title">{unit.unitNumber}</h2><p>{d.properties?.find(p => p.id === unit.propertyId)?.name || 'Property'} · {unit.bedrooms} bedroom{unit.bedrooms === 1 ? '' : 's'}</p></div><button className="icon-button" aria-label="Close unit details" onClick={onClose}><X size={19}/></button></div>
-    <div className="drawer-status-row"><Status value={unit.status}/><b>{fmt(unit.rentAmount)} <small>/ month</small></b></div>
+    <div className="drawer-status-row"><Status value={unit.status}/>{isLandlord && <b>{fmt(unit.rentAmount)} <small>/ month</small></b>}</div>
     <section className="drawer-section"><div className="drawer-section-head"><h3>Tenant</h3>{tenant && <span className="privacy-check"><ShieldCheck size={14}/> Private</span>}</div>{tenant ? <div className="drawer-tenant"><span className="tenant-avatar">{initials(tenant.fullName)}</span><div><b>{tenant.fullName}</b><small>{phoneVisible ? tenant.phone : maskPhone(tenant.phone)}</small></div><button type="button" className="icon-button" aria-label={phoneVisible ? 'Hide tenant phone number' : 'Reveal tenant phone number'} onClick={revealPhone}>{phoneVisible ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div> : <p className="drawer-empty">This unit is currently vacant.</p>}</section>
-    <section className="drawer-section"><div className="drawer-section-head"><h3>Recent payments</h3><Link href="/payments" className="text-link" onClick={onClose}>Ledger <ArrowUpRight size={13}/></Link></div>{payments.length ? <div className="drawer-list">{payments.map(payment => <div className="drawer-list-row" key={payment.id}><span><b>{fmt(payment.amount)}</b><small>{dateFmt(payment.recordedAt)} · {payment.method === 'mobile_money' ? 'Mobile money' : statusLabel(payment.method)}</small></span><Status value={payment.status}/></div>)}</div> : <p className="drawer-empty">No payments recorded yet.</p>}</section>
+    <section className="drawer-section"><div className="drawer-section-head"><h3>Recent payments</h3><Link href="/payments" className="text-link" onClick={onClose}>Ledger <ArrowUpRight size={13}/></Link></div>{payments.length ? <div className="drawer-list">{payments.map(payment => <div className="drawer-list-row" key={payment.id}><span><b>{isLandlord ? fmt(payment.amount) : 'Payment recorded'}</b><small>{dateFmt(payment.recordedAt)}{isLandlord ? ` · ${payment.method === 'mobile_money' ? 'Mobile money' : statusLabel(payment.method)}` : ''}</small></span><Status value={payment.status}/></div>)}</div> : <p className="drawer-empty">No payments recorded yet.</p>}</section>
     <section className="drawer-section"><div className="drawer-section-head"><h3>Open repairs</h3><span className="count-bubble small-count">{repairs.length}</span></div>{repairs.length ? <div className="drawer-list">{repairs.map(repair => <div className="drawer-list-row" key={repair.id}><span><b>{repair.title}</b><small>{dateFmt(repair.reportedAt)}</small></span><Status value={repair.status}/></div>)}</div> : <p className="drawer-empty">No open repair requests.</p>}</section>
-    <section className="drawer-section"><h3>Timeline ledger</h3>{timeline.length ? <div className="drawer-list">{timeline.map(item => <div className="drawer-timeline-row" key={item.id}><span className={`timeline-icon type-${item.type}`}><ActivityIcon size={14}/></span><span><b>{item.title}</b><small>{item.detail} · {dateFmt(item.occurredAt)}</small><small>Recorded by {item.actor}</small></span></div>)}</div> : <p className="drawer-empty">Unit activity will appear here.</p>}</section>
-    <div className="drawer-quick-actions"><button className="button button-primary" disabled={!tenant} onClick={() => { onClose(); setLocation(`/daily-collection?unitId=${unit.id}`); }}><Wallet size={16}/>Record payment</button><button className="button button-quiet" onClick={() => { onClose(); setLocation(`/repairs?unitId=${unit.id}`); }}><Wrench size={16}/>Log repair</button></div>
+    {isLandlord && <section className="drawer-section"><h3>Timeline ledger</h3>{timeline.length ? <div className="drawer-list">{timeline.map(item => <div className="drawer-timeline-row" key={item.id}><span className={`timeline-icon type-${item.type}`}><ActivityIcon size={14}/></span><span><b>{item.title}</b><small>{item.detail} · {dateFmt(item.occurredAt)}</small><small>Recorded by {item.actor}</small></span></div>)}</div> : <p className="drawer-empty">Unit activity will appear here.</p>}</section>}
+    <div className="drawer-quick-actions">{isCaretaker ? <button className="button button-primary" disabled={!tenant} onClick={() => { onClose(); setLocation(`/daily-collection?unitId=${unit.id}`); }}><Wallet size={16}/>Record payment</button> : <Link className="button button-primary" href="/payments" onClick={onClose}><ReceiptText size={16}/>View payment ledger</Link>}<button className="button button-quiet" onClick={() => { onClose(); setLocation(`/repairs?unitId=${unit.id}`); }}><Wrench size={16}/>Log repair</button></div>
   </aside></div>;
 }
 function DailyCollectionPage() {
-  const d = useData(); const [unitId, setUnitId] = useState(() => new URLSearchParams(window.location.search).get('unitId') || ''); const [amount, setAmount] = useState(''); const [method, setMethod] = useState<'mobile_money' | 'cash' | 'bank'>('mobile_money'); const [reference, setReference] = useState(''); const [filter, setFilter] = useState(''); const [confirmed, setConfirmed] = useState<Payment | null>(null);
-  const unpaid = (d.units || []).filter(u => u.balance > 0 || ['pending', 'late'].includes(u.status)).filter(u => `${u.unitNumber} ${u.tenantName || ''}`.toLowerCase().includes(filter.toLowerCase()));
+  const d = useData();
+  const canRecord = d.role === 'Caretaker';
+  const [unitId, setUnitId] = useState(() => new URLSearchParams(window.location.search).get('unitId') || '');
+  const [amount, setAmount] = useState('');
+  const [method, setMethod] = useState<'mobile_money' | 'cash' | 'bank'>('mobile_money');
+  const [reference, setReference] = useState('');
+  const [filter, setFilter] = useState('');
+  const [confirmed, setConfirmed] = useState<Payment | null>(null);
+  const [duplicatePending, setDuplicatePending] = useState<PaymentInput | null>(null);
+  const unpaid = (d.units || []).filter(u => u.tenantId != null && (u.balance > 0 || ['pending', 'late'].includes(u.status)))
+    .filter(u => `${u.unitNumber} ${u.tenantName || ''}`.toLowerCase().includes(filter.toLowerCase()));
   const chosen = d.units?.find(u => String(u.id) === unitId);
   useEffect(() => {
     if (!unitId || amount) return;
@@ -757,29 +995,101 @@ function DailyCollectionPage() {
     if (unit) setAmount(String(unit.balance || unit.rentAmount));
   }, [unitId, d.units, amount]);
   const resetForm = () => { setAmount(''); setReference(''); setUnitId(''); };
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    if (!unitId) return;
-    const data: PaymentInput = { unitId: Number(unitId), amount: Number(amount), method, recordedBy: 'Agnes M.', ...(reference ? { reference } : {}) };
+  const recordPayment = (input: PaymentInput) => {
     try {
-      const payment = d.createPayment(data);
+      const payment = d.createPayment(input);
+      setDuplicatePending(null);
       setConfirmed(payment);
       d.notify('Payment recorded in this browser. Receipt added to the ledger.');
       resetForm();
     } catch (error) {
-      d.notify(error instanceof Error ? error.message : 'Payment could not be saved in this browser.');
+      const message = error instanceof Error ? error.message : 'Payment could not be saved in this browser.';
+      if (message.includes('recorded recently') && !input.confirmDuplicate) setDuplicatePending(input);
+      else d.notify(message);
     }
   };
-  return <><div className="collection-layout"><section className="collection-form-panel"><div className="form-intro"><span className="form-icon"><Wallet size={19}/></span><div><h2>Record a payment</h2><p>Make a clear record, right when rent is received.</p></div></div><form onSubmit={submit} className="form-stack"><Field label="Tenant or unit"><select required value={unitId} onChange={e => { setUnitId(e.target.value); const u = d.units.find(x => String(x.id) === e.target.value); setAmount(u ? String(u.balance || u.rentAmount) : ''); }} data-testid="select-payment-unit"><option value="">Choose a unit…</option>{d.units.map(u => <option key={u.id} value={u.id}>{u.unitNumber} · {u.tenantName || 'Vacant'}{u.balance ? ` · balance ${fmt(u.balance)}` : ''}</option>)}</select></Field><Field label="Amount received"><div className="input-money"><span>UGX</span><input type="number" min="1" required value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" data-testid="input-payment-amount"/></div></Field>{chosen && <div className="selected-unit-note"><span>Monthly rent <b>{fmt(chosen.rentAmount)}</b></span>{chosen.balance > 0 && <span>Outstanding <b className="text-danger">{fmt(chosen.balance)}</b></span>}</div>}<Field label="Payment method"><div className="method-options">{(['mobile_money', 'cash', 'bank'] as const).map(m => <button type="button" key={m} onClick={() => setMethod(m)} className={classes('method-option', method === m && 'active')} aria-pressed={method === m} data-testid={`method-${m}`}><span className={`method-symbol ${m}`}>{m === 'mobile_money' ? <Smartphone size={17}/> : m === 'cash' ? <Wallet size={17}/> : <Building2 size={17}/>}</span><span>{m === 'mobile_money' ? 'Mobile money' : m === 'cash' ? 'Cash' : 'Bank'}</span>{method === m && <Check size={14}/>}</button>)}</div></Field>{method === 'mobile_money' && <div className="mobile-provider"><span className="provider-badge mtn">MTN</span><span className="provider-badge airtel">airtel</span><span>MTN MoMo or Airtel Money</span></div>}<Field label={method === 'mobile_money' ? 'Transaction reference (optional)' : 'Receipt / reference (optional)'}><input value={reference} onChange={e => setReference(e.target.value)} placeholder="e.g. 9826 4017" data-testid="input-payment-reference"/></Field><button className="button button-primary full-button" data-testid="button-submit-payment"><Check size={17}/>Confirm payment</button><p className="form-trust"><ShieldCheck size={14}/> A receipt is saved to this browser as soon as this entry is confirmed.</p></form></section>
-     <section className="unpaid-panel"><div className="unpaid-heading"><div><span className="eyebrow">COLLECTION FOLLOW-UP</span><h2>Still to collect</h2><p>Units with a balance or awaiting confirmation.</p></div><span className="count-bubble">{unpaid.length}</span></div><label className="search-field"><Search size={16}/><input aria-label="Search unpaid units" placeholder="Search unit or tenant" value={filter} onChange={e => setFilter(e.target.value)}/></label><div className="unpaid-list"><DataState rows={unpaid} title="A clear collection list" text="No outstanding unit balances. Nice work.">{unpaid.map(u => <div className="unpaid-row" key={u.id} data-testid={`unpaid-unit-${u.id}`}><span className={`unit-avatar ${u.status}`}>{u.unitNumber}</span><div className="unpaid-info"><b>{u.tenantName || 'Vacant unit'}</b><small>{u.unitNumber} · Monthly {fmt(u.rentAmount)}</small></div><div className="unpaid-amount"><b>{fmt(u.balance || u.rentAmount)}</b><Status value={u.status}/></div><button className="icon-button compact-icon" aria-label={`Record payment for ${u.unitNumber}`} onClick={() => { setUnitId(String(u.id)); setAmount(String(u.balance || u.rentAmount)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}><ArrowDownLeft size={16}/></button></div>)}</DataState></div><div className="offline-note"><ShieldCheck size={15}/><span><b>Saved in this browser</b><br/>The ledger works offline, but this data is not shared with another device or account.</span></div></section></div>
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!canRecord || !unitId || !Number(amount)) return;
+    recordPayment({
+      unitId: Number(unitId),
+      amount: Number(amount),
+      method,
+      recordedBy: 'Amina · Caretaker',
+      ...(reference ? { reference } : {}),
+    });
+  };
+  return <>
+    <div className="collection-layout">
+      {canRecord ? <section className="collection-form-panel">
+        <div className="form-intro"><span className="form-icon"><Wallet size={19}/></span><div><h2>Record a payment</h2><p>Make a clear record, right when rent is received.</p></div></div>
+        <form onSubmit={submit} className="form-stack">
+          <Field label="Tenant or unit"><select required value={unitId} onChange={e => { setUnitId(e.target.value); const u = d.units.find(x => String(x.id) === e.target.value); setAmount(u ? String(u.balance || u.rentAmount) : ''); }} data-testid="select-payment-unit"><option value="">Choose a unit…</option>{d.units.filter(u => u.tenantId != null).map(u => <option key={u.id} value={u.id}>{u.unitNumber} · {u.tenantName}{u.balance ? ` · balance ${fmt(u.balance)}` : ''}</option>)}</select></Field>
+          <Field label="Amount received"><div className="input-money"><span>UGX</span><input type="number" inputMode="numeric" min="1" required value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" data-testid="input-payment-amount"/></div></Field>
+          {chosen && <div className="selected-unit-note"><span>Monthly rent <b>{fmt(chosen.rentAmount)}</b></span>{chosen.balance > 0 && <span>Outstanding <b className="text-danger">{fmt(chosen.balance)}</b></span>}</div>}
+          <Field label="Payment method"><div className="method-options">{(['mobile_money', 'cash', 'bank'] as const).map(m => <button type="button" key={m} onClick={() => setMethod(m)} className={classes('method-option', method === m && 'active')} aria-pressed={method === m} data-testid={`method-${m}`}><span className={`method-symbol ${m}`}>{m === 'mobile_money' ? <Smartphone size={17}/> : m === 'cash' ? <Wallet size={17}/> : <Building2 size={17}/>}</span><span>{m === 'mobile_money' ? 'Mobile money' : m === 'cash' ? 'Cash' : 'Bank'}</span>{method === m && <Check size={14}/>}</button>)}</div></Field>
+          {method === 'mobile_money' && <div className="mobile-provider"><span className="provider-badge mtn">MTN</span><span className="provider-badge airtel">airtel</span><span>MTN MoMo or Airtel Money</span></div>}
+          <Field label={method === 'mobile_money' ? 'Transaction reference (optional)' : 'Receipt / reference (optional)'}><input value={reference} onChange={e => setReference(e.target.value)} placeholder="e.g. 9826 4017" data-testid="input-payment-reference"/></Field>
+          <button className="button button-primary full-button" data-testid="button-submit-payment"><Check size={17}/>Confirm payment</button>
+          <p className="form-trust"><ShieldCheck size={14}/> A receipt is saved to this browser as soon as this entry is confirmed.</p>
+        </form>
+      </section> : <section className="collection-form-panel">
+        <div className="form-intro"><span className="form-icon"><Wallet size={19}/></span><div><h2>Collection summary</h2><p>Read-only view of this month’s recorded rent.</p></div></div>
+        <div className="collection-readonly-summary"><b>{fmt(d.dashboard.totalCollected)}</b><span>collected this month</span><div><strong>{d.dashboard.paidToday}</strong> payments recorded today</div><Link href="/payments" className="button button-quiet full-button">Open payment ledger <ArrowUpRight size={15}/></Link></div>
+      </section>}
+      <section className="unpaid-panel">
+        <div className="unpaid-heading"><div><span className="eyebrow">COLLECTION FOLLOW-UP</span><h2>Still to collect</h2><p>Occupied homes with a balance or awaiting confirmation.</p></div><span className="count-bubble">{unpaid.length}</span></div>
+        <label className="search-field"><Search size={16}/><input aria-label="Search unpaid units" placeholder="Search unit or tenant" value={filter} onChange={e => setFilter(e.target.value)}/></label>
+        <div className="unpaid-list"><DataState rows={unpaid} title="A clear collection list" text="No outstanding unit balances. Nice work.">{unpaid.map(u => <div className="unpaid-row" key={u.id} data-testid={`unpaid-unit-${u.id}`}><span className={`unit-avatar ${u.status}`}>{u.unitNumber}</span><div className="unpaid-info"><b>{u.tenantName || 'Tenant'}</b><small>{u.unitNumber} · Monthly {fmt(u.rentAmount)}</small></div><div className="unpaid-amount"><b>{fmt(u.balance || u.rentAmount)}</b><Status value={u.status}/></div>{canRecord && <button className="icon-button compact-icon" aria-label={`Record payment for ${u.unitNumber}`} onClick={() => { setUnitId(String(u.id)); setAmount(String(u.balance || u.rentAmount)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}><ArrowDownLeft size={16}/></button>}</div>)}</DataState></div>
+        <div className="offline-note"><ShieldCheck size={15}/><span><b>Saved in this browser</b><br/>The ledger works offline, but this data is not shared with another device or account.</span></div>
+      </section>
+    </div>
     {confirmed && <Modal open title="Payment recorded" close={() => setConfirmed(null)}><div className="receipt-confirmation"><div className="paid-stamp" aria-label="Payment paid">PAID</div><span className="eyebrow">RENTWISE RECEIPT</span><h3>{fmt(confirmed.amount)}</h3><p>Unit {confirmed.unitNumber} · {confirmed.tenantName}</p><div className="receipt-meta"><span>Recorded {dateFmt(confirmed.recordedAt)}</span><span>{confirmed.method === 'mobile_money' ? 'MTN / Airtel mobile money' : statusLabel(confirmed.method)}</span>{confirmed.reference && <span>Reference {confirmed.reference}</span>}</div><div className="receipt-actions"><button type="button" className="button button-quiet" onClick={() => window.print()}><ReceiptText size={15}/>Print</button><button type="button" className="button button-primary" onClick={async () => { const url = `${window.location.origin}${import.meta.env.BASE_URL}receipt/${confirmed.id}`; try { await navigator.clipboard.writeText(url); d.notify('Receipt link copied'); } catch { d.notify('Could not copy the receipt link on this device.'); } }}><ArrowUpRight size={15}/>Copy share link</button></div></div></Modal>}
+    {duplicatePending && <Modal open title="Similar payment found" close={() => setDuplicatePending(null)}><div className="duplicate-warning"><span className="role-page-icon"><CircleHelp size={20}/></span><p>A payment for <b>{fmt(duplicatePending.amount)}</b> on this unit was recorded in the last hour. Check the ledger before saving another entry.</p><div className="modal-actions"><button type="button" className="button button-quiet" onClick={() => setDuplicatePending(null)}>Cancel</button><button type="button" className="button button-primary" onClick={() => recordPayment({ ...duplicatePending, confirmDuplicate: true })}>Record another payment</button></div></div></Modal>}
   </>;
 }
 function PaymentsPage() {
-  const d = useData(); const [search, setSearch] = useState(''); const [status, setStatus] = useState('all'); const [method, setMethod] = useState('all');
-  const records = (d.payments || []).filter(p => `${p.tenantName} ${p.unitNumber} ${p.reference || ''}`.toLowerCase().includes(search.toLowerCase())).filter(p => status === 'all' || p.status === status).filter(p => method === 'all' || p.method === method);
-  const exportCsv = () => { const lines = [['Date','Unit','Tenant','Amount (UGX)','Method','Status','Reference','Recorded by'], ...records.map(p => [p.recordedAt,p.unitNumber,p.tenantName,p.amount,p.method,p.status,p.reference || '',p.recordedBy])].map(row => row.map(v => `"${String(v).replaceAll('"','""')}"`).join(',')).join('\n'); const url = URL.createObjectURL(new Blob([lines], { type: 'text/csv;charset=utf-8' })); const a = document.createElement('a'); a.href = url; a.download = 'rentwise-payment-ledger.csv'; a.click(); URL.revokeObjectURL(url); d.notify('Payment ledger exported as CSV'); };
-  return <div className="page-stack"><section className="ledger-summary"><div><span>LEDGER BALANCE</span><b>{fmt((d.payments || []).reduce((a, p) => a + p.amount, 0))}</b><small>Recorded payment total</small></div><div className="summary-side"><span className="summary-mark"><ShieldCheck size={19}/></span><span>Every entry has a timestamp<br/>and a responsible recorder.</span></div></section><div className="toolbar ledger-tools"><div className="filter-search"><Search size={17}/><input aria-label="Search payment ledger" placeholder="Search name, unit or reference" value={search} onChange={e => setSearch(e.target.value)} data-testid="search-payments"/></div><div className="toolbar-right"><select value={status} onChange={e => setStatus(e.target.value)} aria-label="Filter by status" data-testid="filter-payment-status"><option value="all">All statuses</option><option value="paid">Paid</option><option value="pending">Pending</option></select><select value={method} onChange={e => setMethod(e.target.value)} aria-label="Filter by method"><option value="all">All methods</option><option value="mobile_money">Mobile money</option><option value="cash">Cash</option><option value="bank">Bank</option></select><button className="button button-quiet" onClick={exportCsv} data-testid="button-export-csv"><Download size={16}/>Export CSV</button></div></div><div className="panel table-panel"><DataState rows={records} title="No matching payments" text={search ? 'Try a different name, unit or reference.' : 'Payments appear here after they are recorded.'}><div className="table-scroll"><table><thead><tr><th>Tenant & unit</th><th>Amount</th><th>Method</th><th>Recorded</th><th>By</th><th>Status</th><th>Reference</th></tr></thead><tbody>{records.map(p => <tr key={p.id} data-testid={`payment-row-${p.id}`}><td><div className="table-person"><span className="avatar mini">{initials(p.tenantName)}</span><span><b>{p.tenantName}</b><small>Unit {p.unitNumber}</small></span></div></td><td className="money-cell">{fmt(p.amount)}</td><td><span className="method-label"><Smartphone size={14}/>{p.method === 'mobile_money' ? 'MTN / Airtel' : p.method}</span></td><td>{dateFmt(p.recordedAt)}</td><td>{p.recordedBy}</td><td><Status value={p.status}/></td><td className="font-mono">{p.reference || '—'}</td></tr>)}</tbody></table></div></DataState><div className="table-footer">{records.length} records <span>·</span> UGX amounts</div></div></div>;
+  const d = useData();
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('all');
+  const [method, setMethod] = useState('all');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const dateRangeInvalid = Boolean(fromDate && toDate && fromDate > toDate);
+  const records = (d.payments || [])
+    .filter(payment => `${payment.tenantName} ${payment.unitNumber} ${payment.reference || ''}`.toLowerCase().includes(search.toLowerCase()))
+    .filter(payment => status === 'all' || payment.status === status)
+    .filter(payment => method === 'all' || payment.method === method)
+    .filter(payment => !fromDate || payment.recordedAt.slice(0, 10) >= fromDate)
+    .filter(payment => !toDate || payment.recordedAt.slice(0, 10) <= toDate)
+    .filter(() => !dateRangeInvalid);
+  const exportCsv = () => {
+    const rows = [
+      ['Date', 'Unit', 'Tenant', 'Amount (UGX)', 'Method', 'Status', 'Reference', 'Recorded by'],
+      ...records.map(payment => [payment.recordedAt, payment.unitNumber, payment.tenantName, payment.amount, payment.method, payment.status, payment.reference || '', payment.recordedBy]),
+    ];
+    const csvValue = (value: unknown) => {
+      let text = String(value);
+      if (/^\s*[=+\-@]/.test(text)) text = `'${text}`;
+      return `"${text.replaceAll('"', '""')}"`;
+    };
+    const csv = `\uFEFF${rows.map(row => row.map(csvValue).join(',')).join('\n')}`;
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'rentwise-payment-ledger.csv';
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    d.notify('Payment ledger exported as CSV');
+  };
+  return <div className="page-stack">
+    <section className="ledger-summary"><div><span>LEDGER BALANCE</span><b>{fmt((d.payments || []).reduce((total, payment) => total + payment.amount, 0))}</b><small>Recorded payment total</small></div><div className="summary-side"><span className="summary-mark"><ShieldCheck size={19}/></span><span>Every entry has a timestamp<br/>and a responsible recorder.</span></div></section>
+    <div className="toolbar ledger-tools"><div className="filter-search"><Search size={17}/><input aria-label="Search payment ledger" placeholder="Search name, unit or reference" value={search} onChange={event => setSearch(event.target.value)} data-testid="search-payments"/></div>
+      <div className="toolbar-right"><select value={status} onChange={event => setStatus(event.target.value)} aria-label="Filter by status" data-testid="filter-payment-status"><option value="all">All statuses</option><option value="paid">Paid</option><option value="pending">Pending</option></select><select value={method} onChange={event => setMethod(event.target.value)} aria-label="Filter by method"><option value="all">All methods</option><option value="mobile_money">Mobile money</option><option value="cash">Cash</option><option value="bank">Bank</option></select><button className="button button-quiet" onClick={exportCsv} data-testid="button-export-csv"><Download size={16}/>Export CSV</button></div>
+    </div>
+    <div className="toolbar ledger-date-tools"><label>From <input type="date" value={fromDate} onChange={event => setFromDate(event.target.value)} aria-label="Payments from date"/></label><label>To <input type="date" value={toDate} onChange={event => setToDate(event.target.value)} aria-label="Payments to date"/></label>{(fromDate || toDate) && <button type="button" className="text-link" onClick={() => { setFromDate(''); setToDate(''); }}>Clear dates</button>}{dateRangeInvalid && <span role="alert" className="date-range-error">Choose a start date before the end date.</span>}</div>
+    <div className="panel table-panel"><DataState rows={records} title="No matching payments" text={dateRangeInvalid ? 'The start date must be earlier than the end date.' : search ? 'Try a different name, unit or reference.' : 'Payments appear here after they are recorded.'}><div className="table-scroll"><table><thead><tr><th>Tenant & unit</th><th>Amount</th><th>Method</th><th>Recorded</th><th>By</th><th>Status</th><th>Reference</th></tr></thead><tbody>{records.map(payment => <tr key={payment.id} data-testid={`payment-row-${payment.id}`}><td><div className="table-person"><span className="avatar mini">{initials(payment.tenantName)}</span><span><b>{payment.tenantName}</b><small>Unit {payment.unitNumber}</small></span></div></td><td className="money-cell">{fmt(payment.amount)}</td><td><span className="method-label"><Smartphone size={14}/>{payment.method === 'mobile_money' ? 'MTN / Airtel' : statusLabel(payment.method)}</span></td><td>{dateFmt(payment.recordedAt)}</td><td>{payment.recordedBy}</td><td><Status value={payment.status}/></td><td className="font-mono">{payment.reference || '—'}</td></tr>)}</tbody></table></div></DataState><div className="table-footer">{records.length} records <span>·</span> UGX amounts</div></div>
+  </div>;
 }
 function TenantsPage() {
   const d = useData(); const [search, setSearch] = useState(''); const [revealed, setRevealed] = useState<number[]>([]); const [open, setOpen] = useState(false); const [name, setName] = useState(''); const [phone, setPhone] = useState(''); const [unitId, setUnitId] = useState(''); const [rent, setRent] = useState('');
@@ -812,12 +1122,42 @@ function TenantsPage() {
   </div>;
 }
 function maskPhone(phone: string) { if (phone.length <= 4) return '••••••••'; return `${phone.slice(0, 4)} ••• •${phone.slice(-3)}`; }
+async function resizePhotoToDataUrl(file: File): Promise<string> {
+  if (!file.type.startsWith('image/')) throw new Error('Choose an image file.');
+  if (file.size > 10 * 1024 * 1024) throw new Error('This image is over 10 MB. Choose a smaller photo.');
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  const context = canvas.getContext('2d');
+  if (!context) {
+    bitmap.close();
+    throw new Error('This browser could not prepare the photo.');
+  }
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(result => result ? resolve(result) : reject(new Error('This photo could not be compressed.')), 'image/jpeg', 0.72);
+  });
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('This photo could not be read.'));
+    reader.onerror = () => reject(new Error('This photo could not be read.'));
+    reader.readAsDataURL(blob);
+  });
+}
+function RepairHistoryList({ repair }: { repair: Repair }) {
+  const history = [...(repair.history ?? [])].reverse().slice(0, 3);
+  if (!history.length) return null;
+  return <div className="repair-history" aria-label="Repair update history">{history.map((entry, index) => <div key={`${entry.occurredAt}-${index}`}><b>{entry.detail}</b><small>{entry.actor} · {dateFmt(entry.occurredAt)}</small></div>)}</div>;
+}
 function RepairsPage() {
   const d = useData(); const [open, setOpen] = useState(false); const [unitId, setUnitId] = useState(() => new URLSearchParams(window.location.search).get('unitId') || ''); const [title, setTitle] = useState(''); const [description, setDescription] = useState('');
   const submit = (e: FormEvent) => {
     e.preventDefault();
     try {
-      d.createRepair({ unitId: Number(unitId), title, description });
+      d.createRepair({ unitId: Number(unitId), title, description, reportedBy: 'Agnes M. · Landlord' });
       d.notify('Repair request added to the workflow');
       setOpen(false);
       setTitle('');
@@ -826,16 +1166,118 @@ function RepairsPage() {
       d.notify(error instanceof Error ? error.message : 'Could not submit repair request.');
     }
   };
-  const nextStatus = (r: Repair) => r.status === 'reported' ? 'assigned' : r.status === 'assigned' ? 'in_progress' : 'done';
-  const actLabel = (r: Repair) => r.status === 'reported' ? 'Assign' : r.status === 'assigned' ? 'Start work' : r.status === 'in_progress' ? 'Mark complete' : 'Completed';
-  return <div className="page-stack"><div className="toolbar"><div className="toolbar-meta"><b>{d.repairs.filter(r => r.status !== 'done').length} open requests</b><span>·</span><span>Keep repairs moving, step by step</span></div><button className="button button-primary" onClick={() => setOpen(true)} data-testid="button-new-repair"><Plus size={16}/>Log a repair</button></div><div className="repair-columns">{(['reported','assigned','in_progress','done'] as const).map((status, idx) => <section className="repair-column" key={status}><div className="repair-column-head"><span className={`repair-step step-${idx}`}>{String(idx + 1).padStart(2, '0')}</span><h2>{statusLabel(status)}</h2><b>{d.repairs.filter(r => r.status === status).length || 0}</b></div><DataState rows={d.repairs.filter(r => r.status === status)} title="Nothing here yet" text="Requests move into this stage as work progresses."><div className="repair-stack">{d.repairs.filter(r => r.status === status).map(r => <article className="repair-card" key={r.id} data-testid={`repair-card-${r.id}`}><div className="repair-card-top"><span className="repair-unit">UNIT {r.unitNumber}</span><Status value={r.status}/></div><h3>{r.title}</h3><p>{r.description}</p><div className="repair-by"><span className="avatar mini">{initials(r.tenantName)}</span><span>{r.tenantName}</span><time>{dateFmt(r.reportedAt)}</time></div>{r.cost != null && <div className="repair-cost"><span>Recorded cost</span><b>{fmt(r.cost)}</b></div>}<button className={classes('repair-action', status === 'done' && 'done')} disabled={status === 'done'} onClick={() => { try { d.updateRepair(r.id, { status: nextStatus(r) }); d.notify(`Repair moved to ${statusLabel(nextStatus(r))}`); } catch (error) { d.notify(error instanceof Error ? error.message : 'Could not update repair status.'); } }} data-testid={`advance-repair-${r.id}`}>{status === 'done' ? <><Check size={14}/>Complete</> : <>{actLabel(r)} <ArrowUpRight size={14}/></>}</button></article>)}</div></DataState></section>)}</div>
+  return <div className="page-stack">
+    <div className="toolbar"><div className="toolbar-meta"><b>{d.repairs.filter(r => r.status !== 'done').length} open requests</b><span>·</span><span>Keep repairs moving, step by step</span></div><button className="button button-primary" onClick={() => setOpen(true)} data-testid="button-new-repair"><Plus size={16}/>Log a repair</button></div>
+    <div className="repair-columns">{(['reported','assigned','in_progress','done'] as const).map((status, idx) => {
+      const items = d.repairs.filter(repair => repair.status === status);
+      return <section className="repair-column" key={status}>
+        <div className="repair-column-head"><span className={`repair-step step-${idx}`}>{String(idx + 1).padStart(2, '0')}</span><h2>{statusLabel(status)}</h2><b>{items.length}</b></div>
+        <DataState rows={items} title="Nothing here yet" text="Requests move into this stage as work progresses."><div className="repair-stack">{items.map(repair => <article className="repair-card" key={repair.id} data-testid={`repair-card-${repair.id}`}>
+          <div className="repair-card-top"><span className="repair-unit">UNIT {repair.unitNumber}</span><Status value={repair.status}/></div><h3>{repair.title}</h3><p>{repair.description}</p>
+          {repair.photoDataUrl && <img className="repair-photo" src={repair.photoDataUrl} alt={`Photo attached to ${repair.title}`}/>}
+          <div className="repair-by"><span className="avatar mini">{initials(repair.tenantName)}</span><span>{repair.tenantName}</span><time>{dateFmt(repair.reportedAt)}</time></div>
+          {repair.cost != null && <div className="repair-cost"><span>Recorded cost</span><b>{fmt(repair.cost)}</b></div>}
+          <RepairHistoryList repair={repair}/><RepairWorkflowActions repair={repair}/>
+        </article>)}</div></DataState>
+      </section>;
+    })}</div>
     <Modal open={open} title="Log a repair" close={() => setOpen(false)}><form onSubmit={submit} className="form-stack"><Field label="Unit"><select required value={unitId} onChange={e => setUnitId(e.target.value)}><option value="">Choose a unit…</option>{d.units.map(u => <option key={u.id} value={u.id}>{u.unitNumber} · {u.tenantName || 'Vacant'}</option>)}</select></Field><Field label="What needs attention?"><input required value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Kitchen tap leaking"/></Field><Field label="Details"><textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe what is happening…"/></Field><ModalActions close={() => setOpen(false)}/></form></Modal>
   </div>;
 }
 function AgreementsPage() {
-  const d = useData(); const [search, setSearch] = useState('');
+  const d = useData(); const [search, setSearch] = useState(''); const [signing, setSigning] = useState<Agreement | null>(null);
   const items = (d.agreements || []).filter(a => `${a.tenantName} ${a.unitNumber}`.toLowerCase().includes(search.toLowerCase()));
-  return <div className="page-stack"><div className="agreement-banner"><span><FileCheck2 size={20}/></span><div><b>Clear terms. A record everyone can return to.</b><p>Agreement dates and rent summaries at a glance.</p></div><div className="agreement-count"><b>{items.length}</b><small>AGREEMENTS</small></div></div><div className="toolbar"><div className="filter-search"><Search size={17}/><input placeholder="Search tenant or unit" aria-label="Search agreements" value={search} onChange={e => setSearch(e.target.value)}/></div><div className="toolbar-meta"><ShieldCheck size={16}/> Agreement summaries</div></div><div className="agreement-grid"><DataState rows={items} title="No agreements found" text="Agreement summaries will appear here when available.">{items.map(a => <article className="agreement-card" key={a.id} data-testid={`agreement-${a.id}`}><div className="agreement-card-head"><span className="agreement-file"><FileCheck2 size={18}/></span><span className={a.signedAt ? 'signed-label' : 'unsigned-label'}>{a.signedAt ? 'Signed' : 'Awaiting signature'}</span><button className="icon-button" aria-label={`Options for ${a.tenantName}`}><MoreHorizontal size={18}/></button></div><span className="eyebrow">UNIT {a.unitNumber}</span><h2>{a.tenantName}</h2><div className="agreement-rent">{fmt(a.monthlyRent)}<small>/ month</small></div><div className="agreement-details"><div><span>Security deposit</span><b>{fmt(a.deposit)}</b></div><div><span>Agreement term</span><b>{dateFmt(a.startDate)} — {dateFmt(a.endDate)}</b></div><div><span>Next rent due</span><b className="due-date"><CalendarDays size={14}/>{dateFmt(a.nextDueDate)}</b></div></div><div className="agreement-card-foot"><span>{a.signedAt ? `Signed ${dateFmt(a.signedAt)}` : 'Keep a signed copy on file'}</span><button className="text-link" onClick={() => d.notify(`Agreement summary for ${a.tenantName}`)}>View summary <ArrowUpRight size={14}/></button></div></article>)}</DataState></div></div>;
+  const today = new Date();
+  return <div className="page-stack">
+    <div className="agreement-banner"><span><FileCheck2 size={20}/></span><div><b>Clear terms. A record everyone can return to.</b><p>Agreement dates and rent summaries at a glance.</p></div><div className="agreement-count"><b>{items.length}</b><small>AGREEMENTS</small></div></div>
+    <div className="toolbar"><div className="filter-search"><Search size={17}/><input placeholder="Search tenant or unit" aria-label="Search agreements" value={search} onChange={e => setSearch(e.target.value)}/></div><div className="toolbar-meta"><ShieldCheck size={16}/> Agreement summaries</div></div>
+    <div className="agreement-grid"><DataState rows={items} title="No agreements found" text="Agreement summaries will appear here when available.">{items.map(a => {
+      const daysLeft = daysUntilDate(a.endDate, today);
+      const endingSoon = daysLeft >= 0 && daysLeft <= 60;
+      return <article className="agreement-card" key={a.id} data-testid={`agreement-${a.id}`}>
+        <div className="agreement-card-head"><span className="agreement-file"><FileCheck2 size={18}/></span><span className={a.signedAt ? 'signed-label' : 'unsigned-label'}>{a.signedAt ? 'Signed' : 'Awaiting signature'}</span></div>
+        <span className="eyebrow">UNIT {a.unitNumber}</span><h2>{a.tenantName}</h2>
+        <div className="agreement-rent">{fmt(a.monthlyRent)}<small>/ month</small></div>
+        <div className="agreement-details"><div><span>Security deposit</span><b>{fmt(a.deposit)}</b></div><div><span>Agreement term</span><b>{dateFmt(a.startDate)} — {dateFmt(a.endDate)}</b></div><div><span>Next rent due</span><b className="due-date"><CalendarDays size={14}/>{dateFmt(a.nextDueDate)}</b></div></div>
+        {endingSoon && <p className="agreement-expiring"><Clock3 size={14}/> Ends in {daysLeft} days</p>}
+        {a.signatureDataUrl && <div className="agreement-signature"><img src={a.signatureDataUrl} alt={`Signature for ${a.signedBy || a.tenantName}`}/></div>}
+        <div className="agreement-card-foot"><span>{a.signedAt ? `Signed ${dateFmt(a.signedAt)}${a.signedBy ? ` by ${a.signedBy}` : ''}` : 'A name and signature will be saved with the date.'}{!a.signedAt && <button type="button" className="button button-primary" onClick={() => setSigning(a)}>Sign agreement <ArrowUpRight size={14}/></button>}</span></div>
+      </article>;
+    })}</DataState></div>
+    {signing && <AgreementSignatureModal agreement={signing} close={() => setSigning(null)}/>}
+  </div>;
+}
+function SignaturePad({ onChange }: { onChange: (value: string | null) => void }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const drawing = useRef(false);
+  const point = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    return { x: (event.clientX - rect.left) * (canvas.width / rect.width), y: (event.clientY - rect.top) * (canvas.height / rect.height) };
+  };
+  const start = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const context = canvas.getContext('2d');
+    if (!context) return;
+    drawing.current = true;
+    canvas.setPointerCapture(event.pointerId);
+    const position = point(event);
+    context.beginPath();
+    context.moveTo(position.x, position.y);
+    context.lineWidth = 3;
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+    context.strokeStyle = '#1b5144';
+    context.lineTo(position.x + 0.1, position.y + 0.1);
+    context.stroke();
+  };
+  const move = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (!drawing.current) return;
+    const context = canvasRef.current?.getContext('2d');
+    if (!context) return;
+    const position = point(event);
+    context.lineTo(position.x, position.y);
+    context.stroke();
+  };
+  const finish = () => {
+    const canvas = canvasRef.current;
+    if (!drawing.current || !canvas) return;
+    drawing.current = false;
+    onChange(canvas.toDataURL('image/png'));
+  };
+  const clear = () => {
+    const canvas = canvasRef.current;
+    if (canvas) canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
+    onChange(null);
+  };
+  return <div className="signature-pad-wrap"><canvas ref={canvasRef} className="signature-pad" width={640} height={180} aria-label="Draw your signature here" onPointerDown={start} onPointerMove={move} onPointerUp={finish} onPointerCancel={finish}/><div className="signature-pad-footer"><small>Draw with a finger, stylus, or mouse. Typing your name also records your confirmation.</small><button type="button" className="text-link" onClick={clear}>Clear</button></div></div>;
+}
+function AgreementSignatureModal({ agreement, close }: { agreement: Agreement; close: () => void }) {
+  const d = useData();
+  const tenant = d.tenants.find(item => item.id === agreement.tenantId);
+  const [name, setName] = useState(d.role === 'Tenant' ? tenant?.fullName ?? '' : '');
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    try {
+      d.signAgreement(agreement.id, { signedBy: name, signatureDataUrl });
+      d.notify('Agreement signature saved with today’s date');
+      close();
+    } catch (error) {
+      d.notify(error instanceof Error ? error.message : 'The signature could not be saved.');
+    }
+  };
+  return <Modal open title={`Sign agreement · Unit ${agreement.unitNumber}`} close={close}>
+    <form className="form-stack" onSubmit={submit}>
+      <p className="wizard-intro">Review the summary before you confirm. Your name, signature, and signing date stay in this browser.</p>
+      <div className="wizard-review"><div><span>Tenant</span><b>{agreement.tenantName}</b></div><div><span>Rent</span><b>{fmt(agreement.monthlyRent)} / month</b></div><div><span>Term</span><b>{dateFmt(agreement.startDate)} — {dateFmt(agreement.endDate)}</b></div></div>
+      <Field label="Your full name"><input required maxLength={100} value={name} onChange={event => setName(event.target.value)} placeholder="Name of the person signing"/></Field>
+      <SignaturePad onChange={setSignatureDataUrl}/>
+      <label className="signature-confirm"><input required type="checkbox"/> I have reviewed these agreement details and confirm this signature.</label>
+      <div className="modal-actions"><button type="button" className="button button-quiet" onClick={close}>Cancel</button><button type="submit" className="button button-primary"><Check size={15}/>Save signature</button></div>
+    </form>
+  </Modal>;
 }
 function AnalyticsPage() {
   const d = useData();
@@ -844,12 +1286,25 @@ function AnalyticsPage() {
   const max = Math.max(1, ...analytics.points.map(point => point.collected + point.outstanding));
   const collected = analytics.points.reduce((total, point) => total + point.collected, 0);
   const outstanding = analytics.points.reduce((total, point) => total + point.outstanding, 0);
+  const exportAnalytics = () => {
+    const lines = [
+      ['Period', 'Collected (UGX)', 'Outstanding (UGX)'],
+      ...analytics.points.map(point => [point.label, String(point.collected), String(point.outstanding)]),
+    ].map(row => row.map(value => `"${value.replaceAll('"', '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([`\uFEFF${lines}`], { type: 'text/csv;charset=utf-8' }));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `rentwise-analytics-${period === 'month' ? 'monthly' : 'annual'}.csv`;
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    d.notify('Analytics exported as CSV');
+  };
 
   return <div className="page-stack">
-    <div className="toolbar"><div className="toolbar-meta"><span>Collection performance</span><span>·</span><span>Values in UGX</span></div><div className="segmented"><button onClick={() => setPeriod('month')} className={period === 'month' ? 'selected' : ''} aria-pressed={period === 'month'}>Monthly</button><button onClick={() => setPeriod('year')} className={period === 'year' ? 'selected' : ''} aria-pressed={period === 'year'}>Yearly</button></div></div>
+    <div className="toolbar"><div className="toolbar-meta"><span>Collection performance</span><span>·</span><span>Values in UGX</span></div><div className="toolbar-right"><div className="segmented"><button onClick={() => setPeriod('month')} className={period === 'month' ? 'selected' : ''} aria-pressed={period === 'month'}>Monthly</button><button onClick={() => setPeriod('year')} className={period === 'year' ? 'selected' : ''} aria-pressed={period === 'year'}>Yearly</button></div><button className="button button-quiet" onClick={exportAnalytics}><Download size={15}/>Export CSV</button></div></div>
     <div className="analytics-feature">
       <div className="analytics-copy"><span className="eyebrow">COLLECTION OVER TIME</span><h2>{period === 'month' ? 'A month, made visible.' : 'The year in perspective.'}</h2><p>{analytics.insight}</p><div className="chart-legend"><span><i className="legend-collected"/>Collected</span><span><i className="legend-outstanding"/>Outstanding</span></div></div>
-      <div className="chart-area" data-testid="analytics-chart"><div className="chart-grid-lines"><i/><i/><i/><i/></div><div className="bars">{analytics.points.map((point, index) => <div className="bar-group" key={`${point.label}-${index}`}><div className="bar-pair"><span className="bar collected" style={{ height: `${Math.max(3, point.collected / max * 100)}%` }} title={`Collected ${fmt(point.collected)}`}/><span className="bar outstanding" style={{ height: `${Math.max(2, point.outstanding / max * 100)}%` }} title={`Outstanding ${fmt(point.outstanding)}`}/></div><small>{point.label}</small></div>)}</div>{!analytics.points.length && <div className="chart-empty">Trend data will appear here once collection is recorded.</div>}</div>
+      <div className="chart-area" data-testid="analytics-chart"><div className="chart-grid-lines"><i/><i/><i/><i/></div><div className="bars">{analytics.points.map((point, index) => <div className="bar-group" key={`${point.label}-${index}`}><div className="bar-pair"><span className="bar collected" style={{ height: `${Math.max(3, point.collected / max * 100)}%` }} title={`Collected ${fmt(point.collected)}`} aria-label={`${point.label}: collected ${fmt(point.collected)}`}/><span className="bar outstanding" style={{ height: `${Math.max(2, point.outstanding / max * 100)}%` }} title={`Outstanding ${fmt(point.outstanding)}`} aria-label={`${point.label}: outstanding ${fmt(point.outstanding)}`}/></div><small>{point.label}</small></div>)}</div>{!analytics.points.length && <div className="chart-empty">Trend data will appear here once collection is recorded.</div>}</div>
     </div>
     <div className="metrics-grid analytics-metrics"><Metric label="Collected this period" value={compact(collected)} note="Recorded payments" icon={TrendingUp}/><Metric label="Outstanding this period" value={compact(outstanding)} note="Still expected" icon={Clock3} tone="amber"/><Metric label="Collection trust" value={`${d.dashboard.trustPercent}%`} note="Verified records this month" icon={ShieldCheck}/><Metric label="Late units" value={String(d.dashboard.lateCount)} note="May need a follow-up" icon={CalendarDays} tone="blue"/></div>
     <div className="analytics-note"><span><ShieldCheck size={17}/></span><p><b>Numbers you can stand behind.</b><br/>Each figure comes from payment records made in this browser. Download your payment history from the Payment ledger.</p><Link href="/payments" className="text-link">Open ledger <ArrowUpRight size={14}/></Link></div>
@@ -870,8 +1325,28 @@ function ReceiptPage() {
   return <div className="receipt-page"><div className="receipt-page-toolbar"><Link href="/payments" className="text-link"><ArrowLeft size={15}/>Back to ledger</Link><div><button className="button button-quiet" onClick={() => window.print()}><ReceiptText size={15}/>Print receipt</button><button className="button button-primary" onClick={copyLink}><ArrowUpRight size={15}/>Copy share link</button></div></div><article className="receipt-page-card"><div className="receipt-brand"><span className="brand-mark"><House size={18}/></span><span><b>rentwise</b><small>PROPERTY LEDGER</small></span></div><div className="paid-stamp">PAID</div><span className="eyebrow">OFFICIAL RENT RECEIPT</span><h2>{fmt(payment.amount)}</h2><p>Payment recorded for {payment.tenantName}</p><div className="receipt-page-details"><div><span>Unit</span><b>{payment.unitNumber}</b></div><div><span>Recorded on</span><b>{dateFmt(payment.recordedAt)}</b></div><div><span>Payment method</span><b>{payment.method === 'mobile_money' ? 'Mobile money (MTN / Airtel)' : statusLabel(payment.method)}</b></div><div><span>Recorded by</span><b>{payment.recordedBy}</b></div><div><span>Transaction reference</span><b>{payment.reference || 'Not provided'}</b></div><div><span>Receipt number</span><b>RW-{String(payment.id).padStart(6, '0')}</b></div></div><div className="receipt-page-foot"><ShieldCheck size={16}/><span>This receipt reflects a payment recorded in the property ledger.</span></div></article></div>;
 }
 function NotificationsPage() {
-  const d = useData(); const [filter, setFilter] = useState('all'); const items = (d.activity || []).filter(a => filter === 'all' || a.type === filter);
-  return <div className="page-stack"><div className="notification-intro"><span className="notification-emblem"><Bell size={22}/></span><div><h2>One dependable history.</h2><p>Payments, repairs and agreements in the order they happened.</p></div><button className="button button-quiet" onClick={d.refresh}><RefreshCw size={15}/>Refresh</button></div><div className="toolbar notification-toolbar"><div className="toolbar-meta">{items.length} activity records</div><div className="filter-pills">{['all','payment','repair','agreement','message','contact_reveal'].map(x => <button className={filter === x ? 'active' : ''} key={x} onClick={() => setFilter(x)}>{x === 'all' ? 'All activity' : x === 'contact_reveal' ? 'Contact access' : x}</button>)}</div></div><section className="panel notifications-panel"><DataState rows={items} title="Your activity is up to date" text="New payment receipts and property activity will be listed here."><div className="timeline">{items.map((item, i) => <div className="timeline-entry" key={item.id} data-testid={`activity-${item.id}`}><div className="timeline-rail"><span className={`timeline-icon type-${item.type}`}>{item.type === 'payment' ? <Wallet size={16}/> : item.type === 'repair' ? <Wrench size={16}/> : item.type === 'agreement' ? <FileCheck2 size={16}/> : <Bell size={16}/>}</span>{i < items.length - 1 && <i/>}</div><div className="timeline-body"><div className="timeline-title"><b>{item.title}</b><time>{dateFmt(item.occurredAt)}</time></div><p>{item.detail}</p><div className="timeline-meta"><span>{item.unitNumber === 'Tenant record' ? 'Tenant record' : `Unit ${item.unitNumber}`}</span><span>Recorded by {item.actor}</span></div>{item.type === 'payment' && <Link className="receipt-link" href={`/receipt/${item.id}`}><ReceiptText size={14}/>View receipt <ArrowUpRight size={13}/></Link>}</div></div>)}</div></DataState></section></div>;
+  const d = useData();
+  const [filter, setFilter] = useState('all');
+  const items = (d.activity || []).filter(activity => filter === 'all' || activity.type === filter);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const weekStart = new Date(today);
+  weekStart.setDate(weekStart.getDate() - 7);
+  const groups = [
+    { title: 'Today', items: items.filter(item => new Date(item.occurredAt) >= today) },
+    { title: 'This week', items: items.filter(item => { const date = new Date(item.occurredAt); return date >= weekStart && date < today; }) },
+    { title: 'Older', items: items.filter(item => new Date(item.occurredAt) < weekStart) },
+  ];
+  return <div className="page-stack">
+    <div className="notification-intro"><span className="notification-emblem"><Bell size={22}/></span><div><h2>One dependable history.</h2><p>Payments, repairs and agreements in the order they happened.</p></div><button className="button button-quiet" onClick={d.refresh}><RefreshCw size={15}/>Refresh</button></div>
+    <div className="toolbar notification-toolbar"><div className="toolbar-meta">{items.length} activity records</div><div className="filter-pills">{['all','payment','repair','agreement','message','contact_reveal'].map(type => <button aria-pressed={filter === type} className={filter === type ? 'active' : ''} key={type} onClick={() => setFilter(type)}>{type === 'all' ? 'All activity' : type === 'contact_reveal' ? 'Contact access' : statusLabel(type)}</button>)}</div></div>
+    <section className="panel notifications-panel"><DataState rows={items} title="Your activity is up to date" text="New payment receipts and property activity will be listed here."><div className="timeline">
+      {groups.filter(group => group.items.length > 0).map(group => <section className="timeline-group" key={group.title} aria-label={group.title}>
+        <h2>{group.title}</h2>
+        {group.items.map((item, index) => <div className="timeline-entry" key={item.id} data-testid={`activity-${item.id}`}><div className="timeline-rail"><span className={`timeline-icon type-${item.type}`}>{item.type === 'payment' ? <Wallet size={16}/> : item.type === 'repair' ? <Wrench size={16}/> : item.type === 'agreement' ? <FileCheck2 size={16}/> : <Bell size={16}/>}</span>{index < group.items.length - 1 && <i/>}</div><div className="timeline-body"><div className="timeline-title"><b>{item.title}</b><time>{dateFmt(item.occurredAt)}</time></div><p>{item.detail}</p><div className="timeline-meta"><span>{item.unitNumber === 'Tenant record' ? 'Tenant record' : `Unit ${item.unitNumber}`}</span><span>Recorded by {item.actor}</span></div>{item.type === 'payment' && <Link className="receipt-link" href={`/receipt/${item.id}`}><ReceiptText size={14}/>View receipt <ArrowUpRight size={13}/></Link>}</div></div>)}
+      </section>)}
+    </div></DataState></section>
+  </div>;
 }
 function TenantPortalPage() {
   const d = useData();
@@ -917,10 +1392,32 @@ function TenantPortalPage() {
   </div>;
 }
 function SettingsPage({ theme, setTheme }: { theme: string; setTheme: (s: string) => void }) {
-  const d = useData(); const [language, setLanguage] = useState(localStorage.getItem('ledger-language') || 'English'); const [alerts, setAlerts] = useState(localStorage.getItem('ledger-alerts') !== 'off'); const [saved, setSaved] = useState(false);
+  const d = useData();
+  const [language, setLanguage] = useState(localStorage.getItem('ledger-language') || 'English');
+  const [alerts, setAlerts] = useState(localStorage.getItem('ledger-alerts') !== 'off');
+  const [saved, setSaved] = useState(false);
+  const [channels, setChannels] = useState<string[]>(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('ledger-notification-channels') || '["sms"]');
+      return Array.isArray(stored) ? stored.filter((item): item is string => ['sms', 'whatsapp', 'email'].includes(item)) : ['sms'];
+    } catch { return ['sms']; }
+  });
   const updateLanguage = (s: string) => { setLanguage(s); localStorage.setItem('ledger-language', s); setSaved(true); d.notify('Language preference saved'); };
   const updateAlerts = () => { const n = !alerts; setAlerts(n); localStorage.setItem('ledger-alerts', n ? 'on' : 'off'); d.notify(n ? 'Notifications enabled' : 'Notifications paused'); };
-  return <div className="settings-layout"><section className="settings-intro"><span className="settings-mark"><Settings size={21}/></span><div><h2>A workspace that fits the way you work.</h2><p>These preferences are saved on this device.</p></div></section><section className="settings-section"><div className="settings-section-title"><span><UserRound size={18}/></span><div><h2>Workspace role</h2><p>Choose a role-based demo view. No sign-in or OTP flow is simulated.</p></div></div><div className="role-options">{(['Landlord','Caretaker','Tenant'] as Role[]).map(role => <button key={role} onClick={() => { d.setRole(role); d.notify(`${role} demo workspace selected`); }} className={classes('role-option', d.role === role && 'selected')} aria-pressed={d.role === role} data-testid={`role-${role.toLowerCase()}`}><span className="role-icon">{role === 'Landlord' ? <Building2 size={18}/> : role === 'Caretaker' ? <ClipboardList size={18}/> : <UserRound size={18}/>}</span><span><b>{role}</b><small>{role === 'Landlord' ? 'Portfolio overview and records' : role === 'Caretaker' ? 'Fast collection and repairs' : 'A simple tenant-facing portal'}</small></span>{d.role === role && <CheckCircle2 size={18} className="role-check"/>}</button>)}</div></section><section className="settings-section"><div className="settings-section-title"><span><Sun size={18}/></span><div><h2>Appearance</h2><p>Choose a light or dark ledger.</p></div></div><div className="appearance-options"><button onClick={() => setTheme('light')} className={classes('appearance-choice', theme === 'light' && 'selected')} aria-pressed={theme === 'light'} data-testid="theme-light"><Sun size={18}/><span>Light</span>{theme === 'light' && <Check size={15}/>}</button><button onClick={() => setTheme('dark')} className={classes('appearance-choice', theme === 'dark' && 'selected')} aria-pressed={theme === 'dark'} data-testid="theme-dark"><Moon size={18}/><span>Dark</span>{theme === 'dark' && <Check size={15}/>}</button></div></section><section className="settings-section"><div className="settings-section-title"><span><Bell size={18}/></span><div><h2>Notifications</h2><p>Choose whether this device receives activity reminders.</p></div></div><button className="settings-toggle-row" role="switch" aria-checked={alerts} onClick={updateAlerts} data-testid="toggle-notifications"><span><b>Activity and payment reminders</b><small>Receipts, collection follow-ups and repair updates</small></span><i className={classes('switch', alerts && 'on')}><em/></i></button></section><section className="settings-section"><div className="settings-section-title"><span><CircleHelp size={18}/></span><div><h2>Language</h2><p>Language used for labels and date formats.</p></div></div><div className="language-row"><select value={language} onChange={e => updateLanguage(e.target.value)} aria-label="Language preference"><option>English</option><option>Luganda</option><option>Swahili</option></select><span>UGX · Uganda Shillings</span></div></section><section className="settings-section role-summary"><div className="settings-section-title"><span><ShieldCheck size={18}/></span><div><h2>Privacy and data</h2><p>Rental records, contact details, role, and display preferences are saved in this browser only; they do not sync to other devices or users.</p></div></div><span className="privacy-check"><CheckCircle2 size={16}/> Saved in this browser</span></section>{saved && <span className="sr-only">Language setting saved</span>}</div>;
+  const toggleChannel = (channel: string) => {
+    const next = channels.includes(channel) ? channels.filter(item => item !== channel) : [...channels, channel];
+    setChannels(next);
+    localStorage.setItem('ledger-notification-channels', JSON.stringify(next));
+    d.notify('Notification preferences saved on this device');
+  };
+  return <div className="settings-layout">
+    <section className="settings-intro"><span className="settings-mark"><Settings size={21}/></span><div><h2>A workspace that fits the way you work.</h2><p>These preferences are saved on this device.</p></div></section>
+    {d.role === 'Landlord' && <section className="settings-section"><div className="settings-section-title"><span><UserRound size={18}/></span><div><h2>Demo workspace role</h2><p>Preview role-based screens. This does not create accounts or secure access.</p></div></div><div className="role-options">{(['Landlord','Caretaker','Tenant'] as Role[]).map(role => <button key={role} onClick={() => { d.setRole(role); d.notify(`${role} demo workspace selected`); }} className={classes('role-option', d.role === role && 'selected')} aria-pressed={d.role === role} data-testid={`role-${role.toLowerCase()}`}><span className="role-icon">{role === 'Landlord' ? <Building2 size={18}/> : role === 'Caretaker' ? <ClipboardList size={18}/> : <UserRound size={18}/>}</span><span><b>{role}</b><small>{role === 'Landlord' ? 'Portfolio overview and records' : role === 'Caretaker' ? 'Fast collection and repairs' : 'A simple tenant-facing portal'}</small></span>{d.role === role && <CheckCircle2 size={18} className="role-check"/>}</button>)}</div></section>}
+    <section className="settings-section"><div className="settings-section-title"><span><Sun size={18}/></span><div><h2>Appearance</h2><p>Choose a light or dark ledger.</p></div></div><div className="appearance-options"><button onClick={() => setTheme('light')} className={classes('appearance-choice', theme === 'light' && 'selected')} aria-pressed={theme === 'light'} data-testid="theme-light"><Sun size={18}/><span>Light</span>{theme === 'light' && <Check size={15}/>}</button><button onClick={() => setTheme('dark')} className={classes('appearance-choice', theme === 'dark' && 'selected')} aria-pressed={theme === 'dark'} data-testid="theme-dark"><Moon size={18}/><span>Dark</span>{theme === 'dark' && <Check size={15}/>}</button></div></section>
+    <section className="settings-section"><div className="settings-section-title"><span><Bell size={18}/></span><div><h2>Notifications</h2><p>Choose which activity reminders you want on this device.</p></div></div><button className="settings-toggle-row" role="switch" aria-checked={alerts} onClick={updateAlerts} data-testid="toggle-notifications"><span><b>Activity and payment reminders</b><small>Receipts, collection follow-ups and repair updates</small></span><i className={classes('switch', alerts && 'on')}><em/></i></button><div className="notification-channel-options"><span>Preferred channels</span>{[['sms','SMS'],['whatsapp','WhatsApp'],['email','Email']].map(([key,label]) => <label key={key}><input type="checkbox" checked={channels.includes(key)} onChange={() => toggleChannel(key)}/>{label}</label>)}</div><p className="settings-hint">These are saved preferences only. Sending SMS, WhatsApp, or email is not connected in this browser demo.</p></section>
+    <section className="settings-section"><div className="settings-section-title"><span><CircleHelp size={18}/></span><div><h2>Language</h2><p>Language used for labels and date formats.</p></div></div><div className="language-row"><select value={language} onChange={event => updateLanguage(event.target.value)} aria-label="Language preference"><option>English</option><option>Luganda</option><option>Swahili</option></select><span>UGX · Uganda Shillings</span></div></section>
+    <section className="settings-section role-summary"><div className="settings-section-title"><span><ShieldCheck size={18}/></span><div><h2>Privacy and data</h2><p>Rental records, contact details, role, and display preferences are saved in this browser only; they do not sync to other devices or users.</p></div></div><span className="privacy-check"><CheckCircle2 size={16}/> Saved in this browser</span></section>{saved && <span className="sr-only">Language setting saved</span>}
+  </div>;
 }
 function Field({ label, children }: { label: string; children: ReactNode }) { return <label className="form-field"><span>{label}</span>{children}</label>; }
 

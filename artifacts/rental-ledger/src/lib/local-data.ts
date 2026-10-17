@@ -11,12 +11,14 @@ export interface Property {
   address: string;
   description: string;
   unitCount: number;
+  photoDataUrls?: string[];
 }
 
 export interface PropertyInput {
   name: string;
   address: string;
   description?: string;
+  photoDataUrls?: string[];
 }
 
 export interface Unit {
@@ -106,6 +108,15 @@ export interface Repair {
   cost: number | null;
   reportedAt: string;
   assignedTo: string | null;
+  photoDataUrl?: string | null;
+  history?: RepairHistoryEntry[];
+}
+
+export interface RepairHistoryEntry {
+  status: RepairStatus;
+  detail: string;
+  actor: string;
+  occurredAt: string;
 }
 
 export interface RepairInput {
@@ -113,16 +124,27 @@ export interface RepairInput {
   title: string;
   description: string;
   tenantName?: string;
+  reportedBy?: string;
+  photoDataUrl?: string | null;
 }
 
 export interface RepairUpdate {
   status?: RepairStatus;
   cost?: number | null;
   assignedTo?: string | null;
+  actor?: string;
+  detail?: string;
+}
+
+export interface AgreementSignatureInput {
+  signedBy: string;
+  signatureDataUrl: string | null;
 }
 
 export interface Agreement {
   id: number;
+  tenantId: number;
+  unitId: number;
   tenantName: string;
   unitNumber: string;
   monthlyRent: number;
@@ -131,6 +153,8 @@ export interface Agreement {
   endDate: string;
   nextDueDate: string;
   signedAt: string | null;
+  signedBy?: string | null;
+  signatureDataUrl?: string | null;
 }
 
 export interface Activity {
@@ -341,6 +365,8 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
     .sort((a, b) => a.endDate.localeCompare(b.endDate))
     .map((agreement) => ({
       id: agreement.id,
+      tenantId: agreement.tenantId,
+      unitId: agreement.unitId,
       tenantName: tenantById.get(agreement.tenantId)?.fullName ?? "Tenant",
       unitNumber: unitById.get(agreement.unitId)?.unitNumber ?? "—",
       monthlyRent: agreement.monthlyRent,
@@ -349,6 +375,8 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
       endDate: agreement.endDate,
       nextDueDate: agreement.nextDueDate,
       signedAt: agreement.signedAt,
+      signedBy: agreement.signedBy ?? null,
+      signatureDataUrl: agreement.signatureDataUrl ?? null,
     }));
   const tenants: Tenant[] = [...records.tenants]
     .sort((a, b) => a.fullName.localeCompare(b.fullName))
@@ -380,6 +408,14 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
       ...repair,
       unitNumber: unitById.get(repair.unitId)?.unitNumber ?? "—",
       tenantName: unitById.get(repair.unitId)?.tenantName ?? "—",
+      history: repair.history?.length
+        ? repair.history
+        : [{
+          status: repair.status,
+          detail: "Repair reported",
+          actor: repair.assignedTo ?? "Tenant report",
+          occurredAt: repair.reportedAt,
+        }],
     }));
   const activity: Activity[] = [
     ...records.payments.map((payment) => ({
@@ -392,23 +428,35 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
       type: "payment" as const,
       occurredAt: payment.recordedAt,
     })),
-    ...records.repairs.map((repair) => ({
-      id: 1_000_000 + repair.id,
-      unitId: repair.unitId,
-      unitNumber: unitById.get(repair.unitId)?.unitNumber ?? "—",
-      title: repair.title,
-      detail: `Repair ${repair.status.replace("_", " ")}`,
-      actor: repair.assignedTo ?? "Tenant report",
-      type: "repair" as const,
-      occurredAt: repair.reportedAt,
-    })),
+    ...records.repairs.flatMap((repair) => {
+      const history = repair.history?.length
+        ? repair.history
+        : [{
+          status: repair.status,
+          detail: "Repair reported",
+          actor: repair.assignedTo ?? "Tenant report",
+          occurredAt: repair.reportedAt,
+        }];
+      return history.map((entry, index) => ({
+        id: 1_000_000 + repair.id * 1_000 + index,
+        unitId: repair.unitId,
+        unitNumber: unitById.get(repair.unitId)?.unitNumber ?? "—",
+        title: repair.title,
+        detail: entry.detail,
+        actor: entry.actor,
+        type: "repair" as const,
+        occurredAt: entry.occurredAt,
+      }));
+    }),
     ...records.agreements.map((agreement) => ({
       id: 2_000_000 + agreement.id,
       unitId: agreement.unitId,
       unitNumber: unitById.get(agreement.unitId)?.unitNumber ?? "—",
-      title: "Agreement signed",
-      detail: tenantById.get(agreement.tenantId)?.fullName ?? "Tenant",
-      actor: tenantById.get(agreement.tenantId)?.fullName ?? "Tenant",
+      title: agreement.signedAt ? "Agreement signed" : "Agreement recorded",
+      detail: agreement.signedAt
+        ? `Agreement for ${tenantById.get(agreement.tenantId)?.fullName ?? "tenant"} signed`
+        : `Agreement summary recorded for ${tenantById.get(agreement.tenantId)?.fullName ?? "tenant"}`,
+      actor: agreement.signedBy ?? tenantById.get(agreement.tenantId)?.fullName ?? "Workspace team",
       type: "agreement" as const,
       occurredAt: agreement.signedAt ?? `${agreement.startDate}T00:00:00.000Z`,
     })),
@@ -502,12 +550,28 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
         };
       });
     const current = points.reduce((total, point) => total + point.collected, 0);
+    const previousYear = period === "year" ? year - 1 : month === 0 ? year - 1 : year;
+    const previousMonth = month === 0 ? 11 : month - 1;
+    const previous = records.payments
+      .filter((payment) => {
+        const date = new Date(payment.recordedAt);
+        return date.getFullYear() === previousYear
+          && (period === "year" || date.getMonth() === previousMonth);
+      })
+      .reduce((total, payment) => total + payment.amount, 0);
+    const comparisonLabel = period === "year" ? "last year" : "last month";
+    const change = previous > 0 ? Math.round(((current - previous) / previous) * 100) : null;
+    const insight = current === 0
+      ? `No rent has been recorded in ${period === "year" ? "this year" : "this month"} yet.`
+      : change === null
+        ? `UGX ${current.toLocaleString("en-UG")} collected so far. There is no recorded data for ${comparisonLabel} to compare.`
+        : change === 0
+          ? `Collections are level with ${comparisonLabel} at UGX ${current.toLocaleString("en-UG")}.`
+          : `Collections are ${Math.abs(change)}% ${change > 0 ? "higher" : "lower"} than ${comparisonLabel}. UGX ${current.toLocaleString("en-UG")} collected.`;
     return {
       period,
       points,
-      insight: current > 0
-        ? `UGX ${current.toLocaleString("en-UG")} collected in ${period === "year" ? "this year" : "this month"}.`
-        : "No rent has been recorded in this period yet.",
+      insight,
     };
   };
 

@@ -1,0 +1,154 @@
+Role: You are a senior product designer and frontend engineer who builds award-winning, motion-rich web interfaces. Design and build a modern, attractive, web-based interface for a Rental House Management System used by three roles: Landlord (often absentee), Caretaker (on-site, collects rent), and Tenant. The product’s core promise is trust and transparency: every payment, repair, and agreement should be visible, verifiable, and hard to dispute.
+
+Platform constraints: Web only (responsive browser app, no native apps, no hardware). Designed for Ugandan users: UGX currency formatting (e.g., UGX 250,000), mobile money context (MTN and Airtel), English with occasional Luganda terms, and mostly mobile-first use on mid-range Android phones with patchy connectivity.
+
+Visual inspiration: Study award-winning interactive sites on Awwwards (https://www.awwwards.com/websites/web-interactive/). Borrow the quality of motion and craft, not the copy or layout. The interface should feel premium and tactile, but remain calm and trustworthy, because it manages people’s money.
+
+1. Design Direction
+Tone: Confident, warm, transparent. Think “a trusted ledger with a human touch,” not a cold bank portal.
+Palette: One primary brand color for trust actions (deep teal or green), one warm accent for highlights (amber), and semantic colors used consistently: green for paid, amber for pending, red for late or overdue, blue for information. Support light and dark modes.
+Typography: One expressive display face for headings and numbers, one highly legible sans-serif for body and tables. Use tabular numerals for all money and dates.
+Surfaces: Layered cards with soft shadows, subtle glassmorphism only on overlays, generous whitespace on desktop, and thumb-friendly targets (minimum 44px) on mobile.
+Iconography: One consistent set with clear status glyphs (✓ paid, ✗ late, ⚠ pending).
+2. Signature Interactions (Awwwards-Inspired)
+
+A. Immersive Property Creation Wizard (Landlord only)
+
+Replace long forms with a step-by-step wizard (Property → Units → Tenants → Agreements → Review).
+Use clip-path text reveals on step headings and slide transitions between steps with a visible progress rail.
+Room image upload: a drag-and-drop zone that, on drop, animates thumbnails into a floating, staggered grid preview of the property layout. Show a skeleton state during upload and a clear retry on failure.
+Autosave every step so a caretaker losing signal never loses work.
+
+B. Interactive Floorplan and Room States
+
+On the property map, each unit is a tappable tile colored by status (paid, pending, late, vacant, under repair). Landlord sees all units; Caretaker sees units only; Tenant sees only their own unit.
+On hover (desktop) or press (mobile), the room scales up with a spring animation (stiffness ~300, damping ~20).
+Clicking a room opens a right-side drawer with tenant information, payment history, open repairs, and quick actions. Never reload the page. The drawer closes with Esc, a swipe, or the close button. The drawer content depends on role: Landlord sees full details; Caretaker sees contact and payment status only; Tenant does not have this view.
+Provide a list-view toggle for accessibility and for screen readers.
+
+C. Kinetic Data Visualization (Landlord only)
+
+KPI counters (total collected, outstanding, units occupied) count up from zero on load using easing, and reformat smoothly when values change.
+Charts morph between Monthly and Annual views with animated line transitions, not hard redraws. Show a tooltip on hover or touch with exact UGX values.
+Use GSAP or Framer Motion, but keep animations under 600ms and respect reduced-motion settings.
+
+D. Context-Aware Cursor (Desktop, Landlord only)
+
+During drag-and-drop assignment of tenants to vacant units, the cursor becomes a floating tag reading “Drop to Assign” over a valid vacant unit, “Move” over an occupied unit (with confirmation), and “Not Allowed” over an invalid target.
+Touch equivalent: a floating label follows the finger, and invalid drops shake gently with a short haptic-style pulse where supported.
+
+E. Fluid Client-Side Transitions
+
+Single-page routing with no hard reloads. When moving from Overview to Tenant Profiles, metric cards slide down and fade out, while the profile list rises in with a staggered delay (40–60ms per item).
+Use shared-element transitions where a tenant’s avatar or unit tile animates into its profile header.
+Keep page state (filters, scroll position) when the user navigates back.
+3. Unique Signatures (Make It Memorable)
+“Receipt Stamp” moment: When a payment is confirmed, animate a rubber-stamp “PAID” with a subtle ink texture and a soft confirmation chime (muted by default). This is the emotional payoff of the whole system.
+Trust Meter (Landlord only): On the Landlord dashboard, a small ring shows the percentage of rent verified digitally versus reported verbally, reinforcing transparency.
+Timeline Ledger: Every unit has a scrollable timeline where payments, repairs, and messages appear as a continuous story, with each entry marked by who recorded it and when. Tenants see only entries for their own unit.
+Ambient status bar: A thin top gradient shifts color subtly with the day’s collection progress (red at start, green at completion). Shown to Landlord and Caretaker only.
+Sound-free by default, motion-rich by design: Every animation has a purpose. Remove any motion that does not clarify, reward, or orient.
+4. Role Access Matrix
+
+Each screen below is visible only to the roles marked ✓. A screen a role cannot see must not appear in that role’s navigation, and a direct URL to it must show a “not available for your role” page.
+
+Screen	Landlord	Caretaker	Tenant
+Landing, role selection, login	✓	✓	✓
+Onboarding tour	✓	✓ (includes “Record a payment” tutorial)	✓
+Overview dashboard (KPIs, Today card, Trust Meter)	✓	✗	✗
+Floorplan / property map	Full view	Units only, for collection	Own unit only
+Daily collection (record payments)	View only	✓	✗
+Payments and ledger	All units	Entries they recorded	Own payments only
+Tenant profiles	✓	✓ (contact and status only)	✗
+Repairs (kanban board)	Full control	Update status and log costs	Report a repair, view own
+Agreements	✓	View only	Own agreement only
+Receipts and notifications	All	Own actions	Own receipts
+Tenant portal (balance, pay status, “Report a problem”)	✗	✗	✓
+Analytics	✓	✗	✗
+Settings (roles, permissions, notifications)	Full	Personal preferences only	Personal preferences only
+Property creation wizard	✓	✗	✗
+
+Role data rules:
+
+Tenants never see other tenants’ names, phone numbers, or payments, and never see the landlord’s analytics or other units.
+Caretakers never see analytics, agreement terms beyond their own collection duties, or settings that change permissions.
+Landlords see all data for their properties. Sensitive identifiers (phone numbers, IDs) are masked for everyone by default, with a reveal action that is logged.
+5. Screen-by-Screen UX Requirements
+
+For every screen, design these states for each role that can see it: empty, loading (skeleton), error (with a recovery action), success, and offline. Each screen must also meet the requirements in sections 4 and 6.
+
+Landing and Login (all roles)
+
+Role selection (Landlord, Caretaker, Tenant) before sign-in, with one clear reason for each role.
+Phone-number login with OTP for low-friction access. Show a clear message if the network is weak.
+
+Onboarding (per role)
+
+Short guided tour (max 4 cards, skippable). Caretakers get a 30-second “Record a payment” tutorial.
+
+Landlord Overview Dashboard (Landlord only)
+
+Priority first: a “Today” card showing what needs attention (late payments, unresolved repairs, unverified payments) with one-tap actions.
+KPI counters, collection progress, and the floorplan preview.
+Trust Meter and daily summary card.
+
+Floorplan / Property Map (all roles, scope varies per section 4)
+
+Status legend always visible. Filter by status. Search by unit or tenant name (Landlord and Caretaker only; Tenant has no search).
+Drawer for unit details (see section 2B).
+
+Caretaker: Daily Collection (Caretaker only; Landlord sees read-only)
+
+Built for speed on a phone. Large numeric keypad for amount, unit picker with recent units first, and a one-tap “Confirm” that gives instant feedback.
+Running balance card (“12 of 30 collected, UGX 3.6M so far, 18 left”).
+Offline queue: entries save locally and sync when connected, with a visible sync indicator.
+Show the remaining unpaid unit list at the top so the caretaker knows who to follow up with.
+
+Payments and Ledger (scope varies per section 4)
+
+Table with sticky headers, search, and date range filter. Each row shows status, method (mobile money, cash, bank), and recorder.
+Export to PDF or CSV (Landlord only; no Word files for end users).
+Duplicate-payment warning to protect against double entry.
+
+Tenant Profiles (Landlord full; Caretaker contact and status only)
+
+Staggered list entry (section 2E). Profile shows contact, agreement dates, payment history, and open requests.
+Sensitive data (phone numbers, IDs) masked by default with a reveal action that is logged.
+
+Repairs and Maintenance (scope varies per section 4)
+
+Kanban board: Reported → Assigned → In Progress → Done. Each card shows photos, cost (UGX), and timeline.
+Tenants can report a repair with a photo in under 30 seconds.
+
+Agreements (scope varies per section 4)
+
+Clear summary cards: rent amount, due date, deposit, duration, and renewal date. Expiring agreements highlighted 60 days ahead.
+Digital signature capture with a visible “signed on” timestamp.
+
+Receipts and Notifications (scope varies per section 4)
+
+Notification center grouped by Today, This Week, and Older. Tap to open the related unit or payment.
+Receipt view with a shareable link and a print-friendly layout.
+
+Tenant Portal (Tenant only)
+
+Simple home: current balance (with due date countdown), pay-status, receipts, and “Report a problem” button.
+Language toggle (English / Luganda labels for core actions).
+
+Analytics (Landlord only)
+
+Monthly and annual toggles with morphing charts. Export button. Plain-language insight line under each chart (e.g., “Collections are 8% higher than last month”).
+
+Settings (scope varies per section 4)
+
+Roles and permissions (Landlord only), notification preferences (SMS, WhatsApp, email), and theme toggle. Permissions shown as clear on/off descriptions, never jargon.
+6. User Experience Standards (Apply to Every Screen)
+Clarity first: Every screen answers “What is this? What do I do next?” within three seconds.
+Feedback everywhere: Every action gives immediate feedback (button state, toast, animation). Never leave the user guessing.
+Forgiving design: Confirm destructive actions, provide undo for at least 10 seconds where possible, and autosave drafts.
+Plain language: No technical terms in the UI. “Payment not confirmed yet” beats “Pending reconciliation.”
+Accessibility (WCAG 2.1 AA): Contrast ratio 4.5:1 minimum, keyboard navigation for everything, visible focus rings, ARIA labels on icons and status, screen-reader announcements for live updates, and captions or text alternatives for any motion-based cue.
+Reduced motion: Respect the OS “reduce motion” setting by replacing animations with simple fades.
+Performance: First meaningful paint under 2.5 seconds on a mid-range phone over 3G. Lazy-load charts and images. Compress room photos on upload.
+Privacy by design: Show only the data each role needs. Tenants never see other tenants’ information. Mask personal identifiers by default.
+Consistency: One design system with reusable components (buttons, cards, status pills, drawers, tables, empty states) documented in a shared component library.
