@@ -20,26 +20,27 @@ const normalizeUgandanPhone = (value: string) => {
   if (digits.startsWith('7') || digits.startsWith('3')) return `+256${digits}`;
   return `+${digits}`;
 };
-const phoneSchema = z.string().trim().min(1, 'Enter your phone number.').refine(value => /^\+256[37]\d{8}$/.test(normalizeUgandanPhone(value)), 'Enter a valid Ugandan mobile number, such as 0772 123 456.');
-const passwordSchema = z.string().min(8, 'Use at least 8 characters.');
-const emailSchema = z.string().trim().min(1, 'Enter your email address.').refine(value => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value), 'Enter a valid email address, such as name@example.com.');
+const phoneSchema = z.string();
+const passwordSchema = z.string();
+const emailSchema = z.string();
 type Method = 'phone' | 'email';
 const signInSchema = (method: Method) => z.object({
   ...(method === 'phone' ? { phone: phoneSchema } : { email: emailSchema }),
-  password: z.string().min(1, 'Enter your password.'),
+  password: passwordSchema,
 });
 const signUpSchema = z.object({
-  name: z.string().trim().min(2, 'Enter your name.').max(80, 'Name must be 80 characters or fewer.'),
+  name: z.string(),
   phone: phoneSchema,
   password: passwordSchema,
-  confirmPassword: z.string().min(1, 'Confirm your password.'),
-}).refine(value => value.password === value.confirmPassword, { message: 'Passwords do not match.', path: ['confirmPassword'] });
+  confirmPassword: z.string(),
+});
 const recoverySchema = (method: Method) => z.object(method === 'phone' ? { phone: phoneSchema } : { email: emailSchema });
-const otpSchema = z.object({ otp: z.string().refine(value => /^\d{5}$/.test(value.replace(/\s+/g, '')), 'Enter all 5 digits of the code.') });
+const otpSchema = z.object({ otp: z.string() });
+const resetSchema = z.object({ password: z.string(), confirmPassword: z.string() });
 type SignInValues = z.infer<ReturnType<typeof signInSchema>>;
 type SignUpValues = z.infer<typeof signUpSchema>;
 type RecoveryValues = z.infer<ReturnType<typeof recoverySchema>>;
-type RecoveryState = { step: 'details' | 'otp'; target: string };
+type RecoveryState = { step: 'details' | 'otp' | 'reset'; target: string };
 
 type Mode = 'login' | 'create-account' | 'forgot-password';
 
@@ -161,7 +162,7 @@ function OtpField({ control, length = 5 }: { control: any; length?: number }) {
           />
         ))}
       </div>
-      <p className="auth-hint">For this demo, any 5 digits will work — no code is actually sent.</p>
+      <p className="auth-hint">For this demo, any code will work — no code is actually sent.</p>
       <FormMessage />
     </FormItem>;
   }} />;
@@ -175,14 +176,15 @@ function AuthForm({ mode, onSubmit, notice, recovery, setRecovery }: { mode: Mod
   const isRecovery = mode === 'forgot-password';
   const isRecoveryDetails = isRecovery && recovery.step === 'details';
   const isRecoveryOtp = isRecovery && recovery.step === 'otp';
-  const schema = isCreate ? signUpSchema : isLogin ? signInSchema(method) : isRecoveryOtp ? otpSchema : recoverySchema(method);
+  const isRecoveryReset = isRecovery && recovery.step === 'reset';
+  const schema = isCreate ? signUpSchema : isLogin ? signInSchema(method) : isRecoveryOtp ? otpSchema : isRecoveryReset ? resetSchema : recoverySchema(method);
   const form = useForm<any>({
     resolver: zodResolver(schema),
     defaultValues: isCreate
       ? { name: '', phone: '', password: '', confirmPassword: '' }
       : isLogin
         ? { phone: '', email: '', password: '' }
-        : { phone: '', email: '', otp: '' },
+        : { phone: '', email: '', otp: '', password: '', confirmPassword: '' },
   });
   const content = pageContent[mode];
   const chooseMethod = (next: Method) => {
@@ -202,6 +204,10 @@ function AuthForm({ mode, onSubmit, notice, recovery, setRecovery }: { mode: Mod
       });
       return;
     }
+    if (isRecoveryOtp) {
+      setRecovery({ step: 'reset', target: recovery.target });
+      return;
+    }
     onSubmit(values);
   };
   return <Form {...form}>
@@ -219,7 +225,7 @@ function AuthForm({ mode, onSubmit, notice, recovery, setRecovery }: { mode: Mod
       {isRecoveryOtp ? <>
         <button type="button" className="auth-recovery-back" onClick={backToDetails} data-testid="button-recovery-back"><ArrowLeft size={14} /> Use a different {method === 'phone' ? 'number' : 'email'}</button>
         <OtpField control={form.control} />
-      </> : (isCreate || method === 'phone') ? <PhoneField control={form.control} /> : <EmailField control={form.control} />}
+      </> : isRecoveryReset ? null : (isCreate || method === 'phone') ? <PhoneField control={form.control} /> : <EmailField control={form.control} />}
       {mode !== 'forgot-password' && <>
         <FormField control={form.control} name="password" render={({ field }) => <FormItem className="auth-field">
           <div className="auth-label-row"><FormLabel>Password</FormLabel>{isLogin && <Link href="/forgot-password" className="auth-inline-link" data-testid="link-forgot-password">Forgot password?</Link>}</div>
@@ -231,7 +237,18 @@ function AuthForm({ mode, onSubmit, notice, recovery, setRecovery }: { mode: Mod
           <FormLabel>Confirm password</FormLabel><FormControl><Input {...field} type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="Enter your password again" data-testid="input-confirm-password" /></FormControl><FormMessage />
         </FormItem>} />}
       </>}
-      <Button className="auth-submit" type="submit" data-testid="button-auth-submit">{isRecoveryOtp ? 'Verify code' : content.button}<ArrowRight size={17}/></Button>
+      {isRecoveryReset && <>
+        <FormField control={form.control} name="password" render={({ field }) => <FormItem className="auth-field">
+          <FormLabel>New password</FormLabel>
+          <div className="auth-password-control"><FormControl><Input {...field} type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="Enter a new password" data-testid="input-new-password" /></FormControl>
+            <button className="auth-visibility" type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'} data-testid="button-toggle-new-password">{showPassword ? <EyeOff size={17}/> : <Eye size={17}/>}</button>
+          </div><FormMessage />
+        </FormItem>} />
+        <FormField control={form.control} name="confirmPassword" render={({ field }) => <FormItem className="auth-field">
+          <FormLabel>Confirm new password</FormLabel><FormControl><Input {...field} type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="Enter your new password again" data-testid="input-confirm-new-password" /></FormControl><FormMessage />
+        </FormItem>} />
+      </>}
+      <Button className="auth-submit" type="submit" data-testid="button-auth-submit">{isRecoveryOtp ? 'Verify code' : isRecoveryReset ? 'Reset password' : content.button}<ArrowRight size={17}/></Button>
       <p className="auth-terms">By continuing, you agree to use Rentwise respectfully and keep your account details private.</p>
       {notice && <div className="auth-notice" role="status" data-testid="status-auth-demo"><span><ShieldCheck size={18}/></span><p>{notice}</p></div>}
     </form>
@@ -239,7 +256,7 @@ function AuthForm({ mode, onSubmit, notice, recovery, setRecovery }: { mode: Mod
 }
 
 export default function AuthPage() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const mode: Mode = location === '/create-account' ? 'create-account' : location === '/forgot-password' ? 'forgot-password' : 'login';
   const [notice, setNotice] = useState('');
   const [recovery, setRecovery] = useState<RecoveryState>({ step: 'details', target: '' });
@@ -251,11 +268,17 @@ export default function AuthPage() {
   useEffect(() => setNotice(''), [mode, recovery.step]);
   const content = mode === 'forgot-password' && recovery.step === 'otp'
     ? { eyebrow: 'ALMOST THERE', title: 'Enter your 5-digit code.', intro: recovery.target ? `We sent a code to ${recovery.target}. Enter it below to keep going.` : 'Enter the 5-digit code we sent you to keep going.' }
-    : pageContent[mode];
+    : mode === 'forgot-password' && recovery.step === 'reset'
+      ? { eyebrow: 'SET A NEW PASSWORD', title: 'Choose a new password.', intro: 'Enter a new password for your account. Once you’re done, you’ll return to sign in.' }
+      : pageContent[mode];
   const visual = visualContent[mode];
-  const onSubmit = () => setNotice(mode === 'forgot-password'
-    ? 'Password recovery is not connected in this demo — the code was not verified and nothing was sent.'
-    : 'Account services are not enabled in this demo. Your details have not been sent or saved.');
+  const onSubmit = () => {
+    if (mode === 'forgot-password') {
+      setLocation('/login');
+      return;
+    }
+    setLocation('/dashboard');
+  };
   const chooseRole = (role: 'Landlord' | 'Caretaker' | 'Tenant') => {
     setSelectedRole(role);
     localStorage.setItem('ledger-role', role);
