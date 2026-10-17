@@ -43,7 +43,7 @@ import {
   Check, CheckCircle2, ChevronDown, ChevronLeft, CircleHelp, ClipboardList, Clock3, Download, FileCheck2,
   LayoutDashboard, List, LogOut, Menu, Moon, MoreHorizontal,
   Plus, RefreshCw, Search, Settings, ShieldCheck, Sun, UserRound, Users, Wallet, Wrench, X,
-  BarChart3, MapPin, Smartphone, Eye, EyeOff, ReceiptText, House, TrendingUp,
+  BarChart3, MapPin, Smartphone, Eye, EyeOff, ReceiptText, House, TrendingUp, ImagePlus,
 } from 'lucide-react';
 import { Link, Redirect, Route, Switch, useLocation, useRoute, Router as WouterRouter } from 'wouter';
 
@@ -67,17 +67,21 @@ const useData = () => {
   return value;
 };
 
-const navGroups = [
-  { title: 'WORKSPACE', links: [
-    ['/dashboard', 'Overview', LayoutDashboard], ['/properties', 'Properties', Building2],
-    ['/daily-collection', 'Daily collection', Wallet], ['/payments', 'Payment ledger', ReceiptText],
-  ] },
-  { title: 'PEOPLE & OPERATIONS', links: [
-    ['/tenants', 'Tenants', Users], ['/repairs', 'Repairs', Wrench], ['/agreements', 'Agreements', FileCheck2],
-    ['/notifications', 'Activity & receipts', Bell],
-  ] },
-  { title: 'INSIGHTS', links: [['/analytics', 'Analytics', BarChart3], ['/tenant', 'Tenant portal', UserRound]] },
-];
+type NavLink = [string, string, typeof LayoutDashboard];
+const navGroupsByRole: Record<Role, { title: string; links: NavLink[] }[]> = {
+  Landlord: [
+    { title: 'WORKSPACE', links: [['/dashboard', 'Overview', LayoutDashboard], ['/properties', 'Properties', Building2], ['/daily-collection', 'Daily collection', Wallet], ['/payments', 'Payment ledger', ReceiptText]] },
+    { title: 'PEOPLE & OPERATIONS', links: [['/tenants', 'Tenants', Users], ['/repairs', 'Repairs', Wrench], ['/agreements', 'Agreements', FileCheck2], ['/notifications', 'Activity & receipts', Bell]] },
+    { title: 'INSIGHTS', links: [['/analytics', 'Analytics', BarChart3]] },
+  ],
+  Caretaker: [
+    { title: 'TODAY', links: [['/dashboard', 'My day', LayoutDashboard], ['/daily-collection', 'Daily collection', Wallet], ['/properties', 'Homes in care', Building2]] },
+    { title: 'PROPERTY CARE', links: [['/payments', 'Recorded payments', ReceiptText], ['/tenants', 'Tenant contacts', Users], ['/repairs', 'Repair activity', Wrench], ['/agreements', 'Rent summaries', FileCheck2], ['/notifications', 'Activity & receipts', Bell]] },
+  ],
+  Tenant: [
+    { title: 'YOUR HOME', links: [['/dashboard', 'My home', House], ['/tenant', 'Home details', Building2], ['/payments', 'My payments', ReceiptText], ['/repairs', 'My repairs', Wrench], ['/agreements', 'My agreement', FileCheck2], ['/notifications', 'Receipts & activity', Bell]] },
+  ],
+};
 const fmt = (n?: number | null) => `UGX ${(n ?? 0).toLocaleString('en-UG')}`;
 const compact = (n?: number) => `UGX ${(n ?? 0).toLocaleString('en-UG', { notation: 'compact', maximumFractionDigits: 1 })}`;
 const dateFmt = (value?: string | null) => value ? new Date(value).toLocaleDateString('en-UG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
@@ -339,21 +343,32 @@ function AppShell() {
     document.documentElement.classList.toggle('dark', theme === 'dark');
     localStorage.setItem('ledger-theme', theme);
   }, [theme]);
-  const title = path.startsWith('/receipt/') ? 'Receipt' : (navGroups.flatMap(g => g.links).find(([href]) => href === path)?.[1] as string) || 'Overview';
+  const roleNav = navGroupsByRole[d.role];
+  const allRoleNav = Object.values(navGroupsByRole).flatMap(groups => groups.flatMap(group => group.links));
+  const title = path.startsWith('/receipt/') ? 'Receipt' : path === '/settings' ? 'Preferences' : (roleNav.flatMap(g => g.links).find(([href]) => href === path)?.[1] as string) || (allRoleNav.find(([href]) => href === path)?.[1] as string) || (path === '/dashboard' ? (d.role === 'Tenant' ? 'My home' : d.role === 'Caretaker' ? 'My day' : 'Overview') : 'Rentwise');
+  const roleSubtitle = d.role === 'Caretaker' ? 'A practical view of today’s collection and the homes in your care.' : d.role === 'Tenant' ? 'A simple, clear record of home, rent and care.' : 'A clearer view of home, and everything that keeps it running.';
+  const tenantName = getDemoTenant(d)?.fullName ?? 'Tenant';
+  const tenantNameParts = tenantName.split(' ');
+  const tenantDisplayName = `${tenantNameParts[0]} ${tenantNameParts[tenantNameParts.length - 1]?.[0] ?? ''}.`;
+  const displayName = d.role === 'Tenant' ? tenantDisplayName : d.role === 'Caretaker' ? 'Amina' : 'Agnes M.';
+  const tenantUnit = d.role === 'Tenant' ? d.units.find(unit => unit.id === getDemoTenant(d)?.unitId) : undefined;
+  const workspaceProperty = d.role === 'Tenant'
+    ? d.properties.find(property => property.id === tenantUnit?.propertyId)?.name || 'Your home'
+    : d.dashboard?.propertyName || d.properties?.[0]?.name || 'Mirembe Court';
   const sidebar = <aside id="workspace-sidebar" className={classes('sidebar', drawer && 'sidebar-open')} aria-label="Rentwise workspace sidebar">
     <div className="brand-lockup"><span className="brand-mark"><House size={19}/></span><span><b>rentwise</b><small>PROPERTY LEDGER</small></span><button className="sidebar-collapse-button" type="button" onClick={() => setSidebarCollapsed(value => !value)} aria-label={sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={!sidebarCollapsed} aria-controls="workspace-sidebar" title={sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'} data-testid="button-sidebar-collapse"><ChevronLeft size={17}/></button><button className="sidebar-close" onClick={() => setDrawer(false)} aria-label="Close navigation"><X size={19}/></button></div>
-    <div className="workspace-label">MANAGEMENT DESK</div>
-    <div className="property-picker" title={`${d.dashboard?.propertyName || d.properties?.[0]?.name || 'Kintu Court'} · All properties`}><span className="property-symbol">K</span><span><b>{d.dashboard?.propertyName || d.properties?.[0]?.name || 'Kintu Court'}</b><small>All properties</small></span><ChevronDown size={15}/></div>
-    <nav aria-label="Main navigation">{navGroups.map(group => <div className="nav-group" key={group.title}><p>{group.title}</p>{group.links.map(([href, label, Icon]) => <Link key={href as string} href={href as string} onClick={() => setDrawer(false)} aria-label={label as string} title={label as string} className={classes('nav-item', path === href && 'active')} data-testid={`nav-${String(label).toLowerCase().replaceAll(' ', '-')}`}><Icon size={18}/><span>{label as string}</span>{href === '/daily-collection' && d.dashboard?.lateCount ? <em>{d.dashboard.lateCount}</em> : null}</Link>)}</div>)}</nav>
-    <div className="sidebar-bottom"><div className="sync-card" title="Records are saved only in this browser"><span className="sync-dot"/><div><b>Saved on this device</b><small>Local storage · no account sync</small></div><Check size={15}/></div><Link href="/settings" aria-label="Preferences" title="Preferences" className={classes('nav-item', path === '/settings' && 'active')} data-testid="nav-settings"><Settings size={18}/><span>Preferences</span></Link><div className="user-mini" title={`Agnes M. · ${d.role} workspace`}><span className="avatar">AM</span><div><b>Agnes M.</b><small>{d.role} workspace</small></div><MoreHorizontal size={18}/></div></div>
+    <div className="workspace-label">{d.role === 'Landlord' ? 'MANAGEMENT DESK' : d.role === 'Caretaker' ? 'ON-SITE DESK' : 'PRIVATE HOME'}</div>
+    <div className="property-picker" title={d.role === 'Tenant' ? 'Your home' : `${workspaceProperty} · ${d.role === 'Landlord' ? 'All properties' : 'Property in your care'}`}><span className="property-symbol">{workspaceProperty[0]}</span><span><b>{workspaceProperty}</b><small>{d.role === 'Landlord' ? 'All properties' : d.role === 'Caretaker' ? 'Property in your care' : 'Your rented home'}</small></span>{d.role === 'Landlord' && <ChevronDown size={15}/>}</div>
+    <nav aria-label="Main navigation">{roleNav.map(group => <div className="nav-group" key={group.title}><p>{group.title}</p>{group.links.map(([href, label, Icon]) => <Link key={href} href={href} onClick={() => setDrawer(false)} aria-label={label} title={label} className={classes('nav-item', path === href && 'active')} data-testid={`nav-${label.toLowerCase().replaceAll(' ', '-')}`}><Icon size={18}/><span>{label}</span>{href === '/daily-collection' && d.dashboard?.lateCount ? <em>{d.dashboard.lateCount}</em> : null}</Link>)}</div>)}</nav>
+    <div className="sidebar-bottom"><div className="sync-card" title="Records are saved only in this browser"><span className="sync-dot"/><div><b>Saved on this device</b><small>Local storage · no account sync</small></div><Check size={15}/></div><Link href="/settings" aria-label="Preferences" title="Preferences" className={classes('nav-item', path === '/settings' && 'active')} data-testid="nav-settings"><Settings size={18}/><span>Preferences</span></Link><div className="user-mini" title={`${d.role} demo workspace`}><span className="avatar">{initials(displayName)}</span><div><b>{displayName}</b><small>{d.role} workspace</small></div><MoreHorizontal size={18}/></div></div>
   </aside>;
   return <div className="app-shell"><div className={classes('shell-layout', sidebarCollapsed && 'sidebar-is-collapsed')}>{sidebar}{drawer && <button className="scrim" onClick={() => setDrawer(false)} aria-label="Close menu"/>}<main className="main-area">
-     <header className="topbar"><button className="mobile-menu icon-button" onClick={() => setDrawer(true)} aria-label="Open menu"><Menu size={20}/></button><div className="crumb"><span>Workspace</span><span>/</span><b>{title}</b></div><div className="top-actions"><span className="connection"><span/>Browser-only</span><button className="icon-button" aria-label="Refresh workspace" onClick={d.refresh} data-testid="button-refresh"><RefreshCw size={17}/></button><Link href="/notifications" className="icon-button notify-button" aria-label="Notifications"><Bell size={18}/><i/></Link><span className="top-divider"/><DropdownMenu>
-        <DropdownMenuTrigger asChild><button className="profile-button" data-testid="button-profile" aria-label="Open account menu"><span className="avatar small-avatar">AM</span><span>Agnes M.</span><ChevronDown size={14}/></button></DropdownMenuTrigger>
+    <header className="topbar"><button className="mobile-menu icon-button" onClick={() => setDrawer(true)} aria-label="Open menu"><Menu size={20}/></button><div className="crumb"><span>{d.role === 'Tenant' ? 'My home' : 'Workspace'}</span><span>/</span><b>{title}</b></div><div className="top-actions"><span className="connection"><span/>Browser-only</span><button className="icon-button" aria-label="Refresh workspace" onClick={d.refresh} data-testid="button-refresh"><RefreshCw size={17}/></button><Link href="/notifications" className="icon-button notify-button" aria-label="Receipts and activity"><Bell size={18}/><i/></Link><span className="top-divider"/><DropdownMenu>
+        <DropdownMenuTrigger asChild><button className="profile-button" data-testid="button-profile" aria-label="Open account menu"><span className="avatar small-avatar">{initials(displayName)}</span><span>{displayName}</span><ChevronDown size={14}/></button></DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel className="flex items-center gap-2.5 py-2">
-            <span className="avatar small-avatar">AM</span>
-            <span className="flex flex-col gap-0.5"><b className="text-[13px] font-semibold">Agnes M.</b><small className="text-[11px] text-muted-foreground">{d.role} workspace</small></span>
+            <span className="avatar small-avatar">{initials(displayName)}</span>
+            <span className="flex flex-col gap-0.5"><b className="text-[13px] font-semibold">{displayName}</b><small className="text-[11px] text-muted-foreground">{d.role} workspace</small></span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator/>
           <DropdownMenuItem onSelect={() => setLocation('/settings')} data-testid="menu-preferences"><Settings size={16}/> Preferences</DropdownMenuItem>
@@ -361,13 +376,20 @@ function AppShell() {
           <DropdownMenuItem onSelect={() => setLocation('/')} className="focus:bg-destructive focus:text-destructive-foreground" data-testid="menu-sign-out"><LogOut size={16}/> Sign out</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu></div></header>
-    <div className="content-area"><div className="page-heading"><div><div className="eyebrow">{title === 'Overview' ? `${d.role.toUpperCase()} WORKSPACE · UGANDA` : 'RENTWISE · UGANDA'}</div><h1>{title}</h1>{title === 'Overview' && <p className="heading-sub">{d.role === 'Caretaker' ? 'A practical view of today’s collection and the homes in your care.' : d.role === 'Tenant' ? 'A simple, clear record of home, rent and care.' : 'A clearer view of home, and everything that keeps it running.'}</p>}</div>{path === '/dashboard' && <Link href={d.role === 'Tenant' ? '/tenant' : '/daily-collection'} className="button button-primary" data-testid="button-collect-rent">{d.role === 'Tenant' ? <UserRound size={17} /> : <Plus size={17} />}{d.role === 'Tenant' ? 'Open tenant space' : 'Record payment'}</Link>}</div>
+    <div className="content-area"><div className="page-heading"><div><div className="eyebrow">{path === '/dashboard' ? `${d.role.toUpperCase()} WORKSPACE · UGANDA` : 'RENTWISE · UGANDA'}</div><h1>{title}</h1>{path === '/dashboard' && <p className="heading-sub">{roleSubtitle}</p>}</div>{path === '/dashboard' && d.role === 'Landlord' && <Link href="/daily-collection" className="button button-primary" data-testid="button-collect-rent"><Plus size={17}/>Record payment</Link>}</div>
       <div className="page-enter"><Switch>
         <Route path="/" component={() => <Redirect to="/dashboard"/>}/>
-        <Route path="/dashboard" component={DashboardPage}/><Route path="/properties" component={PropertiesPage}/><Route path="/daily-collection" component={DailyCollectionPage}/>
-        <Route path="/payments" component={PaymentsPage}/><Route path="/tenants" component={TenantsPage}/><Route path="/repairs" component={RepairsPage}/>
-        <Route path="/agreements" component={AgreementsPage}/><Route path="/analytics" component={AnalyticsPage}/><Route path="/notifications" component={NotificationsPage}/>
-         <Route path="/tenant" component={TenantPortalPage}/><Route path="/receipt/:id" component={ReceiptPage}/><Route path="/settings" component={() => <SettingsPage theme={theme} setTheme={setTheme}/>}/>
+        <Route path="/dashboard" component={RoleDashboardPage}/>
+        <Route path="/properties" component={RolePropertiesPage}/>
+        <Route path="/daily-collection" component={() => <RoleGate allow={['Landlord','Caretaker']}><RoleCollectionPage/></RoleGate>}/>
+        <Route path="/payments" component={RolePaymentsPage}/>
+        <Route path="/tenants" component={RoleTenantsPage}/>
+        <Route path="/repairs" component={RoleRepairsPage}/>
+        <Route path="/agreements" component={RoleAgreementsPage}/>
+        <Route path="/analytics" component={() => <RoleGate allow={['Landlord']}><AnalyticsPage/></RoleGate>}/>
+        <Route path="/notifications" component={RoleNotificationsPage}/>
+        <Route path="/tenant" component={() => <RoleGate allow={['Tenant']}><TenantPortalPage/></RoleGate>}/>
+        <Route path="/receipt/:id" component={ReceiptPage}/><Route path="/settings" component={() => <SettingsPage theme={theme} setTheme={setTheme}/>}/>
         <Route component={NotFoundPage}/>
       </Switch></div>
       <footer className="footer"><span>Rentwise <i>·</i> A reliable record, for everyone under one roof.</span><span>UGX <i>·</i> Kampala, Uganda</span></footer>
@@ -386,6 +408,165 @@ function Empty({ title, text, action }: { title: string; text: string; action?: 
 function DataState({ rows, children, title = 'No records yet', text = 'When new activity is recorded, it will appear here.' }: { rows?: unknown[]; children: ReactNode; title?: string; text?: string }) {
   if (rows && rows.length === 0) return <Empty title={title} text={text}/>;
   return <>{children}</>;
+}
+function RoleGate({ allow, children }: { allow: Role[]; children: ReactNode }) {
+  const { role } = useData();
+  if (allow.includes(role)) return <>{children}</>;
+  return <section className="role-unavailable" role="status" data-testid="role-unavailable">
+    <span className="role-unavailable-icon"><ShieldCheck size={22}/></span>
+    <span className="eyebrow">PRIVATE WORKSPACE</span>
+    <h2>This page is not available for your role.</h2>
+    <p>Your {role.toLowerCase()} workspace only shows the records and tools relevant to you.</p>
+    <Link href="/dashboard" className="button button-primary" data-testid="link-return-workspace">Return to your workspace <ArrowUpRight size={15}/></Link>
+  </section>;
+}
+const getDemoTenant = (d: DataContextValue) => d.tenants.find(tenant => tenant.unitId != null) ?? d.tenants[0];
+function RoleDashboardPage() {
+  const { role } = useData();
+  if (role === 'Caretaker') return <CaretakerDayPage/>;
+  if (role === 'Tenant') return <TenantPortalPage/>;
+  return <DashboardPage/>;
+}
+function RoleCollectionPage() {
+  return <DailyCollectionPage/>;
+}
+function RolePropertiesPage() {
+  const { role } = useData();
+  if (role === 'Landlord') return <PropertiesPage/>;
+  if (role === 'Caretaker') return <CaretakerHomesPage/>;
+  return <RoleGate allow={['Landlord','Caretaker']}><PropertiesPage/></RoleGate>;
+}
+function RolePaymentsPage() {
+  const { role } = useData();
+  if (role === 'Caretaker') return <CaretakerPaymentsPage/>;
+  if (role === 'Tenant') return <TenantPaymentsPage/>;
+  return <PaymentsPage/>;
+}
+function RoleTenantsPage() {
+  const { role } = useData();
+  if (role === 'Caretaker') return <CaretakerContactsPage/>;
+  return role === 'Landlord' ? <TenantsPage/> : <RoleGate allow={['Landlord','Caretaker']}><TenantsPage/></RoleGate>;
+}
+function RoleRepairsPage() {
+  const { role } = useData();
+  if (role === 'Tenant') return <TenantRepairsPage/>;
+  if (role === 'Caretaker') return <CaretakerRepairsPage/>;
+  return <RepairsPage/>;
+}
+function RoleAgreementsPage() {
+  const { role } = useData();
+  if (role === 'Tenant') return <TenantAgreementPage/>;
+  if (role === 'Landlord') return <AgreementsPage/>;
+  return <CaretakerAgreementsPage/>;
+}
+function RoleNotificationsPage() {
+  const { role } = useData();
+  return role === 'Landlord' ? <NotificationsPage/> : <PrivateActivityPage/>;
+}
+function CaretakerDayPage() {
+  const d = useData();
+  const followUps = d.units.filter(unit => unit.tenantId != null && unit.balance > 0);
+  const occupied = d.units.filter(unit => unit.tenantId != null);
+  const paid = occupied.filter(unit => unit.balance === 0).length;
+  const currentMonth = new Date();
+  currentMonth.setDate(1); currentMonth.setHours(0, 0, 0, 0);
+  const collected = d.payments.filter(payment => new Date(payment.recordedAt) >= currentMonth).reduce((sum, payment) => sum + payment.amount, 0);
+  const expected = occupied.reduce((sum, unit) => sum + unit.rentAmount, 0);
+  const progress = expected ? Math.min(100, Math.round(collected / expected * 100)) : 0;
+  const openRepairs = d.repairs.filter(repair => repair.status !== 'done').slice(0, 3);
+  return <div className="caretaker-day page-stack" data-testid="caretaker-daily-view">
+    <section className="caretaker-welcome">
+      <div className="caretaker-welcome-copy"><span className="eyebrow"><Clock3 size={13}/> TODAY · {new Date().toLocaleDateString('en-UG',{weekday:'long', day:'numeric', month:'long'})}</span><h2>Keep the day moving.</h2><p>Here is what needs a follow-up at {d.dashboard?.propertyName || 'your property'}.</p><Link href="/daily-collection" className="button button-cream" data-testid="button-open-caretaker-collection"><Wallet size={15}/>Open collection <ArrowUpRight size={14}/></Link></div>
+      <div className="caretaker-today-mark"><ClipboardList size={22}/><span>ON-SITE<br/>DESK</span></div>
+    </section>
+    <section className="collection-progress-card" aria-label="Monthly collection progress">
+      <div className="collection-progress-heading"><div><span className="eyebrow">MONTHLY COLLECTION</span><h2>{fmt(collected)} <small>of {fmt(expected)}</small></h2></div><span className="progress-fraction">{paid} of {occupied.length}<small>homes settled</small></span></div>
+      <div className="collection-progress-track" role="progressbar" aria-label="Rent collected this month" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><span style={{transform:`scaleX(${progress / 100})`}}/></div>
+      <div className="collection-progress-foot"><span>{progress}% recorded this month</span><span>{followUps.length} follow-up{followUps.length === 1 ? '' : 's'} remaining</span></div>
+    </section>
+    <div className="caretaker-day-columns">
+      <Panel title="Follow-up units" action={<span className="count-bubble" aria-label={`${followUps.length} units to follow up`}>{followUps.length}</span>} className="caretaker-followups">
+        <p className="role-panel-intro">A short list of homes with rent still due.</p>
+        <DataState rows={followUps} title="Collection is up to date" text="There are no outstanding occupied units right now.">
+          <div className="caretaker-followup-list">{followUps.map(unit => <article key={unit.id} className="caretaker-followup" data-testid={`caretaker-followup-${unit.id}`}><span className="unit-avatar late">{unit.unitNumber}</span><div className="caretaker-followup-person"><b>{unit.tenantName || 'Tenant'}</b><small>{unit.unitNumber} · Monthly rent {fmt(unit.rentAmount)}</small></div><div className="caretaker-followup-balance"><b>{fmt(unit.balance)}</b><Status value={unit.status}/></div></article>)}</div>
+        </DataState>
+      </Panel>
+      <Panel title="Repair activity" action={<Link href="/repairs" className="text-link" data-testid="link-caretaker-repair-activity">View activity <ArrowUpRight size={14}/></Link>} className="caretaker-repair-panel">
+        <p className="role-panel-intro">Repairs currently being looked after.</p>
+        <DataState rows={openRepairs} title="No open repairs" text="New repair updates will appear here.">
+          <div className="caretaker-repair-list">{openRepairs.map(repair => <article className="caretaker-repair-item" key={repair.id} data-testid={`caretaker-repair-${repair.id}`}><span className="repair-activity-icon"><Wrench size={16}/></span><div><b>{repair.title}</b><small>Unit {repair.unitNumber} · {dateFmt(repair.reportedAt)}</small></div><Status value={repair.status}/></article>)}</div>
+        </DataState>
+      </Panel>
+    </div>
+    <div className="caretaker-mobile-money"><Smartphone size={17}/><span><b>MTN MoMo and Airtel Money</b><small>Payment entries are kept with their reference in the browser ledger.</small></span><Link href="/payments" className="text-link" data-testid="link-caretaker-payment-records">See records <ArrowUpRight size={14}/></Link></div>
+  </div>;
+}
+function CaretakerHomesPage() {
+  const d = useData();
+  return <div className="page-stack">
+    <div className="role-page-intro"><span className="role-page-icon"><Building2 size={19}/></span><div><span className="eyebrow">MIREMBE COURT · KISAASI</span><h2>Homes in your care</h2><p>A simple unit view for collection follow-up and on-site repairs.</p></div></div>
+    <section className="panel caretaker-homes-panel"><div className="panel-head"><h2>Unit status</h2><span className="toolbar-meta">{d.units.length} homes</span></div><DataState rows={d.units} title="No homes recorded" text="Home records for this property will appear here."><div className="caretaker-homes-grid" role="list" aria-label="Homes and current status">{d.units.map(unit => <article className={`caretaker-home-tile unit-${unit.status}`} key={unit.id} role="listitem" data-testid={`caretaker-home-${unit.id}`}><div><b>{unit.unitNumber}</b><Status value={unit.status}/></div><span>{unit.tenantName || 'Vacant home'}</span><strong>{unit.tenantId ? fmt(unit.balance > 0 ? unit.balance : unit.rentAmount) : '—'}</strong><small>{unit.tenantId ? unit.balance > 0 ? 'Balance to follow up' : 'Monthly rent' : 'No tenant assigned'}</small></article>)}</div></DataState>
+      <div className="caretaker-unit-legend" aria-label="Unit status legend"><span><i className="legend-paid"/>Up to date</span><span><i className="legend-pending"/>Needs follow-up</span><span><i className="legend-repair"/>Repair</span><span><i className="legend-vacant"/>Vacant</span></div>
+    </section>
+  </div>;
+}
+function CaretakerPaymentsPage() {
+  const d = useData();
+  const payments = d.payments.filter(payment => payment.recordedBy.toLowerCase().includes('caretaker') || payment.recordedBy.toLowerCase().includes('amina'));
+  return <div className="page-stack">
+    <div className="role-page-intro"><span className="role-page-icon"><ReceiptText size={19}/></span><div><span className="eyebrow">YOUR RECORDS</span><h2>Payments you recorded</h2><p>Only collection entries attributed to the caretaker are shown here.</p></div></div>
+    <section className="panel role-record-panel"><DataState rows={payments} title="No caretaker entries yet" text="Payments recorded by the on-site caretaker will appear here."><div className="role-record-list">{payments.map(payment => <article className="role-record-row" key={payment.id} data-testid={`caretaker-payment-${payment.id}`}><span className="payment-check"><Check size={15}/></span><div><b>Unit {payment.unitNumber} · {payment.tenantName}</b><small>{dateFmt(payment.recordedAt)} · {payment.method === 'mobile_money' ? 'MTN / Airtel mobile money' : statusLabel(payment.method)}{payment.reference ? ` · ${payment.reference}` : ''}</small></div><strong>{fmt(payment.amount)}</strong></article>)}</div></DataState></section>
+  </div>;
+}
+function CaretakerContactsPage() {
+  const d = useData();
+  const contacts = d.tenants.filter(tenant => tenant.unitId != null);
+  return <div className="page-stack"><div className="role-page-intro"><span className="role-page-icon"><Users size={19}/></span><div><span className="eyebrow">PROPERTY IN YOUR CARE</span><h2>Tenant contacts</h2><p>Contact and home status for the occupied units you look after.</p></div></div>
+    <section className="panel role-record-panel"><DataState rows={contacts} title="No occupied homes" text="Tenant contact details will appear here when a home is occupied."><div className="role-record-list">{contacts.map(tenant => { const unit = d.units.find(item => item.id === tenant.unitId); return <article className="role-contact-row" key={tenant.id} data-testid={`caretaker-contact-${tenant.id}`}><span className="tenant-avatar">{initials(tenant.fullName)}</span><div className="role-contact-person"><b>{tenant.fullName}</b><small>{unit?.unitNumber} · {maskPhone(tenant.phone)}</small></div><Status value={unit?.status || 'pending'}/><span className="role-contact-balance">{unit && unit.balance > 0 ? fmt(unit.balance) : 'Up to date'}</span></article>; })}</div></DataState></section>
+    <p className="privacy-note"><ShieldCheck size={16}/><span>Phone numbers stay partially hidden in this browser view.</span></p>
+  </div>;
+}
+function CaretakerRepairsPage() {
+  const d = useData();
+  const repairs = d.repairs;
+  return <div className="page-stack"><div className="role-page-intro"><span className="role-page-icon"><Wrench size={19}/></span><div><span className="eyebrow">PROPERTY CARE</span><h2>Repair activity</h2><p>A read-only view of repair reports and their latest recorded status.</p></div></div>
+    <section className="panel role-record-panel"><DataState rows={repairs} title="No repair records yet" text="Repair updates for the property will appear here."><div className="role-record-list">{repairs.map(repair => <article className="role-repair-row" key={repair.id} data-testid={`caretaker-repair-record-${repair.id}`}><span className="repair-activity-icon"><Wrench size={16}/></span><div><b>{repair.title}</b><small>Unit {repair.unitNumber} · Reported {dateFmt(repair.reportedAt)}{repair.assignedTo ? ` · ${repair.assignedTo}` : ''}</small><p>{repair.description}</p></div><Status value={repair.status}/></article>)}</div></DataState></section>
+  </div>;
+}
+function CaretakerAgreementsPage() {
+  const d = useData();
+  return <div className="page-stack">
+    <div className="role-page-intro"><span className="role-page-icon"><FileCheck2 size={19}/></span><div><span className="eyebrow">COLLECTION REFERENCE</span><h2>Rent summaries</h2><p>Only the details needed to follow up on rent are shown here.</p></div></div>
+    <section className="panel role-record-panel"><DataState rows={d.agreements} title="No rent summaries yet" text="Collection details will appear here when an agreement is recorded."><div className="role-record-list">{d.agreements.map(agreement => <article className="role-record-row" key={agreement.id} data-testid={`caretaker-agreement-${agreement.id}`}><span className="agreement-file"><FileCheck2 size={17}/></span><div><b>Unit {agreement.unitNumber} · {agreement.tenantName}</b><small>Next rent due {dateFmt(agreement.nextDueDate)} · {agreement.signedAt ? 'Agreement on file' : 'Awaiting signature'}</small></div><strong>{fmt(agreement.monthlyRent)}<small className="agreement-frequency"> / month</small></strong></article>)}</div></DataState></section>
+  </div>;
+}
+function TenantPaymentsPage() {
+  const d = useData(); const tenant = getDemoTenant(d); const payments = d.payments.filter(payment => payment.unitId === tenant?.unitId);
+  return <div className="page-stack"><div className="role-page-intro"><span className="role-page-icon"><ReceiptText size={19}/></span><div><span className="eyebrow">YOUR RENT RECORD</span><h2>Payments and receipts</h2><p>These entries belong to {tenant?.unitNumber ? `Unit ${tenant.unitNumber}` : 'your home'} only.</p></div></div>
+    <section className="panel role-record-panel"><DataState rows={payments} title="No receipts yet" text="Payments recorded for your home will appear here."><div className="role-record-list">{payments.map(payment => <article className="role-record-row" key={payment.id} data-testid={`tenant-payment-${payment.id}`}><span className="payment-check"><Check size={15}/></span><div><b>{dateFmt(payment.recordedAt)} · rent</b><small>{payment.method === 'mobile_money' ? 'MTN / Airtel mobile money' : statusLabel(payment.method)}{payment.reference ? ` · Ref ${payment.reference}` : ''}</small></div><strong>{fmt(payment.amount)}</strong><Link href={`/receipt/${payment.id}`} className="icon-button" aria-label={`View receipt for ${fmt(payment.amount)}`}><ReceiptText size={16}/></Link></article>)}</div></DataState></section>
+    <div className="mobile-money-note"><Smartphone size={17}/><span><b>Pay by MTN MoMo or Airtel Money.</b> Your caretaker can help if a receipt needs checking.</span></div>
+  </div>;
+}
+function TenantRepairsPage() {
+  const d = useData(); const tenant = getDemoTenant(d); const repairs = d.repairs.filter(repair => repair.unitId === tenant?.unitId);
+  return <div className="page-stack"><div className="role-page-intro"><span className="role-page-icon"><Wrench size={19}/></span><div><span className="eyebrow">YOUR HOME</span><h2>Repair updates</h2><p>Only reports linked to your home are shown here.</p></div></div>
+    <section className="tenant-report-card" aria-labelledby="tenant-report-title"><div className="tenant-report-heading"><span className="role-page-icon"><ImagePlus size={18}/></span><div><h2 id="tenant-report-title">Report a problem</h2><p>Share what needs attention at home.</p></div></div><form className="form-stack" onSubmit={event => event.preventDefault()}><Field label="What needs attention?"><input placeholder="e.g. Kitchen tap is leaking" readOnly aria-label="What needs attention"/></Field><Field label="Add a few details"><textarea placeholder="Tell us what happened and where…" readOnly aria-label="Repair details"/></Field><label className="tenant-photo-upload"><ImagePlus size={16}/><span>Add a photo <small>Optional · JPG or PNG</small></span><input type="file" accept="image/*" aria-label="Add a repair photo" disabled/></label><button className="button button-primary full-button" type="button" disabled>Send to caretaker</button><p className="tenant-report-note">This screen is a visual preview; sending repair requests is not connected.</p></form></section>
+    <section className="panel role-record-panel"><DataState rows={repairs} title="No repair reports" text="There are no repair records for your home yet."><div className="role-record-list">{repairs.map(repair => <article className="role-repair-row" key={repair.id} data-testid={`tenant-repair-${repair.id}`}><span className="repair-activity-icon"><Wrench size={16}/></span><div><b>{repair.title}</b><small>Reported {dateFmt(repair.reportedAt)} · Unit {repair.unitNumber}</small><p>{repair.description}</p></div><Status value={repair.status}/></article>)}</div></DataState></section>
+  </div>;
+}
+function TenantAgreementPage() {
+  const d = useData(); const tenant = getDemoTenant(d); const agreement = d.agreements.find(item => item.tenantName === tenant?.fullName);
+  if (!agreement) return <Empty title="No agreement summary yet" text="Your agreement details will appear here once they are recorded." />;
+  return <div className="page-stack"><div className="role-page-intro"><span className="role-page-icon"><FileCheck2 size={19}/></span><div><span className="eyebrow">YOUR HOME · UNIT {agreement.unitNumber}</span><h2>Agreement summary</h2><p>A clear reference for your rent and tenancy dates.</p></div></div><article className="agreement-card tenant-own-agreement"><div className="agreement-card-head"><span className="agreement-file"><FileCheck2 size={18}/></span><span className={agreement.signedAt ? 'signed-label' : 'unsigned-label'}>{agreement.signedAt ? 'Signed' : 'Awaiting signature'}</span></div><div className="agreement-rent">{fmt(agreement.monthlyRent)}<small>/ month</small></div><div className="agreement-details"><div><span>Security deposit</span><b>{fmt(agreement.deposit)}</b></div><div><span>Agreement term</span><b>{dateFmt(agreement.startDate)} — {dateFmt(agreement.endDate)}</b></div><div><span>Next rent due</span><b className="due-date"><CalendarDays size={14}/>{dateFmt(agreement.nextDueDate)}</b></div></div><div className="agreement-card-foot"><span>{agreement.signedAt ? `Signed ${dateFmt(agreement.signedAt)}` : 'Agreement summary on file'}</span></div></article></div>;
+}
+function PrivateActivityPage() {
+  const d = useData(); const tenant = getDemoTenant(d); const isTenant = d.role === 'Tenant';
+  const activities = d.activity.filter(item => {
+    if (isTenant) return item.unitId === tenant?.unitId && item.type !== 'contact_reveal';
+    return d.payments.some(payment => payment.unitId === item.unitId && payment.recordedBy.toLowerCase().includes('caretaker') && payment.id === item.id)
+      || (item.type === 'repair' && d.repairs.some(repair => repair.unitId === item.unitId));
+  });
+  return <div className="page-stack"><div className="role-page-intro"><span className="role-page-icon"><Bell size={19}/></span><div><span className="eyebrow">{isTenant ? 'YOUR HOME' : 'YOUR RECENT WORK'}</span><h2>{isTenant ? 'Receipts and updates' : 'Activity and receipts'}</h2><p>{isTenant ? 'Only activity connected with your home appears here.' : 'A record of caretaker collection and repair activity.'}</p></div></div><section className="panel notifications-panel"><DataState rows={activities} title="You are up to date" text="Relevant payments and repair updates will appear here."><div className="timeline">{activities.map((item, index) => <div className="timeline-entry" key={item.id}><div className="timeline-rail"><span className={`timeline-icon type-${item.type}`}>{item.type === 'payment' ? <Wallet size={16}/> : <Wrench size={16}/>}</span>{index < activities.length - 1 && <i/>}</div><div className="timeline-body"><div className="timeline-title"><b>{item.title}</b><time>{dateFmt(item.occurredAt)}</time></div><p>{item.detail}</p><div className="timeline-meta"><span>{isTenant ? `Unit ${item.unitNumber}` : `Unit ${item.unitNumber}`}</span>{!isTenant && <span>{item.actor}</span>}</div>{item.type === 'payment' && isTenant && <Link className="receipt-link" href={`/receipt/${item.id}`}><ReceiptText size={14}/>View receipt <ArrowUpRight size={13}/></Link>}</div></div>)}</div></DataState></section></div>;
 }
 function DashboardPage() {
   const d = useData(); const s = d.dashboard; const activities = d.activity || s?.activity || []; const [, setLocation] = useLocation();
@@ -676,6 +857,11 @@ function AnalyticsPage() {
 }
 function ReceiptPage() {
   const d = useData(); const [, params] = useRoute('/receipt/:id'); const payment = d.payments?.find(item => item.id === Number(params?.id));
+  const ownTenantUnit = getDemoTenant(d)?.unitId;
+  const receiptIsVisible = d.role === 'Landlord'
+    || (d.role === 'Tenant' && payment?.unitId === ownTenantUnit)
+    || (d.role === 'Caretaker' && Boolean(payment && (payment.recordedBy.toLowerCase().includes('caretaker') || payment.recordedBy.toLowerCase().includes('amina'))));
+  if (!receiptIsVisible) return <RoleGate allow={['Landlord']}><Empty title="Receipt not available" text="This receipt is not part of the records available in your workspace." action={<Link href="/dashboard" className="button button-primary">Return to your workspace</Link>}/></RoleGate>;
   const copyLink = async () => {
     try { await navigator.clipboard.writeText(window.location.href); d.notify('Receipt link copied'); }
     catch { d.notify('Could not copy the receipt link on this device.'); }
@@ -688,8 +874,47 @@ function NotificationsPage() {
   return <div className="page-stack"><div className="notification-intro"><span className="notification-emblem"><Bell size={22}/></span><div><h2>One dependable history.</h2><p>Payments, repairs and agreements in the order they happened.</p></div><button className="button button-quiet" onClick={d.refresh}><RefreshCw size={15}/>Refresh</button></div><div className="toolbar notification-toolbar"><div className="toolbar-meta">{items.length} activity records</div><div className="filter-pills">{['all','payment','repair','agreement','message','contact_reveal'].map(x => <button className={filter === x ? 'active' : ''} key={x} onClick={() => setFilter(x)}>{x === 'all' ? 'All activity' : x === 'contact_reveal' ? 'Contact access' : x}</button>)}</div></div><section className="panel notifications-panel"><DataState rows={items} title="Your activity is up to date" text="New payment receipts and property activity will be listed here."><div className="timeline">{items.map((item, i) => <div className="timeline-entry" key={item.id} data-testid={`activity-${item.id}`}><div className="timeline-rail"><span className={`timeline-icon type-${item.type}`}>{item.type === 'payment' ? <Wallet size={16}/> : item.type === 'repair' ? <Wrench size={16}/> : item.type === 'agreement' ? <FileCheck2 size={16}/> : <Bell size={16}/>}</span>{i < items.length - 1 && <i/>}</div><div className="timeline-body"><div className="timeline-title"><b>{item.title}</b><time>{dateFmt(item.occurredAt)}</time></div><p>{item.detail}</p><div className="timeline-meta"><span>{item.unitNumber === 'Tenant record' ? 'Tenant record' : `Unit ${item.unitNumber}`}</span><span>Recorded by {item.actor}</span></div>{item.type === 'payment' && <Link className="receipt-link" href={`/receipt/${item.id}`}><ReceiptText size={14}/>View receipt <ArrowUpRight size={13}/></Link>}</div></div>)}</div></DataState></section></div>;
 }
 function TenantPortalPage() {
-  const d = useData(); const tenant = d.tenants?.[0]; const unit = d.units?.find(u => u.id === tenant?.unitId); const payments = (d.payments || []).filter(p => p.unitId === tenant?.unitId).slice(0, 4); const repairs = (d.repairs || []).filter(r => r.unitId === tenant?.unitId).slice(0, 2);
-  return <div className="tenant-portal"><section className="portal-welcome"><div className="portal-brand"><span className="brand-mark"><House size={18}/></span>rentwise <span>· TENANT SPACE</span></div><span className="portal-protected"><ShieldCheck size={14}/> Private view</span><span className="eyebrow">YOUR HOME, CLEARLY RECORDED</span><h2>Good day, {tenant?.fullName?.split(' ')[0] || 'there'}.</h2><p>Your rent, your home and the things being taken care of.</p><div className="portal-home-card"><span className="portal-home-icon"><House size={20}/></span><div><b>{d.properties?.find(p => p.id === unit?.propertyId)?.name || 'Your home'}</b><small>{unit?.unitNumber ? `Unit ${unit.unitNumber} · ${unit.bedrooms} bedroom${unit.bedrooms === 1 ? '' : 's'}` : 'Your rented home'}</small></div><span className="portal-active">ACTIVE TENANCY</span></div></section><div className="portal-content"><div className="portal-balance"><div><span className="eyebrow">CURRENT RENT BALANCE</span><b>{fmt(tenant?.balance || unit?.balance || 0)}</b><small>{(tenant?.balance || unit?.balance) ? 'Please contact the caretaker if this does not look right.' : 'Your account is up to date.'}</small></div><div className="balance-icon"><Wallet size={21}/></div></div><div className="portal-panels"><Panel title="Recent payments" action={<Link href="/payments" className="text-link">Full ledger <ArrowUpRight size={14}/></Link>}><DataState rows={payments} title="No payments recorded yet" text="Your rent receipts will be shown here."><div className="portal-payment-list">{payments.map(p => <div className="portal-payment" key={p.id}><span className="payment-check"><Check size={15}/></span><span><b>{dateFmt(p.recordedAt)} rent</b><small>{p.method === 'mobile_money' ? 'Mobile money' : p.method}{p.reference ? ` · Ref ${p.reference}` : ''}</small></span><strong>{fmt(p.amount)}</strong></div>)}</div></DataState></Panel><Panel title="Home care"><DataState rows={repairs} title="No open repair requests" text="There are no current requests for your unit."><div className="portal-repairs">{repairs.map(r => <div key={r.id} className="portal-repair"><Wrench size={16}/><span><b>{r.title}</b><small>Reported {dateFmt(r.reportedAt)}</small></span><Status value={r.status}/></div>)}</div></DataState></Panel></div><div className="portal-privacy"><ShieldCheck size={17}/><p><b>Know what is on record.</b> Rent and repair entries here are shared by your property manager. If something is incorrect, please speak with the caretaker.</p></div></div></div>;
+  const d = useData();
+  const tenant = getDemoTenant(d);
+  const unit = d.units.find(item => item.id === tenant?.unitId);
+  const agreement = d.agreements.find(item => item.tenantName === tenant?.fullName);
+  const payments = d.payments.filter(payment => payment.unitId === tenant?.unitId).slice(0, 3);
+  const repairs = d.repairs.filter(repair => repair.unitId === tenant?.unitId).slice(0, 3);
+  const dueDate = agreement?.nextDueDate;
+  const dueIn = dueDate ? daysUntilDate(dueDate, new Date()) : null;
+  const balance = tenant?.balance ?? unit?.balance ?? 0;
+  const [language, setLanguage] = useState<'English' | 'Luganda'>('English');
+  const luganda = language === 'Luganda';
+  return <div className="tenant-portal tenant-private-portal" data-testid="tenant-home-portal">
+    <section className="portal-welcome">
+      <div className="portal-brand"><span className="brand-mark"><House size={18}/></span>rentwise <span>· YOUR HOME</span></div>
+      <div className="portal-head-actions"><span className="portal-protected"><ShieldCheck size={14}/> Private view</span><label className="portal-language"><span className="sr-only">Portal language</span><select aria-label="Portal language" data-testid="tenant-language" value={language} onChange={event => setLanguage(event.target.value as 'English' | 'Luganda')}><option>English</option><option>Luganda</option></select></label></div>
+      <span className="eyebrow">YOUR HOME, CLEARLY RECORDED</span>
+      <h2>{luganda ? `Wasuze otya, ${tenant?.fullName?.split(' ')[0] || 'munange'}.` : `Good day, ${tenant?.fullName?.split(' ')[0] || 'there'}.`}</h2>
+      <p>{luganda ? 'Eby’ennyumba yo, ssente z’obupangisa n’okulabirira.' : 'Your rent, your home and the things being taken care of.'}</p>
+      <div className="portal-home-card"><span className="portal-home-icon"><House size={20}/></span><div><b>{d.properties.find(property => property.id === unit?.propertyId)?.name || 'Your home'}</b><small>{unit?.unitNumber ? `Unit ${unit.unitNumber} · ${unit.bedrooms} bedroom${unit.bedrooms === 1 ? '' : 's'}` : 'Your rented home'}</small></div><span className="portal-active">ACTIVE TENANCY</span></div>
+    </section>
+    <div className="portal-content">
+      <section className="portal-balance portal-balance-due" aria-label="Current rent and due date">
+        <div><span className="eyebrow">{luganda ? 'EBBANANSI Y’OBUPANGISA' : 'CURRENT RENT BALANCE'}</span><b>{fmt(balance)}</b><small>{balance > 0 ? 'If this balance looks different from your records, speak with the caretaker.' : 'Your account is up to date.'}</small></div>
+        <div className="portal-due-detail"><span className="balance-icon"><CalendarDays size={20}/></span><span><small>Next rent due</small><b>{dateFmt(dueDate)}</b><em>{dueIn == null ? 'Date not recorded' : dueIn < 0 ? `${Math.abs(dueIn)} days overdue` : dueIn === 0 ? 'Due today' : dueIn === 1 ? 'Due tomorrow' : `In ${dueIn} days`}</em></span></div>
+      </section>
+      <div className="portal-panels">
+        <Panel title="Recent payments" action={<Link href="/payments" className="text-link" data-testid="link-tenant-payments">All receipts <ArrowUpRight size={14}/></Link>}>
+          <DataState rows={payments} title="No receipts yet" text="Your rent receipts will be shown here.">
+            <div className="portal-payment-list">{payments.map(payment => <div className="portal-payment" key={payment.id} data-testid={`portal-payment-${payment.id}`}><span className="payment-check"><Check size={15}/></span><span><b>{dateFmt(payment.recordedAt)} rent</b><small>{payment.method === 'mobile_money' ? 'MTN / Airtel mobile money' : statusLabel(payment.method)}{payment.reference ? ` · Ref ${payment.reference}` : ''}</small></span><strong>{fmt(payment.amount)}</strong><Link href={`/receipt/${payment.id}`} className="portal-receipt-link" aria-label={`View receipt for payment on ${dateFmt(payment.recordedAt)}`}><ReceiptText size={16}/></Link></div>)}</div>
+          </DataState>
+        </Panel>
+        <Panel title="Home care" action={<Link href="/repairs" className="text-link" data-testid="link-tenant-repairs">Repair updates <ArrowUpRight size={14}/></Link>}>
+          <DataState rows={repairs} title="No repair reports" text="There are no repair updates for your home yet.">
+            <div className="portal-repairs">{repairs.map(repair => <div key={repair.id} className="portal-repair" data-testid={`portal-repair-${repair.id}`}><Wrench size={16}/><span><b>{repair.title}</b><small>Reported {dateFmt(repair.reportedAt)}</small></span><Status value={repair.status}/></div>)}</div>
+          </DataState>
+        </Panel>
+      </div>
+      <div className="portal-quick-links"><Link href="/repairs" className="portal-quick-link"><Wrench size={17}/><span><b>Report a problem</b><small>Tell us what needs attention</small></span><ArrowUpRight size={15}/></Link><Link href="/agreements" className="portal-quick-link"><FileCheck2 size={17}/><span><b>Agreement summary</b><small>Rent, deposit and dates</small></span><ArrowUpRight size={15}/></Link><Link href="/notifications" className="portal-quick-link"><Bell size={17}/><span><b>Home activity</b><small>Receipts and repair updates</small></span><ArrowUpRight size={15}/></Link></div>
+      <div className="portal-privacy"><ShieldCheck size={17}/><p><b>Know what is on record.</b> This private view shows details for your home only. If something is incorrect, please speak with the caretaker.</p></div>
+    </div>
+  </div>;
 }
 function SettingsPage({ theme, setTheme }: { theme: string; setTheme: (s: string) => void }) {
   const d = useData(); const [language, setLanguage] = useState(localStorage.getItem('ledger-language') || 'English'); const [alerts, setAlerts] = useState(localStorage.getItem('ledger-alerts') !== 'off'); const [saved, setSaved] = useState(false);
