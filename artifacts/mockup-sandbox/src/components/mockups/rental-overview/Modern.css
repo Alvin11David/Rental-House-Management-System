@@ -1,0 +1,112 @@
+.rental-overview .app-shell {
+  background:
+    radial-gradient(ellipse at 88% 4%, hsl(var(--secondary) / .38), transparent 32rem),
+    hsl(var(--background));
+}
+.rental-overview .app-shell .sidebar {
+  padding: 22px 13px 13px;
+  background:
+    radial-gradient(ellipse at 10% 0%, hsl(var(--sidebar-primary) / .13), transparent 15rem),
+    hsl(var(--sidebar));
+  border-color: hsl(var(--sidebar-border) / .78);
+}
+.rental-overview .app-shell .brand-mark,
+.rental-overview .app-shell .role-page-icon,
+.rental-overview .app-shell .empty-icon,
+.rental-overview .app-shell .payment-check,
+.rental-overview .app-shell .agreement-file,
+.rental-overview .app-shell .repair-activity-icon {
+  border-radius: 13px 13px 13px 5px;
+}
+.rental-overview .app-shell .brand-mark { width: 39px; height: 39px; }
+.rental-overview .app-shell .property-picker {
+  min-height: 57px;
+  border-radius: 14px 14px 14px 5px;
+  background: linear-gradient(135deg, hsl(var(--sidebar-accent)), hsl(var(--sidebar) / .45));
+}
+.rental-overview .app-shell .nav-item {
+  min-height: 42px;
+  border-radius: 12px;
+  margin-block: 3px;
+}
+.rental-overview .app-shell .nav-item.active {
+  background: linear-gradient(105deg, hsl(var(--sidebar-primary) / .18), hsl(var(--sidebar-primary) / .055));
+  box-shadow: inset 3px 0 hsl(var(--sidebar-primary));
+}
+.rental-overview .app-shell .sidebar-account {
+  border-radius: 17px 17px 17px 6px;
+  background: linear-gradient(145deg, hsl(var(--sidebar-accent) / .98), hsl(var(--sidebar) / .82));
+}
+.rental-overview .app-shell .main-area {
+  background:
+    radial-gradient(ellipse at 92% 0%, hsl(var(--secondary) / .19), transparent 31rem),
+    hsl(var(--background));
+}
+.rental-overview .app-shell .topbar { min-height: 66px; }
+.rental-overview .app-shell .content-area { padding-top: 29px; }
+.rental-overview .app-shell .page-heading { margin-bottom: 27px; }
+.rental-overview .app-shell .page-heading h1 {
+  margin-top: 9px;
+  font-size: clamp(28px, 3vw, 35px);
+  letter-spacing: -.055em;
+}
+.rental-overview .app-shell .heading-sub { font-size: 12px; line-height: 1.6; }
+.rental-overview .app-shell .panel,
+.rental-overview .app-shell .metric-card {
+  border: 1px solid hsl(var(--border) / .87);
+  border-radius: 18px;
+  box-shadow: 0 7px 22px hsl(164 25% 18% / .045);
+}
+.rental-overview .app-shell .panel-head {
+  padding: 17px 20px 14px;
+  background: linear-gradient(180deg, hsl(var(--secondary) / .13), transparent);
+}
+.rental-overview .app-shell .panel-head h2 { font-size: 16px; letter-spacing: -.035em; }
+.rental-overview .app-shell .metric-card {
+  padding: 18px 20px;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.rental-overview .app-shell .metric-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px hsl(164 25% 18% / .09);
+}
+.rental-overview .app-shell .collection-hero {
+  border-radius: 22px 22px 22px 7px;
+  box-shadow: 0 14px 30px hsl(164 30% 17% / .12);
+}
+.rental-overview .app-shell .unit-tile {
+  min-height: 76px;
+  border-radius: 15px 15px 15px 5px;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.rental-overview .app-shell .unit-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px hsl(164 25% 18% / .1);
+}
+.rental-overview .app-shell .attention-item,
+.rental-overview .app-shell .upcoming-rent-item,
+.rental-overview .app-shell .activity-row {
+  border-radius: 11px;
+  transition: background .16s ease, transform .16s ease;
+}
+.rental-overview .app-shell .attention-item:hover,
+.rental-overview .app-shell .upcoming-rent-item:hover,
+.rental-overview .app-shell .activity-row:hover {
+  background: hsl(var(--secondary) / .32);
+  transform: translateX(2px);
+}
+.rental-overview .app-shell :is(button, a, input, select):focus-visible {
+  outline: 3px solid hsl(var(--ring));
+  outline-offset: 3px;
+}
+@media (max-width: 767px) {
+  .rental-overview .app-shell .content-area { padding: 21px 15px; }
+  .rental-overview .app-shell .page-heading { align-items: flex-start; margin-bottom: 19px; }
+  .rental-overview .app-shell .page-heading h1 { font-size: 29px; }
+  .rental-overview .app-shell .metric-card { min-height: 112px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rental-overview .app-shell *,
+  .rental-overview .app-shell *::before,
+  .rental-overview .app-shell *::after { transition: none !important; animation: none !important; }
+}

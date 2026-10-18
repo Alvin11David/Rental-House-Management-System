@@ -1178,3 +1178,357 @@
   .assignment-cursor { transition:none !important; }
   .tenant-grid > .tenant-card,.agreement-grid > .agreement-card,.unit-grid > .unit-tile,.role-record-list > .role-record-row,.caretaker-followup-list > .caretaker-followup,.skeleton-block { animation:none !important; }
 }
+
+/* Rentwise workspace finish: editorial navigation, tactile records, and clear scan paths. */
+.app-shell {
+  background:
+    radial-gradient(ellipse at 88% 4%, hsl(var(--secondary) / .38), transparent 32rem),
+    hsl(var(--background));
+}
+.app-shell .sidebar {
+  padding: 22px 13px 13px;
+  background:
+    radial-gradient(ellipse at 10% 0%, hsl(var(--sidebar-primary) / .13), transparent 15rem),
+    hsl(var(--sidebar));
+  border-color: hsl(var(--sidebar-border) / .78);
+}
+.app-shell .brand-lockup { padding-bottom: 23px; }
+.app-shell .brand-mark {
+  width: 39px;
+  height: 39px;
+  border-radius: 13px 13px 13px 5px;
+  box-shadow: 0 5px 14px hsl(var(--sidebar) / .28);
+}
+.app-shell .property-picker {
+  min-height: 57px;
+  border-radius: 14px 14px 14px 5px;
+  background: linear-gradient(135deg, hsl(var(--sidebar-accent)), hsl(var(--sidebar) / .45));
+  border-color: hsl(var(--sidebar-foreground) / .1);
+  padding: 10px;
+}
+.app-shell .property-symbol { border-radius: 10px 10px 10px 3px; }
+.app-shell .nav-group { margin-bottom: 21px; }
+.app-shell .nav-group > p { padding-left: 11px; margin-bottom: 8px; }
+.app-shell .nav-item {
+  position: relative;
+  min-height: 42px;
+  border-radius: 12px;
+  margin: 3px 0;
+  padding-inline: 11px;
+  font-size: 11px;
+}
+.app-shell .nav-item > svg { flex: 0 0 auto; opacity: .86; }
+.app-shell .nav-item.active {
+  background: linear-gradient(105deg, hsl(var(--sidebar-primary) / .18), hsl(var(--sidebar-primary) / .055));
+  box-shadow: inset 3px 0 hsl(var(--sidebar-primary));
+}
+.app-shell .nav-item.active > svg { opacity: 1; }
+.app-shell .nav-item:focus-visible,
+.app-shell .sidebar-signout:focus-visible,
+.app-shell .icon-button:focus-visible,
+.app-shell .profile-button:focus-visible {
+  outline: 2px solid hsl(var(--sidebar-primary));
+  outline-offset: 2px;
+}
+.app-shell .sync-card {
+  min-height: 55px;
+  border-radius: 13px;
+  background: hsl(var(--sidebar-foreground) / .035);
+}
+.app-shell .sidebar-account {
+  border-radius: 17px 17px 17px 6px;
+  background: linear-gradient(145deg, hsl(var(--sidebar-accent) / .98), hsl(var(--sidebar) / .82));
+}
+.app-shell .sidebar-signout { min-height: 40px; border-radius: 11px; }
+.app-shell .main-area {
+  background:
+    radial-gradient(ellipse at 92% 0%, hsl(var(--secondary) / .19), transparent 31rem),
+    hsl(var(--background));
+}
+.app-shell .topbar {
+  min-height: 66px;
+  border-bottom: 1px solid hsl(var(--border) / .7);
+}
+.app-shell .crumb { font-size: 11px; }
+.app-shell .content-area { padding-top: 29px; }
+.app-shell .page-heading { align-items: center; margin-bottom: 27px; }
+.app-shell .eyebrow { letter-spacing: .13em; }
+.app-shell .page-heading h1 {
+  position: relative;
+  margin-top: 9px;
+  font-size: clamp(28px, 3vw, 35px);
+  letter-spacing: -.055em;
+}
+.app-shell .heading-sub { font-size: 12px; line-height: 1.6; }
+.app-shell .page-stack { gap: 19px; }
+.app-shell .panel,
+.app-shell .metric-card,
+.app-shell .collection-form-panel,
+.app-shell .unpaid-panel,
+.app-shell .tenant-card,
+.app-shell .agreement-card,
+.app-shell .repair-card,
+.app-shell .property-plan,
+.app-shell .ledger-summary,
+.app-shell .analytics-feature,
+.app-shell .analytics-note,
+.app-shell .notifications-panel,
+.app-shell .notification-intro,
+.app-shell .tenant-portal,
+.app-shell .portal-home-card,
+.app-shell .portal-balance,
+.app-shell .portal-privacy,
+.app-shell .receipt-page-card,
+.app-shell .settings-intro,
+.app-shell .settings-section,
+.app-shell .role-summary {
+  border-radius: 18px;
+  box-shadow: 0 7px 22px hsl(164 25% 18% / .045);
+}
+.app-shell .panel,
+.app-shell .metric-card,
+.app-shell .collection-form-panel,
+.app-shell .unpaid-panel,
+.app-shell .tenant-card,
+.app-shell .agreement-card,
+.app-shell .repair-card,
+.app-shell .property-plan,
+.app-shell .settings-section {
+  border-color: hsl(var(--border) / .87);
+}
+.app-shell .panel-head { padding: 17px 20px 14px; }
+.app-shell .panel-head h2,
+.app-shell .role-page-intro h2,
+.app-shell .form-intro h2,
+.app-shell .unpaid-heading h2,
+.app-shell .settings-intro h2 {
+  font-size: 16px;
+  letter-spacing: -.035em;
+}
+.app-shell .panel-head { background: linear-gradient(180deg, hsl(var(--secondary) / .13), transparent); }
+.app-shell .panel-foot-link { min-height: 46px; }
+.app-shell .button {
+  min-height: 42px;
+  border-radius: 11px;
+  font-size: 11px;
+}
+.app-shell .button-primary {
+  box-shadow: 0 5px 13px hsl(var(--primary) / .15);
+}
+.app-shell .button-quiet { border-color: hsl(var(--border)); }
+.app-shell :is(input, select, textarea, .filter-search, .search-field) { border-radius: 10px; }
+.app-shell .form-field input,
+.app-shell .form-field select,
+.app-shell .form-field textarea { min-height: 43px; }
+.app-shell .form-field textarea { min-height: 88px; }
+.app-shell .role-page-intro {
+  align-items: flex-start;
+  gap: 13px;
+  padding: 5px 2px 2px;
+}
+.app-shell .role-page-icon {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border-radius: 15px 15px 15px 5px;
+  background: linear-gradient(145deg, hsl(var(--secondary)), hsl(var(--secondary) / .48));
+  box-shadow: inset 0 0 0 1px hsl(var(--primary) / .07);
+}
+.app-shell .role-page-intro h2 { margin-top: 5px; }
+.app-shell .role-page-intro p { max-width: 620px; font-size: 11px; line-height: 1.6; }
+.app-shell .role-record-panel { overflow: hidden; }
+.app-shell .role-record-row,
+.app-shell .role-contact-row,
+.app-shell .role-repair-row {
+  min-height: 76px;
+  padding: 15px 19px;
+  gap: 13px;
+  border-color: hsl(var(--border) / .76);
+}
+.app-shell .role-record-row > div,
+.app-shell .role-repair-row > div { min-width: 0; }
+.app-shell .role-record-row b,
+.app-shell .role-contact-row b,
+.app-shell .role-repair-row b { font-size: 11px; }
+.app-shell .role-record-row small,
+.app-shell .role-contact-row small,
+.app-shell .role-repair-row small { line-height: 1.55; }
+.app-shell .role-record-row > strong {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.app-shell .role-record-list { padding: 2px 0; }
+.app-shell .payment-check,
+.app-shell .agreement-file,
+.app-shell .repair-activity-icon {
+  width: 37px;
+  height: 37px;
+  border-radius: 12px 12px 12px 4px;
+}
+.app-shell .empty-state {
+  min-height: 190px;
+  padding: 28px;
+}
+.app-shell .empty-icon { width: 48px; height: 48px; border-radius: 15px 15px 15px 5px; }
+.app-shell .empty-state > b { font-size: 15px; }
+.app-shell .empty-state > p { font-size: 11px; line-height: 1.65; }
+.app-shell .toolbar { flex-wrap: wrap; }
+.app-shell .filter-search { min-height: 42px; }
+.app-shell .table-panel { overflow: hidden; }
+.app-shell .table-panel table { font-size: 11px; }
+.app-shell .table-panel th { padding: 13px 15px; }
+.app-shell .table-panel td { padding: 14px 15px; }
+.app-shell .table-panel tbody tr { transition: background-color .16s ease; }
+.app-shell .table-panel tbody tr:hover { background: hsl(var(--secondary) / .2); }
+.app-shell .tenant-card,
+.app-shell .agreement-card,
+.app-shell .property-plan,
+.app-shell .repair-card {
+  position: relative;
+  overflow: hidden;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.app-shell .tenant-card::before,
+.app-shell .agreement-card::before,
+.app-shell .property-plan::before {
+  position: absolute;
+  top: -34px;
+  right: -31px;
+  width: 91px;
+  height: 91px;
+  border: 1px solid hsl(var(--primary) / .1);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+.app-shell .tenant-card:hover,
+.app-shell .agreement-card:hover,
+.app-shell .property-plan:hover,
+.app-shell .repair-card:hover {
+  transform: translateY(-2px);
+  border-color: hsl(var(--primary) / .28);
+  box-shadow: 0 13px 28px hsl(164 25% 18% / .08);
+}
+.app-shell .tenant-card-head { position: relative; }
+.app-shell .tenant-avatar { width: 42px; height: 42px; }
+.app-shell .agreement-banner {
+  border-radius: 18px 18px 18px 5px;
+  box-shadow: 0 7px 18px hsl(43 45% 28% / .08);
+}
+.app-shell .agreement-grid,
+.app-shell .tenant-grid { gap: 16px; }
+.app-shell .agreement-card,
+.app-shell .tenant-card { padding: 18px; }
+.app-shell .settings-layout { gap: 15px; }
+.app-shell .settings-intro {
+  padding: 20px;
+  border-radius: 21px 21px 21px 7px;
+}
+.app-shell .settings-section { padding: 20px; }
+.app-shell .settings-section-title h2 { font-size: 14px; }
+.app-shell .settings-section-title p { font-size: 10px; }
+.app-shell .role-option {
+  min-height: 68px;
+  border-radius: 12px;
+}
+.app-shell .appearance-choice { min-height: 44px; border-radius: 11px; }
+.app-shell .settings-toggle-row { min-height: 56px; border-radius: 12px; }
+.app-shell .privacy-note {
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 10px;
+  background: hsl(var(--secondary) / .19);
+}
+.app-shell .notifications-panel { padding: 6px 0; }
+.app-shell .timeline-entry { padding-block: 10px; }
+.app-shell .timeline-icon { border-radius: 12px 12px 12px 4px; }
+.app-shell .timeline-body { padding: 3px 0 14px; }
+.app-shell .footer { padding-bottom: 22px; }
+
+@media (min-width: 1121px) {
+  .app-shell .content-area { padding-inline: clamp(30px, 3vw, 48px); }
+}
+@media (max-width: 767px) {
+  .app-shell .sidebar {
+    width: min(300px, calc(100vw - 46px));
+    border-radius: 0 24px 24px 0;
+    padding: max(17px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom));
+  }
+  .app-shell .sidebar-close {
+    display: grid !important;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    border: 1px solid hsl(var(--sidebar-foreground) / .14);
+    border-radius: 12px;
+    background: hsl(var(--sidebar-foreground) / .06);
+    color: hsl(var(--sidebar-foreground));
+  }
+  .app-shell .brand-lockup { padding-inline: 4px; padding-bottom: 20px; }
+  .app-shell .sidebar nav { padding-bottom: 8px; }
+  .app-shell .sidebar-bottom { padding-top: 8px; }
+  .app-shell .topbar {
+    min-height: 58px;
+    height: auto;
+    padding: 0 15px;
+    gap: 10px;
+  }
+  .app-shell .crumb { min-width: 0; flex: 1; gap: 7px; font-size: 10px; }
+  .app-shell .crumb > span:first-child { display: none; }
+  .app-shell .crumb > span:nth-child(2) { display: none; }
+  .app-shell .top-actions { gap: 5px; }
+  .app-shell .connection,
+  .app-shell .top-divider,
+  .app-shell .profile-button > span:not(.avatar),
+  .app-shell .profile-button > svg { display: none; }
+  .app-shell .profile-button { padding: 0; }
+  .app-shell .content-area { padding: 21px 15px max(12px, env(safe-area-inset-bottom)); }
+  .app-shell .page-heading { align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+  .app-shell .page-heading h1 { font-size: 29px; }
+  .app-shell .page-heading > .button { flex: 0 0 auto; padding-inline: 10px; }
+  .app-shell .heading-sub { max-width: 38ch; font-size: 11px; }
+  .app-shell .page-stack { gap: 15px; }
+  .app-shell .role-page-intro { gap: 11px; }
+  .app-shell .role-page-icon { width: 40px; height: 40px; flex-basis: 40px; }
+  .app-shell .role-page-intro h2 { font-size: 15px; }
+  .app-shell .role-record-row,
+  .app-shell .role-contact-row,
+  .app-shell .role-repair-row { padding: 13px; gap: 9px; }
+  .app-shell .role-record-row { flex-wrap: wrap; }
+  .app-shell .role-record-row > strong { margin-left: auto; }
+  .app-shell .role-contact-row { flex-wrap: wrap; }
+  .app-shell .role-repair-row { align-items: flex-start; }
+  .app-shell .table-panel th,
+  .app-shell .table-panel td { padding-inline: 12px; }
+  .app-shell .settings-intro,
+  .app-shell .settings-section { padding: 16px; }
+  .app-shell .role-options { margin-left: 0; grid-template-columns: 1fr; }
+  .app-shell .appearance-options { margin-left: 0; }
+  .app-shell .settings-toggle-row,
+  .app-shell .language-row { width: 100%; margin-left: 0; }
+  .app-shell .agreement-grid,
+  .app-shell .tenant-grid { grid-template-columns: 1fr; }
+  .app-shell .footer { flex-wrap: wrap; gap: 7px; margin-top: 26px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell .tenant-card,
+  .app-shell .agreement-card,
+  .app-shell .property-plan,
+  .app-shell .repair-card,
+  .app-shell .table-panel tbody tr { transition: none !important; }
+}
+@media (max-width: 767px) {
+  .app-shell .button,
+  .app-shell .icon-button,
+  .app-shell .nav-item,
+  .app-shell .method-option,
+  .app-shell .appearance-choice,
+  .app-shell .role-option,
+  .app-shell .assignment-person,
+  .app-shell .portal-language select,
+  .app-shell .sidebar-signout { min-height: 44px; }
+  .app-shell .form-field input,
+  .app-shell .form-field select,
+  .app-shell .form-field textarea,
+  .app-shell .date-filter input { min-height: 44px; }
+}
