@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>Dashboard preview setup</title></head>
+  <body>
+    <script>
+      const role = new URLSearchParams(location.search).get('role') || 'Landlord';
+      localStorage.setItem('ledger-role', role);
+      localStorage.setItem(`rentwise-tour-${role.toLowerCase()}`, 'done');
+      location.replace('/dashboard');
+    </script>
+  </body>
+</html>
