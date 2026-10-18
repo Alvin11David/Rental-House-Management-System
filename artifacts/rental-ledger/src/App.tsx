@@ -1,6 +1,8 @@
 import { type ChangeEvent, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, createContext, useContext, useEffect, useRef, useState } from 'react';
 import './rental.css';
 import './dashboard.css';
+import './tenant-portal.css';
+import './caretaker.css';
 import OnboardingTour from '@/components/OnboardingTour';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -472,7 +474,7 @@ function AppShell() {
        </section>
      </div>
   </aside>;
-  return <div className="app-shell"><div className={classes('shell-layout', sidebarCollapsed && 'sidebar-is-collapsed')}>{sidebar}{drawer && <button className="scrim" onClick={() => setDrawer(false)} aria-label="Close menu"/>}<main className="main-area">
+  return <div className={classes('app-shell', `role-${d.role.toLowerCase()}`)}><div className={classes('shell-layout', sidebarCollapsed && 'sidebar-is-collapsed')}>{sidebar}{drawer && <button className="scrim" onClick={() => setDrawer(false)} aria-label="Close menu"/>}<main className="main-area">
     {d.role !== 'Tenant' && <div className="ambient-status" role="progressbar" aria-label="Today’s collection progress" aria-valuenow={collectionProgress} aria-valuemin={0} aria-valuemax={100} title={`${collectionProgress}% of occupied homes recorded a payment today`}><i style={{ width: `${collectionProgress}%`, backgroundColor: `hsl(${Math.round(collectionProgress * 1.2)} 43% 46%)` }}/></div>}
     <header className="topbar"><button className="mobile-menu icon-button" onClick={() => setDrawer(true)} aria-label="Open menu"><Menu size={20}/></button><div className="crumb"><span>{d.role === 'Tenant' ? 'My home' : 'Workspace'}</span><span>/</span><b>{title}</b></div><div className="top-actions"><span className="connection"><span/>Browser-only</span><button className="icon-button" aria-label="Refresh workspace" onClick={d.refresh} data-testid="button-refresh"><RefreshCw size={17}/></button><Link href="/notifications" className="icon-button notify-button" aria-label="Receipts and activity"><Bell size={18}/><i/></Link><span className="top-divider"/><DropdownMenu>
         <DropdownMenuTrigger asChild><button className="profile-button" data-testid="button-profile" aria-label="Open account menu"><span className="avatar small-avatar">{initials(displayName)}</span><span>{displayName}</span><ChevronDown size={14}/></button></DropdownMenuTrigger>
@@ -938,13 +940,27 @@ function TenantRepairsPage() {
   };
   return <div className="page-stack"><div className="role-page-intro"><span className="role-page-icon"><Wrench size={19}/></span><div><span className="eyebrow">YOUR HOME</span><h2>Repair updates</h2><p>Send a report to the property team and follow its progress here.</p></div></div>
     <section className="tenant-report-card" aria-labelledby="tenant-report-title">
-      <div className="tenant-report-heading"><span className="role-page-icon"><ImagePlus size={18}/></span><div><h2 id="tenant-report-title">Report a problem</h2><p>Share what needs attention at home.</p></div></div>
-      <form className="form-stack" onSubmit={submit}>
+      <div className="tenant-report-heading">
+        <span className="role-page-icon"><ImagePlus size={18}/></span>
+        <div>
+          <span className="eyebrow">HOME CARE</span>
+          <h2 id="tenant-report-title">Report a problem</h2>
+          <p>Tell us what needs attention and we&rsquo;ll follow it up.</p>
+        </div>
+      </div>
+      <form className="form-stack tenant-report-form" onSubmit={submit}>
         <Field label="What needs attention?"><input required maxLength={100} value={title} onChange={event => setTitle(event.target.value)} placeholder="e.g. Kitchen tap is leaking" aria-label="What needs attention"/></Field>
         <Field label="Add a few details"><textarea maxLength={1000} value={description} onChange={event => setDescription(event.target.value)} placeholder="Tell us what happened and where…" aria-label="Repair details"/></Field>
-        <label className="tenant-photo-upload"><ImagePlus size={16}/><span>{photoBusy ? 'Preparing photo…' : photoDataUrl ? 'Photo attached' : 'Add a photo'} <small>Optional · JPG or PNG · up to 10 MB</small></span><input type="file" accept="image/*" aria-label="Add a repair photo" onChange={selectPhoto} disabled={photoBusy}/></label>
+        <div className="tenant-photo-field">
+          <span className="tenant-photo-label">Photo <small>Optional · JPG or PNG · up to 10 MB</small></span>
+          <label className="tenant-photo-upload">
+            <span className="tenant-photo-icon"><ImagePlus size={20}/></span>
+            <span className="tenant-photo-copy"><b>{photoBusy ? 'Preparing photo…' : photoDataUrl ? 'Photo attached' : 'Add a photo'}</b><small>{photoDataUrl ? 'Tap to replace' : 'Show us the problem'}</small></span>
+            <input type="file" accept="image/*" aria-label="Add a repair photo" onChange={selectPhoto} disabled={photoBusy}/>
+          </label>
+        </div>
         {photoDataUrl && <div className="repair-photo-preview"><img src={photoDataUrl} alt="Preview of repair photo"/><button type="button" className="button button-quiet" onClick={() => setPhotoDataUrl(null)}>Remove photo</button></div>}
-        <button className="button button-primary full-button" type="submit" disabled={photoBusy || !title.trim() || tenant?.unitId == null} data-testid="button-submit-repair"><Wrench size={16}/>Send to caretaker</button>
+        <button className="button button-primary full-button tenant-report-submit" type="submit" disabled={photoBusy || !title.trim() || tenant?.unitId == null} data-testid="button-submit-repair"><Wrench size={16}/>Send to caretaker</button>
         {tenant?.unitId == null && <p className="tenant-report-note">A home must be assigned to this tenant before a repair can be reported.</p>}
       </form>
     </section>

@@ -1,0 +1,636 @@
+/* Tenant experience — editorial-luxe x bold-fintech, brand palette preserved.
+   Everything is scoped under .role-tenant so landlord/caretaker views are untouched. */
+
+.app-shell.role-tenant {
+  --tenant-display: 'Fraunces', 'Manrope', ui-serif, Georgia, serif;
+  --tenant-gold: 43 73% 61%;
+  --tenant-gold-deep: 36 68% 48%;
+  --tenant-lime: 75 82% 62%;
+  --tenant-ink-a: hsl(164 42% 24%);
+  --tenant-ink-b: hsl(210 72% 40%);
+  --tenant-edge: hsl(var(--border));
+}
+.dark .app-shell.role-tenant {
+  --tenant-ink-a: hsl(158 44% 60%);
+  --tenant-ink-b: hsl(205 72% 68%);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   1. Dashboard portal — hero
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-tenant .tenant-portal {
+  border-radius: 20px;
+  border-color: hsl(var(--border));
+  box-shadow: 0 20px 50px hsl(220 25% 15% / .08);
+}
+.app-shell.role-tenant .portal-welcome {
+  position: relative;
+  isolation: isolate;
+  padding: 28px 30px 26px;
+  border-radius: 0;
+  box-shadow: none;
+  background-image:
+    radial-gradient(115% 130% at 88% -12%, hsl(var(--tenant-lime) / .16), transparent 46%),
+    radial-gradient(105% 120% at 4% 2%, hsl(164 62% 30% / .55), transparent 55%),
+    radial-gradient(95% 115% at 86% 118%, hsl(210 72% 42% / .28), transparent 56%),
+    linear-gradient(152deg, hsl(235 10% 15%), hsl(235 13% 9%)),
+    radial-gradient(hsl(0 0% 100% / .05) 1px, transparent 1.4px);
+  background-size: auto, auto, auto, auto, 4px 4px;
+  background-position: center, center, center, center, 0 0;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+}
+.app-shell.role-tenant .portal-brand {
+  font-family: var(--tenant-display);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: -.015em;
+}
+.app-shell.role-tenant .portal-brand .brand-mark {
+  border-radius: 10px 10px 10px 4px;
+  box-shadow: 0 6px 16px hsl(var(--tenant-lime) / .28);
+}
+.app-shell.role-tenant .portal-welcome > .eyebrow {
+  margin-top: 30px;
+  color: hsl(var(--tenant-lime) / .95);
+  font-family: var(--app-font-mono);
+  letter-spacing: .16em;
+}
+.app-shell.role-tenant .portal-welcome h2 {
+  margin: 11px 0 8px;
+  padding-bottom: 15px;
+  font-family: var(--tenant-display);
+  font-weight: 600;
+  font-variation-settings: "SOFT" 35, "WONK" 1;
+  font-optical-sizing: auto;
+  font-size: clamp(31px, 4.6vw, 47px);
+  line-height: 1.02;
+  letter-spacing: -.025em;
+  background-image: linear-gradient(90deg, hsl(var(--tenant-gold)), hsl(var(--tenant-gold) / 0));
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 112px 3px;
+}
+.app-shell.role-tenant .portal-welcome > p { color: hsl(0 0% 80%); font-size: 11px; }
+.app-shell.role-tenant .portal-protected {
+  padding: 5px 10px;
+  border: 1px solid hsl(var(--tenant-lime) / .3);
+  border-radius: 999px;
+  background: hsl(var(--tenant-lime) / .1);
+  color: hsl(var(--tenant-lime));
+  font-family: var(--app-font-mono);
+  font-size: 8px;
+  letter-spacing: .05em;
+}
+.app-shell.role-tenant .portal-language select {
+  border: 1px solid hsl(0 0% 100% / .22);
+  border-radius: 999px;
+  background: hsl(0 0% 100% / .1);
+  color: hsl(44 34% 95%);
+  font-family: var(--app-font-mono);
+}
+.app-shell.role-tenant .portal-home-card {
+  margin-top: 22px;
+  padding: 13px 15px;
+  border: 1px solid hsl(var(--tenant-gold) / .3);
+  border-radius: 15px;
+  background: linear-gradient(120deg, hsl(0 0% 100% / .13), hsl(0 0% 100% / .05));
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / .12), 0 12px 30px hsl(220 40% 6% / .3);
+  backdrop-filter: blur(9px);
+}
+.app-shell.role-tenant .portal-home-card b { font-family: var(--tenant-display); font-weight: 600; font-size: 12px; }
+.app-shell.role-tenant .portal-home-card small { color: hsl(0 0% 82%); }
+.app-shell.role-tenant .portal-home-icon {
+  border-radius: 11px 11px 11px 4px;
+  background: linear-gradient(140deg, hsl(43 84% 70%), hsl(var(--tenant-gold-deep)));
+  color: hsl(164 40% 16%);
+  box-shadow: 0 8px 20px hsl(var(--tenant-gold) / .38);
+}
+.app-shell.role-tenant .portal-active {
+  border-color: hsl(var(--tenant-lime) / .45);
+  background: hsl(var(--tenant-lime) / .12);
+  border-radius: 999px;
+  color: hsl(var(--tenant-lime));
+  font-family: var(--app-font-mono);
+}
+
+/* 1b. Balance — bold-fintech hero stat */
+.app-shell.role-tenant .portal-content { padding: 20px 24px 24px; }
+.app-shell.role-tenant .portal-balance {
+  position: relative;
+  overflow: hidden;
+  padding: 18px 22px;
+  border: 1px solid var(--tenant-edge);
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 160% at 100% 0%, hsl(var(--primary) / .07), transparent 55%),
+    radial-gradient(120% 160% at 0% 120%, hsl(var(--tenant-gold) / .09), transparent 55%),
+    hsl(var(--card));
+  box-shadow: 0 12px 32px hsl(220 25% 15% / .06);
+}
+.app-shell.role-tenant .portal-balance b {
+  margin: 6px 0 6px;
+  font-family: var(--tenant-display);
+  font-weight: 600;
+  font-size: clamp(31px, 4vw, 43px);
+  line-height: 1;
+  letter-spacing: -.03em;
+  background-image: linear-gradient(115deg, var(--tenant-ink-a), var(--tenant-ink-b));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.app-shell.role-tenant .portal-balance small { font-size: 9px; }
+.app-shell.role-tenant .portal-due-detail { padding-left: 20px; border-left-color: var(--tenant-edge); }
+.app-shell.role-tenant .balance-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px 13px 13px 5px;
+  color: hsl(var(--primary));
+  background: linear-gradient(145deg, hsl(var(--secondary)), hsl(var(--secondary) / .5));
+  box-shadow: inset 0 0 0 1px hsl(var(--primary) / .08);
+}
+.app-shell.role-tenant .portal-due-detail > span:last-child em { font-variant-numeric: tabular-nums; }
+
+/* 1c. Panels */
+.app-shell.role-tenant .portal-panels { gap: 14px; margin-top: 16px; }
+.app-shell.role-tenant .portal-panels .panel {
+  border: 1px solid var(--tenant-edge);
+  border-radius: 16px;
+  background: hsl(var(--card));
+  box-shadow: 0 8px 22px hsl(220 25% 15% / .05);
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.app-shell.role-tenant .portal-panels .panel:hover {
+  transform: translateY(-2px);
+  border-color: hsl(var(--primary) / .28);
+  box-shadow: 0 16px 36px hsl(220 25% 15% / .1);
+}
+.app-shell.role-tenant .portal-panels .panel-head h2 {
+  font-family: var(--tenant-display);
+  font-weight: 600;
+  letter-spacing: -.015em;
+}
+.app-shell.role-tenant .portal-payment,
+.app-shell.role-tenant .portal-repair { transition: background-color .16s ease; border-bottom-color: hsl(var(--border) / .72); }
+.app-shell.role-tenant .portal-payment:hover,
+.app-shell.role-tenant .portal-repair:hover { background: hsl(var(--secondary) / .4); }
+.app-shell.role-tenant .payment-check {
+  border-radius: 13px 13px 13px 5px;
+  color: hsl(150 48% 15%);
+  background: linear-gradient(140deg, hsl(var(--tenant-lime)), hsl(75 68% 47%));
+  box-shadow: 0 6px 15px hsl(75 60% 35% / .3);
+}
+.app-shell.role-tenant .portal-payment strong {
+  font-family: var(--tenant-display);
+  font-weight: 600;
+  font-size: 11px;
+}
+.app-shell.role-tenant .portal-receipt-link {
+  border-radius: 10px;
+  color: hsl(var(--primary));
+  background: hsl(var(--secondary) / .5);
+  transition: background .16s ease;
+}
+.app-shell.role-tenant .portal-receipt-link:hover { background: hsl(var(--secondary)); }
+.app-shell.role-tenant .portal-repair > svg { color: hsl(var(--primary)); }
+
+/* 1d. Quick links */
+.app-shell.role-tenant .portal-quick-links { gap: 12px; margin-top: 16px; }
+.app-shell.role-tenant .portal-quick-link {
+  min-height: 78px;
+  padding: 12px 14px;
+  border: 1px solid var(--tenant-edge);
+  border-radius: 16px;
+  background: linear-gradient(150deg, hsl(var(--card)), hsl(var(--background)));
+  box-shadow: 0 4px 14px hsl(220 25% 15% / .045);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.app-shell.role-tenant .portal-quick-link:hover {
+  transform: translateY(-2px);
+  border-color: hsl(var(--primary) / .4);
+  box-shadow: 0 14px 30px hsl(220 25% 15% / .1);
+}
+.app-shell.role-tenant .portal-quick-link > svg:first-child {
+  width: 36px;
+  height: 36px;
+  padding: 9px;
+  flex: 0 0 auto;
+  border-radius: 12px 12px 12px 4px;
+  color: hsl(var(--primary));
+  background: linear-gradient(145deg, hsl(var(--secondary) / .95), hsl(var(--secondary) / .35));
+}
+.app-shell.role-tenant .portal-quick-link b { font-family: var(--tenant-display); font-weight: 600; font-size: 11px; }
+.app-shell.role-tenant .portal-quick-link small { font-size: 9px; }
+
+/* 1e. Privacy note */
+.app-shell.role-tenant .portal-privacy {
+  margin-top: 16px;
+  padding: 13px 15px;
+  border: 1px solid var(--tenant-edge);
+  border-left: 3px solid hsl(var(--tenant-gold));
+  border-radius: 14px;
+  background: hsl(var(--secondary) / .3);
+}
+.app-shell.role-tenant .portal-privacy svg { color: hsl(var(--tenant-gold-deep)); }
+.app-shell.role-tenant .portal-privacy p { font-size: 9px; }
+
+/* 1f. Search */
+.app-shell.role-tenant .dashboard-search-box { border-radius: 20px; }
+
+/* ─────────────────────────────────────────────────────────────
+   2. Sub-page intro banner
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-tenant .role-page-intro {
+  align-items: center;
+  gap: 15px;
+  position: relative;
+  overflow: hidden;
+  padding: 20px 22px;
+  border: 1px solid hsl(164 45% 26%);
+  border-radius: 18px;
+  color: hsl(44 30% 94%);
+  background:
+    radial-gradient(120% 150% at 100% 0%, hsl(var(--tenant-gold) / .2), transparent 52%),
+    radial-gradient(105% 130% at 0% 110%, hsl(164 62% 32% / .6), transparent 60%),
+    linear-gradient(150deg, hsl(235 10% 15%), hsl(235 13% 9%));
+  box-shadow: 0 14px 34px hsl(220 30% 12% / .2);
+}
+.app-shell.role-tenant .role-page-intro .role-page-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  border-radius: 15px 15px 15px 5px;
+  color: hsl(164 40% 15%);
+  background: linear-gradient(140deg, hsl(43 84% 70%), hsl(var(--tenant-gold-deep)));
+  box-shadow: 0 9px 22px hsl(var(--tenant-gold) / .35);
+}
+.app-shell.role-tenant .role-page-intro .eyebrow {
+  color: hsl(var(--tenant-lime) / .95);
+  font-family: var(--app-font-mono);
+  letter-spacing: .15em;
+}
+.app-shell.role-tenant .role-page-intro h2 {
+  margin: 5px 0 4px;
+  font-family: var(--tenant-display);
+  font-weight: 600;
+  font-size: clamp(19px, 2.4vw, 24px);
+  letter-spacing: -.02em;
+  color: hsl(44 36% 96%);
+}
+.app-shell.role-tenant .role-page-intro p { max-width: 620px; color: hsl(0 0% 84%); font-size: 11px; }
+
+/* ─────────────────────────────────────────────────────────────
+   3. Record panels & rows
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-tenant .role-record-panel {
+  border: 1px solid var(--tenant-edge);
+  border-radius: 18px;
+  background: hsl(var(--card));
+  box-shadow: 0 10px 26px hsl(220 25% 15% / .05);
+}
+.app-shell.role-tenant .role-record-row { transition: background-color .16s ease; }
+.app-shell.role-tenant .role-record-row:hover { background: hsl(var(--secondary) / .35); }
+.app-shell.role-tenant .role-record-row > strong {
+  font-family: var(--tenant-display);
+  font-weight: 600;
+  font-size: 13px;
+}
+.app-shell.role-tenant .role-record-row b { font-size: 11px; }
+.app-shell.role-tenant .agreement-file,
+.app-shell.role-tenant .repair-activity-icon {
+  border-radius: 13px 13px 13px 5px;
+  background: linear-gradient(145deg, hsl(var(--secondary)), hsl(var(--secondary) / .5));
+  box-shadow: inset 0 0 0 1px hsl(var(--primary) / .07);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   4. Repair report form
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-tenant .tenant-report-card {
+  position: relative;
+  overflow: hidden;
+  padding: 22px;
+  border: 1px solid var(--tenant-edge);
+  border-radius: 20px;
+  background:
+    radial-gradient(120% 120% at 100% 0%, hsl(var(--primary) / .06), transparent 55%),
+    radial-gradient(120% 130% at 0% 100%, hsl(var(--tenant-gold) / .06), transparent 55%),
+    hsl(var(--card));
+  box-shadow: 0 14px 34px hsl(220 25% 15% / .07);
+}
+.app-shell.role-tenant .tenant-report-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, hsl(var(--tenant-lime)), hsl(var(--tenant-gold)) 55%, hsl(var(--primary)));
+}
+.app-shell.role-tenant .tenant-report-heading {
+  align-items: flex-start;
+  gap: 13px;
+  padding-bottom: 16px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid hsl(var(--border) / .7);
+}
+.app-shell.role-tenant .tenant-report-heading > div { min-width: 0; }
+.app-shell.role-tenant .tenant-report-heading .eyebrow {
+  display: block;
+  color: hsl(var(--tenant-gold-deep));
+  font-family: var(--app-font-mono);
+  letter-spacing: .16em;
+}
+.app-shell.role-tenant .tenant-report-heading .role-page-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  border-radius: 14px 14px 14px 5px;
+  color: hsl(164 40% 15%);
+  background: linear-gradient(140deg, hsl(43 84% 70%), hsl(var(--tenant-gold-deep)));
+  box-shadow: 0 9px 22px hsl(var(--tenant-gold) / .32);
+}
+.app-shell.role-tenant .tenant-report-heading h2 {
+  margin: 3px 0 0;
+  font-family: var(--tenant-display);
+  font-weight: 600;
+  font-size: clamp(19px, 2.4vw, 23px);
+  letter-spacing: -.02em;
+  color: hsl(var(--foreground));
+}
+.app-shell.role-tenant .tenant-report-heading p { margin: 5px 0 0; font-size: 10px; }
+
+/* Fields as filled surfaces */
+.app-shell.role-tenant .tenant-report-form { margin-top: 0; gap: 14px; }
+.app-shell.role-tenant .tenant-report-form .form-field {
+  gap: 8px;
+  padding: 12px 13px;
+  border: 1px solid var(--tenant-edge);
+  border-radius: 14px;
+  background: hsl(var(--secondary) / .28);
+  font-size: 10px;
+  transition: border-color .18s ease, background .18s ease;
+}
+.app-shell.role-tenant .tenant-report-form .form-field:focus-within {
+  border-color: hsl(var(--primary) / .45);
+  background: hsl(var(--secondary) / .4);
+}
+.app-shell.role-tenant .tenant-report-form .form-field > span {
+  color: hsl(var(--muted-foreground));
+  font-family: var(--app-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.app-shell.role-tenant .tenant-report-form .form-field input,
+.app-shell.role-tenant .tenant-report-form .form-field textarea {
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid hsl(var(--input) / .8);
+  border-radius: 11px;
+  background: hsl(var(--card));
+  font-size: 12px;
+}
+.app-shell.role-tenant .tenant-report-form .form-field textarea { min-height: 96px; }
+.app-shell.role-tenant .tenant-report-form .form-field input:focus,
+.app-shell.role-tenant .tenant-report-form .form-field textarea:focus {
+  border-color: hsl(var(--primary) / .55);
+  box-shadow: 0 0 0 4px hsl(var(--primary) / .12);
+}
+
+/* Photo dropzone */
+.app-shell.role-tenant .tenant-photo-field { display: flex; flex-direction: column; gap: 8px; }
+.app-shell.role-tenant .tenant-photo-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: hsl(var(--muted-foreground));
+  font-family: var(--app-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.app-shell.role-tenant .tenant-photo-label small {
+  color: hsl(var(--muted-foreground) / .8);
+  font-family: var(--app-font-sans);
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.app-shell.role-tenant .tenant-photo-upload {
+  min-height: 76px;
+  padding: 14px 16px;
+  gap: 13px;
+  border: 1.5px dashed hsl(var(--primary) / .45);
+  border-radius: 14px;
+  color: hsl(var(--primary));
+  background: hsl(var(--secondary) / .3);
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+.app-shell.role-tenant .tenant-photo-upload:hover {
+  border-color: hsl(var(--primary) / .75);
+  background: hsl(var(--secondary) / .5);
+  transform: translateY(-1px);
+}
+.app-shell.role-tenant .tenant-photo-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 12px 12px 12px 4px;
+  color: hsl(var(--primary));
+  background: linear-gradient(145deg, hsl(var(--secondary)), hsl(var(--secondary) / .4));
+  box-shadow: inset 0 0 0 1px hsl(var(--primary) / .1);
+}
+.app-shell.role-tenant .tenant-photo-copy { display: flex; flex-direction: column; gap: 3px; }
+.app-shell.role-tenant .tenant-photo-copy b { color: hsl(var(--foreground)); font-size: 11px; font-weight: 650; }
+.app-shell.role-tenant .tenant-photo-copy small { margin: 0; color: hsl(var(--muted-foreground)); font-size: 9px; font-weight: 500; }
+.app-shell.role-tenant .repair-photo-preview img { border-radius: 12px; }
+
+/* Submit + note */
+.app-shell.role-tenant .tenant-report-submit {
+  min-height: 50px;
+  margin-top: 2px;
+  font-size: 12px;
+  letter-spacing: .01em;
+  box-shadow: 0 12px 26px hsl(var(--primary) / .3);
+}
+.app-shell.role-tenant .tenant-report-submit:disabled {
+  box-shadow: none;
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+.app-shell.role-tenant .tenant-report-note {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid hsl(var(--tenant-gold) / .4);
+  border-radius: 12px;
+  background: hsl(var(--tenant-gold) / .1);
+  color: hsl(var(--tenant-gold-deep));
+  font-size: 9px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+/* General tenant form focus (covers other tenant forms) */
+.app-shell.role-tenant .form-field input:focus,
+.app-shell.role-tenant .form-field select:focus,
+.app-shell.role-tenant .form-field textarea:focus {
+  outline: 0;
+  border-color: hsl(var(--primary) / .55);
+  box-shadow: 0 0 0 4px hsl(var(--primary) / .12);
+}
+.app-shell.role-tenant .mobile-money-note {
+  min-height: 54px;
+  padding: 14px 16px;
+  border: 1px solid var(--tenant-edge);
+  border-radius: 15px;
+  background:
+    radial-gradient(120% 150% at 100% 0%, hsl(var(--tenant-lime) / .12), transparent 55%),
+    hsl(var(--secondary) / .35);
+}
+.app-shell.role-tenant .mobile-money-note > svg { color: hsl(var(--tenant-gold-deep)); }
+.app-shell.role-tenant .mobile-money-note b { color: hsl(var(--foreground)); }
+
+/* ─────────────────────────────────────────────────────────────
+   5. Agreement card — luxe certificate
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-tenant .agreement-card.tenant-own-agreement {
+  max-width: 680px;
+  padding: 24px;
+  border: 1px solid var(--tenant-edge);
+  border-radius: 20px;
+  background:
+    radial-gradient(130% 130% at 100% 0%, hsl(var(--tenant-gold) / .12), transparent 55%),
+    radial-gradient(120% 130% at 0% 100%, hsl(var(--primary) / .05), transparent 55%),
+    hsl(var(--card));
+  box-shadow: 0 16px 40px hsl(220 25% 15% / .08);
+}
+.app-shell.role-tenant .agreement-card.tenant-own-agreement::before {
+  border-color: hsl(var(--tenant-gold) / .25);
+}
+.app-shell.role-tenant .agreement-card.tenant-own-agreement .agreement-rent {
+  font-family: var(--tenant-display);
+  font-weight: 600;
+  letter-spacing: -.025em;
+  background-image: linear-gradient(115deg, var(--tenant-ink-a), var(--tenant-ink-b));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.app-shell.role-tenant .agreement-card.tenant-own-agreement .agreement-rent small { -webkit-text-fill-color: hsl(var(--muted-foreground)); color: hsl(var(--muted-foreground)); }
+.app-shell.role-tenant .agreement-card .agreement-file {
+  color: hsl(var(--tenant-gold-deep));
+  background: linear-gradient(145deg, hsl(43 80% 92%), hsl(43 70% 82%));
+}
+.app-shell.role-tenant .agreement-details b { font-variant-numeric: tabular-nums; }
+.app-shell.role-tenant .agreement-card .due-date { color: hsl(var(--primary)); }
+
+/* ─────────────────────────────────────────────────────────────
+   6. Activity timeline
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-tenant .notifications-panel { border-radius: 18px; }
+.app-shell.role-tenant .timeline-icon {
+  border-radius: 13px 13px 13px 5px;
+  color: hsl(var(--primary));
+  background: linear-gradient(145deg, hsl(var(--secondary)), hsl(var(--secondary) / .5));
+  box-shadow: 0 0 0 4px hsl(var(--background)), 0 6px 16px hsl(220 25% 15% / .1);
+}
+.app-shell.role-tenant .timeline-icon.type-payment {
+  color: hsl(150 48% 15%);
+  background: linear-gradient(140deg, hsl(var(--tenant-lime)), hsl(75 68% 47%));
+}
+.app-shell.role-tenant .timeline-rail i { background: linear-gradient(180deg, hsl(var(--primary) / .45), hsl(var(--border))); }
+.app-shell.role-tenant .timeline-title b { font-size: 11px; }
+.app-shell.role-tenant .timeline-body p { font-size: 10px; }
+.app-shell.role-tenant .receipt-link { color: hsl(var(--primary)); font-weight: 600; }
+
+/* ─────────────────────────────────────────────────────────────
+   7. Unit map & receipt
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-tenant .tenant-unit-map-tile {
+  border-radius: 16px;
+  box-shadow: 0 10px 24px hsl(220 25% 15% / .05);
+}
+.app-shell.role-tenant .tenant-unit-number { font-family: var(--tenant-display); font-weight: 600; }
+.app-shell.role-tenant .tenant-unit-map-tile > b { font-family: var(--tenant-display); font-weight: 600; font-size: 13px; }
+.app-shell.role-tenant .receipt-page-card {
+  border-radius: 20px;
+  border-color: var(--tenant-edge);
+  box-shadow: 0 18px 44px hsl(220 25% 15% / .1);
+}
+.app-shell.role-tenant .receipt-page-card h2 {
+  font-family: var(--tenant-display);
+  font-weight: 600;
+  letter-spacing: -.025em;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   8. Buttons (tenant forms)
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-tenant .button { border-radius: 12px; }
+.app-shell.role-tenant .button-primary {
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(210 88% 44%));
+  box-shadow: 0 8px 20px hsl(var(--primary) / .28);
+}
+.app-shell.role-tenant .button-primary:hover { background: linear-gradient(135deg, hsl(210 100% 57%), hsl(210 88% 48%)); }
+
+/* ─────────────────────────────────────────────────────────────
+   9. Motion
+   ───────────────────────────────────────────────────────────── */
+@keyframes tenant-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+.app-shell.role-tenant .portal-welcome,
+.app-shell.role-tenant .role-page-intro,
+.app-shell.role-tenant .tenant-report-card,
+.app-shell.role-tenant .agreement-card.tenant-own-agreement {
+  animation: tenant-rise .52s cubic-bezier(.2, .7, .3, 1) both;
+}
+.app-shell.role-tenant .portal-balance { animation: tenant-rise .52s cubic-bezier(.2, .7, .3, 1) .05s both; }
+.app-shell.role-tenant .portal-panels > .panel { animation: tenant-rise .52s cubic-bezier(.2, .7, .3, 1) both; }
+.app-shell.role-tenant .portal-panels > .panel:nth-child(1) { animation-delay: .1s; }
+.app-shell.role-tenant .portal-panels > .panel:nth-child(2) { animation-delay: .16s; }
+.app-shell.role-tenant .portal-quick-link { animation: tenant-rise .52s cubic-bezier(.2, .7, .3, 1) both; }
+.app-shell.role-tenant .portal-quick-link:nth-child(1) { animation-delay: .2s; }
+.app-shell.role-tenant .portal-quick-link:nth-child(2) { animation-delay: .25s; }
+.app-shell.role-tenant .portal-quick-link:nth-child(3) { animation-delay: .3s; }
+
+/* ─────────────────────────────────────────────────────────────
+   10. Responsive
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .app-shell.role-tenant .portal-welcome { padding: 22px 19px 20px; }
+  .app-shell.role-tenant .portal-welcome h2 { font-size: clamp(27px, 8vw, 34px); }
+  .app-shell.role-tenant .portal-content { padding: 16px 15px 18px; }
+  .app-shell.role-tenant .portal-balance { padding: 16px; }
+  .app-shell.role-tenant .portal-balance b { font-size: clamp(27px, 9vw, 34px); }
+  .app-shell.role-tenant .role-page-intro { padding: 16px 16px; gap: 12px; }
+  .app-shell.role-tenant .role-page-intro .role-page-icon { width: 42px; height: 42px; flex-basis: 42px; }
+  .app-shell.role-tenant .agreement-card.tenant-own-agreement { padding: 18px; }
+  .app-shell.role-tenant .tenant-report-card { padding: 16px; }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   11. Reduced motion
+   ───────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.role-tenant .portal-welcome,
+  .app-shell.role-tenant .portal-balance,
+  .app-shell.role-tenant .portal-panels > .panel,
+  .app-shell.role-tenant .portal-quick-link,
+  .app-shell.role-tenant .role-page-intro,
+  .app-shell.role-tenant .tenant-report-card,
+  .app-shell.role-tenant .agreement-card.tenant-own-agreement {
+    animation: none !important;
+  }
+  .app-shell.role-tenant .portal-panels .panel,
+  .app-shell.role-tenant .portal-quick-link,
+  .app-shell.role-tenant .portal-receipt-link,
+  .app-shell.role-tenant .tenant-photo-upload {
+    transition: none !important;
+  }
+}

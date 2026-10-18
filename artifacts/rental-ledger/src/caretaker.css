@@ -1,0 +1,485 @@
+/* Caretaker workspace — "field ops" identity: utilitarian, high-contrast,
+   work-order cards, blueprint grid, deep teal signal (#1E3B39).
+   Everything is scoped under .role-caretaker so landlord/tenant views are untouched. */
+
+.app-shell.role-caretaker {
+  --ops-deep: 176 33% 18%;          /* #1E3B39 — banner surface + accent */
+  --ops-deep-2: 176 38% 12%;
+  --ops-signal: 176 33% 18%;        /* accent on surfaces */
+  --ops-signal-bright: 172 40% 62%; /* accent that must read on dark surfaces */
+  --ops-signal-ink: 168 26% 95%;    /* text set on the signal colour */
+  --ops-teal: 150 52% 42%;          /* settled / paid */
+  --ops-blue: 210 88% 46%;
+  --ops-line: var(--border);
+  --ops-display: 'Saira Condensed', 'Archivo', 'Barlow Condensed', 'Inter', system-ui, sans-serif;
+  --ops-hard: 4px 4px 0 hsl(var(--foreground) / .06);
+  --ops-hard-signal: 4px 4px 0 hsl(var(--ops-signal) / .25);
+  --ops-grid: linear-gradient(hsl(var(--foreground) / .035) 1px, transparent 1px),
+              linear-gradient(90deg, hsl(var(--foreground) / .035) 1px, transparent 1px);
+}
+.dark .app-shell.role-caretaker {
+  --ops-signal: 172 40% 58%;
+  --ops-signal-bright: 168 44% 72%;
+  --ops-signal-ink: 176 40% 10%;
+  --ops-teal: 150 45% 56%;
+  --ops-blue: 210 80% 64%;
+  --ops-hard: 4px 4px 0 hsl(0 0% 0% / .35);
+  --ops-hard-signal: 4px 4px 0 hsl(var(--ops-signal) / .3);
+  --ops-grid: linear-gradient(hsl(0 0% 100% / .045) 1px, transparent 1px),
+              linear-gradient(90deg, hsl(0 0% 100% / .045) 1px, transparent 1px);
+}
+
+/* Shared field-ops typography */
+.app-shell.role-caretaker .caretaker-welcome h2,
+.app-shell.role-caretaker .collection-progress-heading h2,
+.app-shell.role-caretaker .role-page-intro h2,
+.app-shell.role-caretaker .panel-head h2,
+.app-shell.role-caretaker .unpaid-heading h2,
+.app-shell.role-caretaker .form-intro h2 {
+  font-family: var(--ops-display);
+}
+.app-shell.role-caretaker .eyebrow {
+  font-family: var(--app-font-mono);
+  text-transform: uppercase;
+  letter-spacing: .14em;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   1. Dashboard — welcome banner + collection gauge
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-caretaker .caretaker-welcome {
+  border: 1.5px solid hsl(var(--ops-signal-bright) / .4);
+  border-radius: 8px;
+  background-image:
+    radial-gradient(120% 150% at 92% -25%, hsl(var(--ops-signal-bright) / .22), transparent 55%),
+    linear-gradient(150deg, hsl(var(--ops-deep)), hsl(var(--ops-deep-2))),
+    linear-gradient(hsl(0 0% 100% / .05) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(0 0% 100% / .05) 1px, transparent 1px);
+  background-size: auto, auto, 22px 22px, 22px 22px;
+  background-repeat: no-repeat, no-repeat, repeat, repeat;
+  background-position: center, center, 0 0, 0 0;
+  color: hsl(60 22% 95%);
+  box-shadow: var(--ops-hard-signal), 0 16px 36px hsl(var(--ops-deep-2) / .32);
+}
+.app-shell.role-caretaker .caretaker-welcome-copy .eyebrow { color: hsl(var(--ops-signal-bright)); }
+.app-shell.role-caretaker .caretaker-welcome h2 {
+  text-transform: uppercase;
+  letter-spacing: .005em;
+  font-weight: 700;
+}
+.app-shell.role-caretaker .caretaker-welcome p { color: hsl(168 16% 82%); }
+.app-shell.role-caretaker .caretaker-welcome-copy .button-cream {
+  margin-top: 16px;
+  border-radius: 6px;
+  background: hsl(var(--ops-signal-bright));
+  color: hsl(var(--ops-deep-2));
+  font-family: var(--ops-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  box-shadow: 3px 3px 0 hsl(var(--ops-deep-2) / .5);
+}
+.app-shell.role-caretaker .caretaker-welcome-copy .button-cream:hover {
+  background: hsl(var(--ops-signal-bright) / .86);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 hsl(var(--ops-deep-2) / .5);
+}
+.app-shell.role-caretaker .caretaker-today-mark {
+  border-radius: 10px;
+  border: 1.5px solid hsl(var(--ops-signal-bright) / .55);
+  background: hsl(var(--ops-signal-bright) / .1);
+  color: hsl(var(--ops-signal-bright));
+  transform: rotate(-3deg);
+}
+.app-shell.role-caretaker .card-corner-mark {
+  border-radius: 5px;
+  color: hsl(var(--ops-deep-2));
+  background: hsl(var(--ops-signal-bright));
+}
+
+.app-shell.role-caretaker .collection-progress-card {
+  border: 1.5px solid hsl(var(--ops-line));
+  border-radius: 8px;
+  background-color: hsl(var(--card));
+  background-image: var(--ops-grid);
+  background-size: 22px 22px;
+  box-shadow: var(--ops-hard);
+}
+.app-shell.role-caretaker .collection-progress-heading h2 {
+  text-transform: uppercase;
+  letter-spacing: .01em;
+}
+.app-shell.role-caretaker .collection-progress-heading h2 small {
+  text-transform: none;
+  font-family: var(--app-font-sans);
+}
+.app-shell.role-caretaker .progress-fraction {
+  font-family: var(--ops-display);
+  font-size: 17px;
+  color: hsl(var(--ops-signal));
+}
+.app-shell.role-caretaker .collection-progress-track {
+  height: 12px;
+  border-radius: 3px;
+  background: hsl(var(--muted));
+  position: relative;
+  overflow: hidden;
+}
+.app-shell.role-caretaker .collection-progress-track::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(90deg, transparent 0 10px, hsl(var(--card) / .55) 10px 12px);
+}
+.app-shell.role-caretaker .collection-progress-track > span {
+  border-radius: 3px;
+  background: linear-gradient(90deg, hsl(var(--ops-signal)), hsl(var(--ops-signal-bright)));
+}
+.app-shell.role-caretaker .collection-progress-foot {
+  font-family: var(--app-font-mono);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  font-size: 8px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   2. Dashboard columns — work-order panels
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-caretaker .caretaker-day-columns > .panel,
+.app-shell.role-caretaker .caretaker-homes-panel,
+.app-shell.role-caretaker .role-record-panel,
+.app-shell.role-caretaker .notifications-panel {
+  border: 1.5px solid hsl(var(--ops-line));
+  border-radius: 8px;
+  box-shadow: var(--ops-hard);
+}
+.app-shell.role-caretaker .panel-head {
+  border-bottom: 1.5px solid hsl(var(--ops-line));
+}
+.app-shell.role-caretaker .panel-head h2 { text-transform: uppercase; letter-spacing: .02em; }
+.app-shell.role-caretaker .role-panel-intro {
+  font-family: var(--ops-display);
+  font-size: 10px;
+  letter-spacing: .015em;
+}
+.app-shell.role-caretaker .count-bubble {
+  border-radius: 6px;
+  background: hsl(var(--ops-signal));
+  color: hsl(var(--ops-signal-ink));
+  font-family: var(--ops-display);
+  font-weight: 700;
+}
+
+.app-shell.role-caretaker .caretaker-followup,
+.app-shell.role-caretaker .caretaker-repair-item {
+  border-bottom: 1.5px solid hsl(var(--ops-line));
+  border-left: 3px solid hsl(var(--ops-signal));
+  padding-left: 12px;
+}
+.app-shell.role-caretaker .caretaker-repair-item { border-left-color: hsl(var(--ops-blue)); }
+.app-shell.role-caretaker .caretaker-followup-person b,
+.app-shell.role-caretaker .caretaker-repair-item > div b,
+.app-shell.role-caretaker .caretaker-followup-balance > b {
+  font-family: var(--ops-display);
+  letter-spacing: .01em;
+}
+.app-shell.role-caretaker .caretaker-followup-balance > b { font-family: var(--app-font-mono); }
+
+.app-shell.role-caretaker .repair-activity-icon,
+.app-shell.role-caretaker .role-page-icon,
+.app-shell.role-caretaker .form-icon,
+.app-shell.role-caretaker .notification-emblem,
+.app-shell.role-caretaker .agreement-file,
+.app-shell.role-caretaker .payment-check {
+  border-radius: 7px;
+  background: hsl(var(--ops-signal) / .12);
+  color: hsl(var(--ops-signal));
+  border: 1px solid hsl(var(--ops-signal) / .3);
+  box-shadow: none;
+}
+
+.app-shell.role-caretaker .caretaker-mobile-money {
+  border: 1.5px dashed hsl(var(--ops-line));
+  border-radius: 8px;
+  background: hsl(var(--ops-signal) / .06);
+  color: hsl(var(--ops-signal));
+}
+
+/* ─────────────────────────────────────────────────────────────
+   3. Homes — work-order unit tiles
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-caretaker .caretaker-homes-grid { padding: 15px; gap: 11px; }
+.app-shell.role-caretaker .caretaker-home-tile {
+  position: relative;
+  overflow: hidden;
+  border: 1.5px solid hsl(var(--ops-line));
+  border-radius: 8px;
+  background-color: hsl(var(--background));
+  box-shadow: 3px 3px 0 hsl(var(--foreground) / .05);
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+.app-shell.role-caretaker .caretaker-home-tile::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: hsl(var(--ops-teal));
+}
+.app-shell.role-caretaker .caretaker-home-tile.unit-pending::before,
+.app-shell.role-caretaker .caretaker-home-tile.unit-late::before { background: hsl(var(--ops-signal)); }
+.app-shell.role-caretaker .caretaker-home-tile.unit-repair::before,
+.app-shell.role-caretaker .caretaker-home-tile.unit-in-progress::before { background: hsl(var(--ops-blue)); }
+.app-shell.role-caretaker .caretaker-home-tile.unit-vacant::before { background: hsl(var(--muted-foreground)); }
+.app-shell.role-caretaker .caretaker-home-tile.unit-late,
+.app-shell.role-caretaker .caretaker-home-tile.unit-pending {
+  border-color: hsl(var(--ops-signal) / .5);
+  background-color: hsl(var(--ops-signal) / .06);
+}
+.app-shell.role-caretaker .caretaker-home-tile.unit-repair {
+  border-color: hsl(var(--ops-blue) / .5);
+  background-color: hsl(var(--ops-blue) / .06);
+}
+.app-shell.role-caretaker .caretaker-home-tile:hover,
+.app-shell.role-caretaker .caretaker-home-tile:focus-visible {
+  transform: translate(-2px, -2px);
+  border-color: hsl(var(--ops-signal) / .6);
+  box-shadow: var(--ops-hard-signal);
+}
+.app-shell.role-caretaker .caretaker-home-tile-head b {
+  font-family: var(--ops-display);
+  font-size: 16px;
+  letter-spacing: .02em;
+}
+.app-shell.role-caretaker .caretaker-home-tile > strong { font-family: var(--app-font-mono); }
+.app-shell.role-caretaker .caretaker-unit-legend {
+  font-family: var(--app-font-mono);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.app-shell.role-caretaker .caretaker-unit-legend i { border-radius: 2px; }
+.app-shell.role-caretaker .caretaker-unit-legend .legend-paid { background: hsl(var(--ops-teal)); }
+.app-shell.role-caretaker .caretaker-unit-legend .legend-pending { background: hsl(var(--ops-signal)); }
+
+/* ─────────────────────────────────────────────────────────────
+   4. Records — payments, contacts, repairs, agreements
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-caretaker .role-page-intro {
+  position: relative;
+  overflow: hidden;
+  align-items: center;
+  gap: 14px;
+  padding: 17px 20px 17px 22px;
+  border: 1.5px solid hsl(var(--ops-line));
+  border-radius: 8px;
+  background-color: hsl(var(--card));
+  background-image: var(--ops-grid);
+  background-size: 22px 22px;
+  box-shadow: var(--ops-hard);
+}
+.app-shell.role-caretaker .role-page-intro::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: hsl(var(--ops-signal));
+}
+.app-shell.role-caretaker .role-page-intro h2 {
+  text-transform: uppercase;
+  letter-spacing: .015em;
+  font-size: 19px;
+}
+.app-shell.role-caretaker .role-page-intro .eyebrow { color: hsl(var(--ops-signal)); }
+
+.app-shell.role-caretaker .role-record-list { padding: 0 19px; }
+.app-shell.role-caretaker .role-record-row,
+.app-shell.role-caretaker .role-contact-row,
+.app-shell.role-caretaker .role-repair-row {
+  border-bottom: 1.5px dashed hsl(var(--ops-line));
+}
+.app-shell.role-caretaker .role-record-row > div b,
+.app-shell.role-caretaker .role-contact-person b,
+.app-shell.role-caretaker .role-repair-row > div b,
+.app-shell.role-caretaker .unpaid-info b {
+  font-family: var(--ops-display);
+  letter-spacing: .015em;
+}
+.app-shell.role-caretaker .role-record-row > strong,
+.app-shell.role-caretaker .role-contact-balance { font-family: var(--app-font-mono); }
+
+.app-shell.role-caretaker .unit-avatar {
+  border-radius: 6px;
+  font-family: var(--ops-display);
+}
+.app-shell.role-caretaker .privacy-note {
+  border: 1.5px solid hsl(var(--ops-line));
+  border-left: 3px solid hsl(var(--ops-signal));
+  border-radius: 6px;
+  background: hsl(var(--ops-signal) / .05);
+  font-family: var(--ops-display);
+  letter-spacing: .01em;
+}
+
+.app-shell.role-caretaker .repair-detail-form input {
+  border-radius: 6px;
+  border: 1.5px solid hsl(var(--ops-line));
+}
+.app-shell.role-caretaker .repair-detail-form input:focus-visible {
+  border-color: hsl(var(--ops-signal));
+  box-shadow: 0 0 0 3px hsl(var(--ops-signal) / .18);
+}
+.app-shell.role-caretaker .repair-action {
+  border: 0;
+  border-radius: 6px;
+  background: hsl(var(--ops-signal));
+  color: hsl(var(--ops-signal-ink));
+  font-family: var(--ops-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  box-shadow: 3px 3px 0 hsl(var(--foreground) / .15);
+}
+.app-shell.role-caretaker .repair-action:hover { background: hsl(var(--ops-signal) / .88); }
+.app-shell.role-caretaker .repair-photo { border-radius: 6px; }
+
+/* ─────────────────────────────────────────────────────────────
+   5. Status tags — chunky mono stamps
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-caretaker .status-pill {
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  font-family: var(--app-font-mono);
+  font-size: 8.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.app-shell.role-caretaker .status-pill i { width: 6px; height: 6px; border-radius: 1px; }
+.app-shell.role-caretaker .status-pill.status-paid,
+.app-shell.role-caretaker .status-pill.status-done {
+  background: hsl(174 62% 92%);
+  color: hsl(174 58% 24%);
+  border-color: hsl(174 45% 68%);
+}
+.app-shell.role-caretaker .status-pill.status-pending,
+.app-shell.role-caretaker .status-pill.status-reported {
+  background: hsl(34 100% 92%);
+  color: hsl(24 78% 32%);
+  border-color: hsl(28 78% 64%);
+}
+.app-shell.role-caretaker .status-pill.status-late {
+  background: hsl(3 80% 94%);
+  color: hsl(3 60% 38%);
+  border-color: hsl(3 58% 72%);
+}
+.app-shell.role-caretaker .status-pill.status-repair,
+.app-shell.role-caretaker .status-pill.status-in-progress {
+  background: hsl(210 90% 94%);
+  color: hsl(214 68% 36%);
+  border-color: hsl(210 68% 74%);
+}
+.app-shell.role-caretaker .status-pill.status-assigned {
+  background: hsl(250 60% 94%);
+  color: hsl(250 45% 42%);
+  border-color: hsl(250 48% 78%);
+}
+.app-shell.role-caretaker .status-pill.status-vacant {
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  border-color: hsl(var(--border));
+}
+.dark .app-shell.role-caretaker .status-pill.status-paid,
+.dark .app-shell.role-caretaker .status-pill.status-done { background: hsl(174 40% 18%); color: hsl(174 60% 72%); border-color: hsl(174 40% 30%); }
+.dark .app-shell.role-caretaker .status-pill.status-pending,
+.dark .app-shell.role-caretaker .status-pill.status-reported { background: hsl(28 45% 20%); color: hsl(34 90% 74%); border-color: hsl(28 45% 34%); }
+.dark .app-shell.role-caretaker .status-pill.status-late { background: hsl(3 40% 22%); color: hsl(3 70% 76%); border-color: hsl(3 40% 34%); }
+.dark .app-shell.role-caretaker .status-pill.status-repair,
+.dark .app-shell.role-caretaker .status-pill.status-in-progress { background: hsl(210 40% 22%); color: hsl(210 70% 76%); border-color: hsl(210 40% 34%); }
+.dark .app-shell.role-caretaker .status-pill.status-assigned { background: hsl(250 32% 24%); color: hsl(250 60% 80%); border-color: hsl(250 32% 36%); }
+
+/* ─────────────────────────────────────────────────────────────
+   6. Daily collection — payment docket + follow-up queue
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-caretaker .collection-form-panel,
+.app-shell.role-caretaker .unpaid-panel {
+  border: 1.5px solid hsl(var(--ops-line));
+  border-radius: 8px;
+  background-color: hsl(var(--card));
+  background-image: var(--ops-grid);
+  background-size: 22px 22px;
+  box-shadow: var(--ops-hard);
+}
+.app-shell.role-caretaker .form-intro { border-bottom: 1.5px solid hsl(var(--ops-line)); }
+.app-shell.role-caretaker .form-intro h2 { text-transform: uppercase; letter-spacing: .02em; }
+.app-shell.role-caretaker .unpaid-heading h2 { text-transform: uppercase; letter-spacing: .02em; }
+.app-shell.role-caretaker .form-intro .eyebrow,
+.app-shell.role-caretaker .unpaid-heading .eyebrow { color: hsl(var(--ops-signal)); }
+.app-shell.role-caretaker .method-option {
+  border: 1.5px solid hsl(var(--ops-line));
+  border-radius: 6px;
+}
+.app-shell.role-caretaker .method-option.active {
+  border-color: hsl(var(--ops-signal));
+  background: hsl(var(--ops-signal) / .12);
+  box-shadow: 3px 3px 0 hsl(var(--ops-signal) / .25);
+}
+.app-shell.role-caretaker .method-option.active .method-symbol { color: hsl(var(--ops-signal)); }
+.app-shell.role-caretaker .selected-unit-note { font-family: var(--app-font-mono); }
+.app-shell.role-caretaker .input-money { border-radius: 6px; }
+.app-shell.role-caretaker .search-field { border-radius: 6px; border: 1.5px solid hsl(var(--ops-line)); }
+.app-shell.role-caretaker .unpaid-row { border-bottom: 1.5px dashed hsl(var(--ops-line)); }
+.app-shell.role-caretaker .unpaid-amount b { font-family: var(--app-font-mono); }
+.app-shell.role-caretaker .offline-note,
+.app-shell.role-caretaker .form-trust {
+  font-family: var(--ops-display);
+  letter-spacing: .01em;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   7. Notifications — dispatch log
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-caretaker .timeline-icon {
+  border-radius: 6px;
+  background: hsl(var(--ops-signal) / .12);
+  color: hsl(var(--ops-signal));
+  border: 1px solid hsl(var(--ops-signal) / .3);
+}
+.app-shell.role-caretaker .timeline-rail i { background: hsl(var(--ops-line)); }
+.app-shell.role-caretaker .timeline-title b { font-family: var(--ops-display); letter-spacing: .01em; }
+.app-shell.role-caretaker .timeline-meta { font-family: var(--app-font-mono); }
+
+/* ─────────────────────────────────────────────────────────────
+   8. Shared sheets — unit drawer + receipt (caretaker only)
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-caretaker .unit-drawer { background-image: var(--ops-grid); background-size: 22px 22px; }
+.app-shell.role-caretaker .drawer-heading { border-bottom: 1.5px solid hsl(var(--ops-line)); }
+.app-shell.role-caretaker .drawer-heading h2 { font-family: var(--ops-display); text-transform: uppercase; letter-spacing: .02em; }
+.app-shell.role-caretaker .drawer-section-head h3 { font-family: var(--ops-display); text-transform: uppercase; letter-spacing: .03em; }
+.app-shell.role-caretaker .drawer-list-row { border-bottom: 1.5px dashed hsl(var(--ops-line)); }
+.app-shell.role-caretaker .drawer-quick-actions {
+  border-top: 1.5px solid hsl(var(--ops-line));
+  background: hsl(var(--background) / .96);
+}
+.app-shell.role-caretaker .receipt-page-card { border: 1.5px solid hsl(var(--ops-line)); border-radius: 8px; box-shadow: var(--ops-hard); }
+.app-shell.role-caretaker .receipt-page-card h2,
+.app-shell.role-caretaker .receipt-page-toolbar h1 { font-family: var(--ops-display); text-transform: uppercase; letter-spacing: .02em; }
+
+/* ─────────────────────────────────────────────────────────────
+   9. Responsive + motion
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .app-shell.role-caretaker .role-page-intro { padding: 14px 15px 14px 18px; }
+  .app-shell.role-caretaker .caretaker-home-tile:hover,
+  .app-shell.role-caretaker .caretaker-home-tile:focus-visible { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.role-caretaker .caretaker-home-tile,
+  .app-shell.role-caretaker .caretaker-welcome-copy .button-cream,
+  .app-shell.role-caretaker .collection-progress-track > span { transition: none !important; }
+}
