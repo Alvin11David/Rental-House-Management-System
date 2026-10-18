@@ -3,6 +3,7 @@ import './rental.css';
 import './dashboard.css';
 import './tenant-portal.css';
 import './caretaker.css';
+import './landlord-exec.css';
 import OnboardingTour from '@/components/OnboardingTour';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';

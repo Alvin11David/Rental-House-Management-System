@@ -1,0 +1,549 @@
+/* Landlord workspace — "executive / private-banking" identity: deep navy-ink
+   surfaces, antique-brass accents, Playfair Display serif headings, hairline
+   ledger rules and refined tabular figures. Keeps the shared brand chrome
+   (green sidebar, blue primary) untouched. Everything is scoped under
+   .role-landlord so the tenant and caretaker views are untouched. */
+
+.app-shell.role-landlord {
+  --exec-ink: 222 44% 15%;          /* hero / dark surfaces */
+  --exec-ink-2: 224 52% 9%;
+  --exec-navy: 222 42% 24%;
+  --exec-brass: 34 45% 48%;         /* antique brass — signature accent */
+  --exec-brass-bright: 38 60% 68%;  /* brass that must read on dark surfaces */
+  --exec-brass-ink: 34 48% 12%;     /* text set on the brass colour */
+  --exec-cream: 40 42% 95%;
+  --exec-steel: 210 34% 42%;        /* supporting blue for data */
+  --exec-display: 'Playfair Display', 'Newsreader', Georgia, 'Times New Roman', serif;
+  --exec-rule: 1px solid hsl(var(--exec-brass) / .35);
+}
+.dark .app-shell.role-landlord {
+  --exec-ink: 222 42% 13%;
+  --exec-ink-2: 224 48% 7%;
+  --exec-navy: 220 30% 30%;
+  --exec-brass: 38 54% 58%;
+  --exec-brass-bright: 40 62% 72%;
+  --exec-steel: 208 42% 66%;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Shared executive typography
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-landlord .page-heading h1,
+.app-shell.role-landlord .panel-head h2,
+.app-shell.role-landlord .metric-card > strong,
+.app-shell.role-landlord .hero-copy h2,
+.app-shell.role-landlord .seal-ring strong,
+.app-shell.role-landlord .ledger-summary > div:first-child > b,
+.app-shell.role-landlord .analytics-copy h2,
+.app-shell.role-landlord .analytics-note b,
+.app-shell.role-landlord .agreement-banner b,
+.app-shell.role-landlord .agreement-count > b,
+.app-shell.role-landlord .agreement-card h2,
+.app-shell.role-landlord .agreement-rent,
+.app-shell.role-landlord .tenant-card-head h2,
+.app-shell.role-landlord .repair-column-head h2,
+.app-shell.role-landlord .repair-card h3,
+.app-shell.role-landlord .notification-intro h2,
+.app-shell.role-landlord .timeline-title b,
+.app-shell.role-landlord .collection-readonly-summary > b,
+.app-shell.role-landlord .receipt-page-card h2,
+.app-shell.role-landlord .settings-intro h2,
+.app-shell.role-landlord .settings-section-title h2,
+.app-shell.role-landlord .empty-state > b {
+  font-family: var(--exec-display);
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+.app-shell.role-landlord .eyebrow {
+  color: hsl(var(--exec-brass));
+  font-family: var(--app-font-mono);
+  letter-spacing: .17em;
+}
+.app-shell.role-landlord .page-heading h1 {
+  font-size: clamp(30px, 3.2vw, 39px);
+  font-weight: 600;
+  letter-spacing: -.02em;
+}
+.app-shell.role-landlord .metric-card > strong,
+.app-shell.role-landlord .money-cell,
+.app-shell.role-landlord .agreement-rent,
+.app-shell.role-landlord .collection-readonly-summary > b { font-variant-numeric: tabular-nums; }
+
+/* Buttons — brass primary, hairline secondary */
+.app-shell.role-landlord .button { border-radius: 10px; letter-spacing: .01em; }
+.app-shell.role-landlord .button-primary {
+  color: hsl(var(--exec-brass-ink));
+  border-color: hsl(var(--exec-brass) / .6);
+  background: linear-gradient(160deg, hsl(var(--exec-brass-bright)), hsl(var(--exec-brass)));
+  box-shadow: 0 6px 16px hsl(var(--exec-brass) / .24);
+}
+.app-shell.role-landlord .button-primary:hover {
+  background: linear-gradient(160deg, hsl(var(--exec-brass-bright) / .92), hsl(var(--exec-brass) / .92));
+}
+.app-shell.role-landlord .button-quiet { border-color: hsl(222 18% 82%); background: hsl(var(--card)); }
+.app-shell.role-landlord .hero-copy .button-cream {
+  color: hsl(var(--exec-brass-ink));
+  border-color: hsl(var(--exec-brass) / .5);
+  background: linear-gradient(160deg, hsl(var(--exec-brass-bright)), hsl(var(--exec-brass)));
+}
+.app-shell.role-landlord .hero-copy .button-cream:hover { background: hsl(var(--exec-brass-bright)); }
+.app-shell.role-landlord .text-link { color: hsl(var(--exec-brass)); }
+.app-shell.role-landlord .text-link:hover { color: hsl(var(--exec-brass-bright)); }
+
+/* ─────────────────────────────────────────────────────────────
+   1. Dashboard — report cards + ledger hero
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-landlord .dashboard-page .dashboard-grid .metric-card {
+  border-radius: 16px;
+  border-color: hsl(222 20% 87%);
+  box-shadow: inset 0 2px 0 0 hsl(var(--exec-brass) / .55), 0 8px 22px hsl(222 30% 20% / .05);
+}
+.app-shell.role-landlord .dashboard-page .dashboard-grid .metric-card:hover {
+  box-shadow: inset 0 2px 0 0 hsl(var(--exec-brass) / .8), 0 14px 28px hsl(222 30% 20% / .1);
+}
+.app-shell.role-landlord .dashboard-page .dashboard-grid .metrics-grid > .metric-card:nth-child(1) { background: hsl(222 42% 94%); }
+.app-shell.role-landlord .dashboard-page .dashboard-grid .metrics-grid > .metric-card:nth-child(2) { background: hsl(37 46% 93%); }
+.app-shell.role-landlord .dashboard-page .dashboard-grid .metrics-grid > .metric-card:nth-child(3) { background: hsl(214 30% 94%); }
+.app-shell.role-landlord .dashboard-page .dashboard-grid .metrics-grid > .metric-card:nth-child(4) { background: hsl(222 34% 95%); }
+.dark .app-shell.role-landlord .dashboard-page .dashboard-grid .metrics-grid > .metric-card:nth-child(1) { background: hsl(222 26% 20%); }
+.dark .app-shell.role-landlord .dashboard-page .dashboard-grid .metrics-grid > .metric-card:nth-child(2) { background: hsl(34 20% 20%); }
+.dark .app-shell.role-landlord .dashboard-page .dashboard-grid .metrics-grid > .metric-card:nth-child(3) { background: hsl(214 20% 22%); }
+.dark .app-shell.role-landlord .dashboard-page .dashboard-grid .metrics-grid > .metric-card:nth-child(4) { background: hsl(222 22% 23%); }
+
+.app-shell.role-landlord .metric-icon,
+.app-shell.role-landlord .metric-icon.green {
+  color: hsl(var(--exec-brass-ink));
+  background: hsl(var(--exec-brass) / .9);
+}
+.app-shell.role-landlord .metric-icon.amber { color: hsl(34 48% 30%); background: hsl(36 60% 82%); }
+.app-shell.role-landlord .metric-icon.blue { color: hsl(222 44% 34%); background: hsl(214 46% 86%); }
+.dark .app-shell.role-landlord .metric-icon.green { color: hsl(var(--exec-brass-ink)); background: hsl(var(--exec-brass)); }
+.dark .app-shell.role-landlord .metric-icon.amber { color: hsl(38 74% 76%); background: hsl(34 28% 26%); }
+.dark .app-shell.role-landlord .metric-icon.blue { color: hsl(210 62% 76%); background: hsl(214 30% 26%); }
+
+.app-shell.role-landlord .card-corner-mark {
+  background: hsl(var(--exec-ink));
+  color: hsl(var(--exec-brass-bright));
+}
+
+/* Ledger hero + balance + analytics share the ink surface */
+.app-shell.role-landlord .collection-hero,
+.app-shell.role-landlord .ledger-summary,
+.app-shell.role-landlord .analytics-feature {
+  color: hsl(var(--exec-cream));
+  border: 1px solid hsl(var(--exec-brass) / .28);
+  background-image:
+    radial-gradient(125% 155% at 90% -22%, hsl(var(--exec-brass) / .22), transparent 55%),
+    repeating-linear-gradient(0deg, hsl(0 0% 100% / .04) 0 1px, transparent 1px 27px),
+    linear-gradient(152deg, hsl(var(--exec-ink)), hsl(var(--exec-ink-2)));
+  box-shadow: 0 18px 42px hsl(var(--exec-ink-2) / .34);
+}
+.app-shell.role-landlord .collection-hero { border-radius: 22px; }
+.app-shell.role-landlord .ledger-summary { border-radius: 20px; }
+.app-shell.role-landlord .analytics-feature { border-radius: 22px; }
+.app-shell.role-landlord .hero-label,
+.app-shell.role-landlord .analytics-copy .eyebrow,
+.app-shell.role-landlord .ledger-summary > div:first-child > span {
+  color: hsl(var(--exec-brass-bright));
+}
+.app-shell.role-landlord .hero-copy h2 { letter-spacing: -.02em; }
+.app-shell.role-landlord .hero-copy h2 em {
+  color: hsl(var(--exec-brass-bright));
+  font-style: italic;
+  font-family: var(--exec-display);
+}
+.app-shell.role-landlord .hero-copy p,
+.app-shell.role-landlord .analytics-copy p,
+.app-shell.role-landlord .chart-legend,
+.app-shell.role-landlord .ledger-summary > div:first-child > small,
+.app-shell.role-landlord .summary-side { color: hsl(40 20% 80%); }
+.app-shell.role-landlord .hero-orbit { border-color: hsl(var(--exec-brass-bright) / .16); }
+.app-shell.role-landlord .seal-ring {
+  color: hsl(var(--exec-brass-bright));
+  border-color: hsl(var(--exec-brass) / .6);
+  background: radial-gradient(circle at 50% 30%, hsl(var(--exec-brass) / .16), transparent 70%);
+}
+.app-shell.role-landlord .seal-ring:before { border-color: hsl(var(--exec-brass-bright) / .38); }
+.app-shell.role-landlord .seal-caption { color: hsl(40 20% 78%); }
+.app-shell.role-landlord .summary-mark { border-color: hsl(var(--exec-brass) / .45); color: hsl(var(--exec-brass-bright)); }
+
+/* Panels — quiet parchment cards with a brass hairline head */
+.app-shell.role-landlord .dashboard-grid .panel {
+  border-color: hsl(222 20% 87%);
+  border-radius: 15px;
+  box-shadow: 0 6px 18px hsl(222 30% 20% / .045);
+}
+.app-shell.role-landlord .panel-head { border-bottom: var(--exec-rule); }
+
+.app-shell.role-landlord .attention-item { border-bottom: 1px solid hsl(222 18% 88%); }
+.app-shell.role-landlord .attention-mark {
+  color: hsl(var(--exec-brass-ink));
+  background: hsl(var(--exec-brass) / .9);
+}
+.app-shell.role-landlord .attention-mark svg { color: hsl(var(--exec-brass-ink)); }
+.app-shell.role-landlord .attention-mark.warn { color: hsl(34 48% 30%); background: hsl(36 62% 83%); font-weight: 700; }
+.app-shell.role-landlord .attention-item > button { color: hsl(var(--exec-brass)); }
+.app-shell.role-landlord .calm-empty { color: hsl(var(--muted-foreground)); }
+.app-shell.role-landlord .panel-foot-link { border-top: var(--exec-rule); color: hsl(var(--exec-brass)); }
+
+.app-shell.role-landlord .unit-tile { border-color: hsl(222 18% 86%); background: hsl(var(--card)); }
+.app-shell.role-landlord .unit-tile:hover { border-color: hsl(var(--exec-brass) / .6); background: hsl(40 40% 97%); }
+.app-shell.role-landlord .unit-tile > i { background: hsl(var(--exec-navy)); }
+.app-shell.role-landlord .unit-tile.unit-late > i,
+.app-shell.role-landlord .unit-tile.unit-pending > i { background: hsl(var(--exec-brass)); }
+.app-shell.role-landlord .unit-tile.unit-repair > i { background: hsl(3 62% 52%); }
+.dark .app-shell.role-landlord .unit-tile:hover { background: hsl(222 22% 22%); }
+
+.app-shell.role-landlord .upcoming-rent-panel {
+  color: hsl(var(--exec-cream));
+  border-color: hsl(var(--exec-brass) / .28);
+  background: linear-gradient(160deg, hsl(var(--exec-ink)), hsl(var(--exec-ink-2)));
+  box-shadow: 0 14px 32px hsl(var(--exec-ink-2) / .28);
+}
+.app-shell.role-landlord .upcoming-rent-panel .panel-head { border-color: hsl(0 0% 100% / .12); }
+.app-shell.role-landlord .upcoming-rent-panel .panel-head h2 { color: hsl(var(--exec-cream)); }
+.app-shell.role-landlord .upcoming-rent-panel .panel-head .text-link { color: hsl(var(--exec-brass-bright)); }
+.app-shell.role-landlord .upcoming-rent-item { border-color: hsl(0 0% 100% / .1); }
+.app-shell.role-landlord .upcoming-rent-icon { color: hsl(var(--exec-brass-bright)); background: hsl(var(--exec-brass) / .14); }
+.app-shell.role-landlord .upcoming-rent-tenant b { color: hsl(var(--exec-cream)); }
+.app-shell.role-landlord .upcoming-rent-tenant small,
+.app-shell.role-landlord .upcoming-rent-amount small { color: hsl(40 18% 72%); }
+.app-shell.role-landlord .upcoming-rent-amount b { color: hsl(var(--exec-brass-bright)); }
+.app-shell.role-landlord .upcoming-rent-state { color: hsl(40 18% 74%); }
+.app-shell.role-landlord .upcoming-rent-state svg { color: hsl(var(--exec-brass-bright)); }
+
+.app-shell.role-landlord .activity-row { border-color: hsl(222 18% 89%); }
+.app-shell.role-landlord .activity-symbol {
+  color: hsl(222 44% 30%);
+  background: hsl(214 40% 90%);
+  border-radius: 11px;
+}
+.app-shell.role-landlord .activity-symbol.activity-payment { color: hsl(34 50% 30%); background: hsl(36 58% 88%); }
+.app-shell.role-landlord .activity-symbol.activity-repair { color: hsl(3 52% 40%); background: hsl(3 58% 92%); }
+.app-shell.role-landlord .activity-symbol.activity-agreement { color: hsl(222 44% 32%); background: hsl(222 40% 91%); }
+
+.app-shell.role-landlord .mobile-money-note {
+  border: 1px solid hsl(var(--exec-brass) / .3);
+  border-radius: 12px;
+  background: linear-gradient(160deg, hsl(40 46% 96%), hsl(222 30% 96%));
+}
+.app-shell.role-landlord .mobile-money-note > svg { color: hsl(var(--exec-brass)); }
+.app-shell.role-landlord .mobile-money-note a { color: hsl(var(--exec-brass)); font-weight: 600; }
+.dark .app-shell.role-landlord .mobile-money-note { background: hsl(222 24% 18%); }
+
+/* Search field accent */
+.app-shell.role-landlord .dashboard-search-box {
+  background:
+    linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
+    linear-gradient(112deg, hsl(var(--exec-brass) / .5), hsl(222 40% 40% / .55), hsl(var(--exec-brass) / .4)) border-box;
+}
+.app-shell.role-landlord .dashboard-search-icon {
+  color: hsl(var(--exec-brass-ink));
+  background: linear-gradient(145deg, hsl(var(--exec-brass) / .85), hsl(var(--exec-brass) / .35));
+}
+.app-shell.role-landlord .dashboard-result-icon { color: hsl(var(--exec-brass)); background: hsl(var(--exec-brass) / .14); }
+
+/* ─────────────────────────────────────────────────────────────
+   2. Properties — portfolio plans + unit map
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-landlord .segmented { border-color: hsl(222 18% 84%); background: hsl(222 24% 96%); }
+.app-shell.role-landlord .segmented button.selected { background: hsl(var(--exec-ink)); color: hsl(var(--exec-cream)); box-shadow: none; }
+.app-shell.role-landlord .property-plan { border-color: hsl(222 20% 87%); }
+.app-shell.role-landlord .building-icon {
+  color: hsl(var(--exec-brass-ink));
+  background: linear-gradient(145deg, hsl(var(--exec-brass) / .9), hsl(var(--exec-brass) / .5));
+}
+.app-shell.role-landlord .building-1 { color: hsl(222 44% 34%); background: hsl(214 40% 89%); }
+.app-shell.role-landlord .building-2 { color: hsl(34 48% 32%); background: hsl(36 54% 88%); }
+.app-shell.role-landlord .property-description { color: hsl(var(--muted-foreground)); }
+.app-shell.role-landlord .property-photo-strip img { border-radius: 8px; }
+.app-shell.role-landlord .floorplan { border: 1px solid hsl(222 18% 86%); background: hsl(40 30% 98%); }
+.app-shell.role-landlord .floorplan-label { color: hsl(var(--exec-brass)); font-family: var(--app-font-mono); letter-spacing: .12em; }
+.app-shell.role-landlord .floorplan-label span { color: hsl(var(--muted-foreground)); }
+.app-shell.role-landlord .floor-unit { border-color: hsl(222 20% 84%); background: hsl(222 30% 96%); }
+.app-shell.role-landlord .floor-unit > span { font-family: var(--app-font-mono); }
+.app-shell.role-landlord .floor-unit.floor-paid { border-color: hsl(36 46% 74%); background: hsl(37 52% 92%); }
+.app-shell.role-landlord .floor-unit.floor-pending,
+.app-shell.role-landlord .floor-unit.floor-repair { border-color: hsl(210 32% 74%); background: hsl(210 40% 93%); }
+.app-shell.role-landlord .floor-unit.floor-late { border-color: hsl(3 40% 78%); background: hsl(3 60% 94%); }
+.app-shell.role-landlord .floor-unit.floor-vacant { border-color: hsl(222 16% 84%); background: hsl(222 20% 95%); }
+.app-shell.role-landlord .floor-unit:hover,
+.app-shell.role-landlord .floor-unit:focus-visible { box-shadow: 0 8px 20px hsl(var(--exec-brass) / .16); }
+.app-shell.role-landlord .floor-legend .paid-dot { background: hsl(var(--exec-brass)); }
+.app-shell.role-landlord .floor-legend .pending-dot,
+.app-shell.role-landlord .floor-legend .repair-dot { background: hsl(210 34% 52%); }
+.app-shell.role-landlord .floor-legend .late-dot { background: hsl(3 60% 54%); }
+.app-shell.role-landlord .floor-legend { font-family: var(--app-font-mono); text-transform: uppercase; letter-spacing: .05em; }
+.app-shell.role-landlord .assignment-tray { border: 1px solid hsl(222 18% 86%); background: hsl(40 34% 97%); }
+.app-shell.role-landlord .assignment-person { border-color: hsl(222 18% 85%); background: hsl(var(--card)); }
+.app-shell.role-landlord .assignment-person.selected { border-color: hsl(var(--exec-brass) / .6); background: hsl(40 42% 95%); }
+.app-shell.role-landlord .tenant-avatar { color: hsl(var(--exec-brass-ink)); background: hsl(37 46% 88%); }
+.dark .app-shell.role-landlord .assignment-person.selected { background: hsl(34 22% 22%); }
+.dark .app-shell.role-landlord .tenant-avatar { background: hsl(36 28% 28%); color: hsl(38 60% 76%); }
+
+/* ─────────────────────────────────────────────────────────────
+   3. Daily collection — read-only summary + follow-up list
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-landlord .collection-form-panel,
+.app-shell.role-landlord .unpaid-panel {
+  border-color: hsl(222 20% 87%);
+  border-radius: 16px;
+  background: hsl(var(--card));
+}
+.app-shell.role-landlord .form-intro { border-bottom: var(--exec-rule); }
+.app-shell.role-landlord .form-icon {
+  color: hsl(var(--exec-brass-ink));
+  background: hsl(37 46% 90%);
+}
+.app-shell.role-landlord .form-intro .eyebrow,
+.app-shell.role-landlord .unpaid-heading .eyebrow { color: hsl(var(--exec-brass)); }
+.app-shell.role-landlord .collection-readonly-summary > b { color: hsl(var(--exec-brass)); }
+.app-shell.role-landlord .collection-readonly-summary > div strong { color: hsl(var(--foreground)); }
+.app-shell.role-landlord .search-field { border: 1px solid hsl(222 18% 85%); border-radius: 10px; }
+.app-shell.role-landlord .count-bubble {
+  color: hsl(var(--exec-brass-ink));
+  background: hsl(var(--exec-brass));
+}
+.app-shell.role-landlord .unpaid-row { border-bottom: 1px solid hsl(222 18% 88%); }
+.app-shell.role-landlord .unit-avatar { color: hsl(var(--exec-brass-ink)); background: hsl(37 46% 88%); }
+.app-shell.role-landlord .unpaid-amount b { font-family: var(--app-font-mono); }
+.app-shell.role-landlord .offline-note { color: hsl(var(--muted-foreground)); }
+.app-shell.role-landlord .offline-note b { color: hsl(var(--foreground)); }
+
+/* ─────────────────────────────────────────────────────────────
+   4. Payments — the ledger
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-landlord .ledger-summary > div:first-child > b { letter-spacing: -.01em; }
+.app-shell.role-landlord .ledger-tools select,
+.app-shell.role-landlord .toolbar select { border-color: hsl(222 18% 84%); background: hsl(var(--card)); }
+.app-shell.role-landlord .filter-search { border: 1px solid hsl(222 18% 85%); background: hsl(var(--card)); }
+.app-shell.role-landlord .ledger-date-tools input { border-color: hsl(222 18% 84%); background: hsl(var(--card)); }
+.app-shell.role-landlord .date-range-error { color: hsl(3 62% 44%); }
+.app-shell.role-landlord .table-panel { border-color: hsl(222 20% 87%); border-radius: 16px; }
+.app-shell.role-landlord .table-panel thead th {
+  border-bottom: var(--exec-rule);
+  color: hsl(var(--exec-brass));
+  font-family: var(--app-font-mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.app-shell.role-landlord .table-scroll tbody tr { border-bottom: 1px solid hsl(222 18% 90%); }
+.app-shell.role-landlord .table-scroll tbody tr:hover { background: hsl(40 40% 97%); }
+.app-shell.role-landlord .table-person .avatar.mini { color: hsl(222 44% 30%); background: hsl(214 40% 91%); }
+.app-shell.role-landlord .money-cell { font-weight: 600; }
+.app-shell.role-landlord .method-label { color: hsl(var(--muted-foreground)); }
+.app-shell.role-landlord .table-footer { border-top: var(--exec-rule); color: hsl(var(--muted-foreground)); }
+.dark .app-shell.role-landlord .table-scroll tbody tr:hover { background: hsl(222 20% 20%); }
+
+/* ─────────────────────────────────────────────────────────────
+   5. Tenants — portfolio of residents
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-landlord .tenant-card {
+  border-color: hsl(222 20% 87%);
+  border-radius: 15px;
+  box-shadow: inset 0 2px 0 0 hsl(var(--exec-brass) / .35);
+}
+.app-shell.role-landlord .tenant-card-head { border-bottom: var(--exec-rule); }
+.app-shell.role-landlord .tenant-data-row,
+.app-shell.role-landlord .tenant-stat-row { border-bottom: 1px solid hsl(222 18% 89%); }
+.app-shell.role-landlord .reveal-button { color: hsl(var(--exec-brass)); }
+.app-shell.role-landlord .tenant-card-foot b { font-variant-numeric: tabular-nums; }
+.app-shell.role-landlord .privacy-note {
+  border: 1px solid hsl(var(--exec-brass) / .28);
+  border-left: 3px solid hsl(var(--exec-brass));
+  border-radius: 9px;
+  background: hsl(40 40% 97%);
+}
+.app-shell.role-landlord .privacy-note svg { color: hsl(var(--exec-brass)); }
+.dark .app-shell.role-landlord .privacy-note { background: hsl(34 18% 18%); }
+
+/* ─────────────────────────────────────────────────────────────
+   6. Repairs — work ledger columns
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-landlord .repair-column-head h2 { letter-spacing: 0; }
+.app-shell.role-landlord .repair-step {
+  color: hsl(var(--exec-brass-ink));
+  background: hsl(var(--exec-brass) / .9);
+  font-family: var(--app-font-mono);
+}
+.app-shell.role-landlord .repair-step.step-1 { color: hsl(222 44% 32%); background: hsl(214 40% 89%); }
+.app-shell.role-landlord .repair-step.step-2 { color: hsl(34 48% 30%); background: hsl(36 56% 87%); }
+.app-shell.role-landlord .repair-step.step-3 { color: hsl(222 40% 30%); background: hsl(222 36% 90%); }
+.app-shell.role-landlord .repair-column-head > b { font-family: var(--app-font-mono); }
+.app-shell.role-landlord .repair-card {
+  border-color: hsl(222 20% 87%);
+  border-radius: 13px;
+  box-shadow: 0 4px 12px hsl(222 30% 20% / .04);
+}
+.app-shell.role-landlord .repair-card h3 { letter-spacing: 0; }
+.app-shell.role-landlord .repair-unit { color: hsl(var(--exec-brass)); font-family: var(--app-font-mono); }
+.app-shell.role-landlord .repair-by { border-top: 1px solid hsl(222 18% 89%); }
+.app-shell.role-landlord .repair-cost b { font-variant-numeric: tabular-nums; }
+.app-shell.role-landlord .repair-history > div { border-top: 1px solid hsl(222 18% 90%); }
+.app-shell.role-landlord .repair-action {
+  border-color: hsl(var(--exec-brass) / .45);
+  background: hsl(40 40% 97%);
+  color: hsl(var(--exec-brass));
+  border-radius: 8px;
+}
+.app-shell.role-landlord .repair-action:hover { background: hsl(40 46% 94%); border-color: hsl(var(--exec-brass) / .7); }
+.app-shell.role-landlord .repair-detail-form input { border-color: hsl(222 18% 84%); }
+.app-shell.role-landlord .repair-photo { border-radius: 9px; }
+
+/* ─────────────────────────────────────────────────────────────
+   7. Agreements — signed instruments
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-landlord .agreement-banner {
+  color: hsl(var(--exec-brass-ink));
+  border: 1px solid hsl(var(--exec-brass) / .4);
+  background: linear-gradient(150deg, hsl(40 60% 91%), hsl(37 46% 87%));
+}
+.app-shell.role-landlord .agreement-banner > span { background: hsl(0 0% 100% / .55); color: hsl(var(--exec-brass-ink)); }
+.app-shell.role-landlord .agreement-count { border-left: 1px solid hsl(var(--exec-brass) / .4); }
+.app-shell.role-landlord .agreement-count > b { color: hsl(var(--exec-brass-ink)); }
+.app-shell.role-landlord .agreement-card {
+  border-color: hsl(222 20% 87%);
+  border-radius: 14px;
+  box-shadow: inset 0 2px 0 0 hsl(var(--exec-brass) / .3);
+}
+.app-shell.role-landlord .agreement-file {
+  color: hsl(var(--exec-brass-ink));
+  background: hsl(37 46% 89%);
+}
+.app-shell.role-landlord .signed-label { color: hsl(222 44% 34%); }
+.app-shell.role-landlord .unsigned-label { color: hsl(34 52% 34%); }
+.app-shell.role-landlord .agreement-rent { color: hsl(var(--exec-brass)); }
+.app-shell.role-landlord .agreement-details { border-top: var(--exec-rule); }
+.app-shell.role-landlord .agreement-details > div { border-bottom: 1px solid hsl(222 18% 90%); }
+.app-shell.role-landlord .due-date { color: hsl(var(--exec-brass)); }
+.app-shell.role-landlord .agreement-expiring { color: hsl(34 52% 36%); }
+.app-shell.role-landlord .agreement-signature { border-top: 1px solid hsl(222 18% 88%); }
+.app-shell.role-landlord .agreement-card-foot button { margin-top: 8px; }
+
+/* ─────────────────────────────────────────────────────────────
+   8. Analytics — the board pack
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-landlord .analytics-feature .chart-area { border-radius: 16px; background: hsl(var(--exec-ink-2) / .55); }
+.app-shell.role-landlord .analytics-feature .chart-grid-line { stroke: hsl(0 0% 100% / .12); stroke-dasharray: 2 5; }
+.app-shell.role-landlord .analytics-feature .chart-line-collected { stroke: hsl(var(--exec-brass-bright)); filter: drop-shadow(0 3px 6px hsl(var(--exec-brass) / .3)); }
+.app-shell.role-landlord .analytics-feature .chart-line-outstanding { stroke: hsl(210 60% 74%); }
+.app-shell.role-landlord .analytics-feature .chart-point-collected { fill: hsl(var(--exec-brass-bright)); stroke: hsl(var(--exec-ink-2)); }
+.app-shell.role-landlord .analytics-feature .chart-point-outstanding { fill: hsl(210 60% 78%); stroke: hsl(var(--exec-ink-2)); }
+.app-shell.role-landlord .analytics-feature .chart-x-labels button { color: hsl(40 18% 74%); font-family: var(--app-font-mono); }
+.app-shell.role-landlord .analytics-feature .chart-x-labels button:hover,
+.app-shell.role-landlord .analytics-feature .chart-x-labels button:focus-visible { color: hsl(var(--exec-brass-bright)); }
+.app-shell.role-landlord .chart-tooltip { border-color: hsl(var(--exec-brass) / .4); background: hsl(var(--exec-ink-2) / .96); }
+.app-shell.role-landlord .chart-legend i { background: hsl(var(--exec-brass-bright)); border-radius: 2px; }
+.app-shell.role-landlord .chart-legend .legend-outstanding { background: hsl(210 60% 74%); }
+.app-shell.role-landlord .chart-legend .legend-collected { background: hsl(var(--exec-brass-bright)); }
+.app-shell.role-landlord .analytics-metrics .metric-card {
+  border-color: hsl(222 20% 87%);
+  box-shadow: inset 0 2px 0 0 hsl(var(--exec-brass) / .45), 0 6px 16px hsl(222 30% 20% / .045);
+}
+.app-shell.role-landlord .analytics-note {
+  border: 1px solid hsl(var(--exec-brass) / .3);
+  border-left: 3px solid hsl(var(--exec-brass));
+  border-radius: 12px;
+}
+.app-shell.role-landlord .analytics-note > span { color: hsl(var(--exec-brass)); }
+
+/* ─────────────────────────────────────────────────────────────
+   9. Notifications — the register
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-landlord .notification-intro {
+  border-color: hsl(222 20% 87%);
+  border-left: 3px solid hsl(var(--exec-brass));
+}
+.app-shell.role-landlord .notification-emblem {
+  color: hsl(var(--exec-brass-ink));
+  background: hsl(37 46% 90%);
+}
+.app-shell.role-landlord .filter-pills button.active {
+  background: hsl(var(--exec-ink));
+  color: hsl(var(--exec-cream));
+}
+.app-shell.role-landlord .timeline-group > h2 { color: hsl(var(--exec-brass)); }
+.app-shell.role-landlord .timeline-group + .timeline-group { border-top: var(--exec-rule); }
+.app-shell.role-landlord .timeline-icon {
+  color: hsl(222 44% 30%);
+  background: hsl(214 40% 91%);
+}
+.app-shell.role-landlord .timeline-icon.type-payment { color: hsl(34 50% 30%); background: hsl(36 56% 89%); }
+.app-shell.role-landlord .timeline-icon.type-repair { color: hsl(3 52% 40%); background: hsl(3 58% 93%); }
+.app-shell.role-landlord .timeline-rail i { background: hsl(222 18% 85%); }
+.app-shell.role-landlord .timeline-body { border-bottom: 1px solid hsl(222 18% 89%); }
+.app-shell.role-landlord .timeline-meta { font-family: var(--app-font-mono); }
+.app-shell.role-landlord .receipt-link { color: hsl(var(--exec-brass)); }
+
+/* ─────────────────────────────────────────────────────────────
+   10. Status tags, shared sheets & modals
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-landlord .status-pill {
+  border-radius: 6px;
+  font-family: var(--app-font-mono);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.app-shell.role-landlord .status-pill i { border-radius: 2px; }
+.app-shell.role-landlord .status-pill.status-paid,
+.app-shell.role-landlord .status-pill.status-done { background: hsl(37 52% 88%); color: hsl(34 52% 28%); }
+.app-shell.role-landlord .status-pill.status-pending,
+.app-shell.role-landlord .status-pill.status-reported { background: hsl(222 42% 92%); color: hsl(222 44% 34%); }
+.app-shell.role-landlord .status-pill.status-late { background: hsl(3 62% 92%); color: hsl(3 56% 39%); }
+.app-shell.role-landlord .status-pill.status-repair,
+.app-shell.role-landlord .status-pill.status-in-progress { background: hsl(210 44% 92%); color: hsl(210 44% 33%); }
+.app-shell.role-landlord .status-pill.status-assigned { background: hsl(222 30% 92%); color: hsl(222 34% 40%); }
+.app-shell.role-landlord .status-pill.status-vacant { background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
+.dark .app-shell.role-landlord .status-pill.status-paid,
+.dark .app-shell.role-landlord .status-pill.status-done { background: hsl(34 30% 24%); color: hsl(38 70% 74%); }
+.dark .app-shell.role-landlord .status-pill.status-pending,
+.dark .app-shell.role-landlord .status-pill.status-reported { background: hsl(222 30% 25%); color: hsl(214 60% 76%); }
+.dark .app-shell.role-landlord .status-pill.status-late { background: hsl(3 36% 24%); color: hsl(3 70% 76%); }
+.dark .app-shell.role-landlord .status-pill.status-repair,
+.dark .app-shell.role-landlord .status-pill.status-in-progress { background: hsl(210 34% 24%); color: hsl(210 64% 76%); }
+.dark .app-shell.role-landlord .status-pill.status-assigned { background: hsl(222 26% 26%); color: hsl(214 52% 78%); }
+
+.app-shell.role-landlord .paid-stamp {
+  color: hsl(var(--exec-brass));
+  border-color: hsl(var(--exec-brass));
+  box-shadow: inset 0 0 0 2px hsl(var(--exec-brass) / .18);
+}
+.app-shell.role-landlord .receipt-page-card {
+  border-color: hsl(222 20% 87%);
+  border-radius: 16px;
+  box-shadow: inset 0 3px 0 0 hsl(var(--exec-brass) / .35), 0 12px 30px hsl(222 30% 20% / .06);
+}
+.app-shell.role-landlord .receipt-page-card .eyebrow { color: hsl(var(--exec-brass)); }
+.app-shell.role-landlord .receipt-page-card .receipt-brand b { font-family: var(--exec-display); }
+.app-shell.role-landlord .receipt-page-foot { border-top: var(--exec-rule); }
+.app-shell.role-landlord .settings-mark {
+  color: hsl(var(--exec-brass-ink));
+  background: hsl(37 46% 90%);
+}
+.app-shell.role-landlord .settings-section-title > span { color: hsl(var(--exec-brass)); }
+.app-shell.role-landlord .role-option.selected { border-color: hsl(var(--exec-brass) / .55); background: hsl(40 40% 96%); }
+.app-shell.role-landlord .role-icon { color: hsl(var(--exec-brass-ink)); background: hsl(37 46% 90%); }
+.app-shell.role-landlord .role-check { color: hsl(var(--exec-brass)); }
+.app-shell.role-landlord .empty-icon { color: hsl(var(--exec-brass-ink)); background: hsl(37 46% 91%); }
+.app-shell.role-landlord .modal { border-color: hsl(222 20% 87%); border-radius: 18px; }
+.app-shell.role-landlord .modal-head { border-bottom: var(--exec-rule); }
+.app-shell.role-landlord .unit-drawer { border-left: 1px solid hsl(var(--exec-brass) / .3); }
+.app-shell.role-landlord .drawer-heading { border-bottom: var(--exec-rule); }
+.app-shell.role-landlord .drawer-section-head h3 { color: hsl(var(--exec-brass)); font-family: var(--app-font-mono); letter-spacing: .1em; text-transform: uppercase; }
+.app-shell.role-landlord .drawer-list-row { border-bottom: 1px solid hsl(222 18% 89%); }
+.app-shell.role-landlord .drawer-quick-actions { border-top: var(--exec-rule); }
+
+/* ─────────────────────────────────────────────────────────────
+   11. Responsive + motion
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .app-shell.role-landlord .collection-hero { border-radius: 18px; }
+  .app-shell.role-landlord .page-heading h1 { font-size: 28px; }
+  .app-shell.role-landlord .agreement-banner { border-radius: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.role-landlord .button,
+  .app-shell.role-landlord .unit-tile,
+  .app-shell.role-landlord .floor-unit,
+  .app-shell.role-landlord .dashboard-page .dashboard-grid .metric-card { animation: none; transition: none; }
+}
