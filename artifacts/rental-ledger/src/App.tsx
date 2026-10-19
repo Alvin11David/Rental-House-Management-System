@@ -32,6 +32,8 @@ import {
   type PaymentInput,
   type Property,
   type PropertyInput,
+  type Reminder,
+  type ReminderInput,
   type Repair,
   type RepairInput,
   type RepairUpdate,
@@ -62,6 +64,7 @@ type DataContextValue = {
   signAgreement: (id: number, input: AgreementSignatureInput) => void;
   createPayment: (input: PaymentInput) => Payment;
   createContactReveal: (input: ContactRevealInput) => void;
+  createReminder: (input: ReminderInput) => Reminder;
   createRepair: (input: RepairInput) => Repair;
   updateRepair: (id: number, update: RepairUpdate) => Repair;
   removePayment: (id: number) => void;
@@ -168,7 +171,7 @@ function WorkspaceData({ children }: { children: ReactNode }) {
     commitRecords(current => {
       if (!current.properties.some(property => property.id === input.propertyId)) throw new Error('Choose a property before adding a unit.');
       const id = current.nextId;
-      created = { ...input, id, unitNumber: input.unitNumber.trim(), status: 'vacant', tenantId: null, tenantName: null, balance: 0 };
+      created = { ...input, id, unitNumber: input.unitNumber.trim(), status: 'vacant', tenantId: null, tenantName: null, balance: 0, daysLate: null };
       return { ...current, nextId: id + 1, units: [...current.units, { id, propertyId: input.propertyId, unitNumber: created.unitNumber, bedrooms: input.bedrooms, rentAmount: input.rentAmount, status: 'vacant', tenantId: null }] };
     });
     return created;
@@ -285,6 +288,36 @@ function WorkspaceData({ children }: { children: ReactNode }) {
         }],
       };
     });
+  };
+  const createReminder = (input: ReminderInput) => {
+    let created!: Reminder;
+    commitRecords(current => {
+      const tenant = current.tenants.find(item => item.id === input.tenantId);
+      const unit = current.units.find(item => item.id === input.unitId);
+      if (!tenant || !unit) throw new Error('Tenant or unit not found.');
+      const id = current.nextId;
+      created = {
+        ...input,
+        id,
+        sentAt: new Date().toISOString(),
+        tenantName: tenant.fullName,
+        unitNumber: unit.unitNumber,
+      };
+      return {
+        ...current,
+        nextId: id + 1,
+        reminders: [...current.reminders, {
+          id,
+          tenantId: input.tenantId,
+          unitId: input.unitId,
+          channel: input.channel,
+          message: input.message,
+          sentBy: input.sentBy,
+          sentAt: created.sentAt,
+        }],
+      };
+    });
+    return created;
   };
   const createRepair = (input: RepairInput) => {
     let created!: Repair;
@@ -418,6 +451,7 @@ function WorkspaceData({ children }: { children: ReactNode }) {
     signAgreement,
     createPayment,
     createContactReveal,
+    createReminder,
     createRepair,
     updateRepair,
     removePayment,
@@ -503,7 +537,7 @@ function AppShell() {
         <Route path="/analytics" component={() => <RoleGate allow={['Landlord']}><AnalyticsPage/></RoleGate>}/>
         <Route path="/notifications" component={RoleNotificationsPage}/>
         <Route path="/tenant" component={() => <RoleGate allow={['Tenant']}><TenantPortalPage/></RoleGate>}/>
-        <Route path="/receipt/:id" component={ReceiptPage}/><Route path="/settings" component={() => <SettingsPage theme={theme} setTheme={setTheme}/>}/>
+        <Route path="/receipt/:id" component={ReceiptPage}/><Route path="/unit/:id" component={() => <RoleGate allow={['Landlord','Caretaker']}><UnitTimelinePage/></RoleGate>}/><Route path="/settings" component={() => <SettingsPage theme={theme} setTheme={setTheme}/>}/>
         <Route component={NotFoundPage}/>
       </Switch></div>
       <footer className="footer"><span>Rentwise <i>·</i> A reliable record, for everyone under one roof.</span><span>UGX <i>·</i> Kampala, Uganda</span></footer>
@@ -580,7 +614,7 @@ function DashboardSearch() {
     ...visibleUnits.map(unit => ({
       title: `Unit ${unit.unitNumber}`,
       detail: `${unit.tenantName || 'Vacant home'} · ${statusLabel(unit.status)} · ${fmt(unit.balance || unit.rentAmount)}`,
-      href: d.role === 'Tenant' ? '/tenant' : '/properties',
+      href: d.role === 'Tenant' ? '/tenant' : `/unit/${unit.id}`,
       keywords: `${unit.unitNumber} ${unit.tenantName || ''} ${unit.status} ${d.properties.find(property => property.id === unit.propertyId)?.name || ''}`,
       icon: <House size={16}/>,
     })),
@@ -985,16 +1019,32 @@ function PrivateActivityPage() {
 }
 function DashboardPage() {
   const d = useData(); const s = d.dashboard; const activities = d.activity || s?.activity || []; const [, setLocation] = useLocation(); const loading = useSimulatedLoad(500);
+  const [reminderUnit, setReminderUnit] = useState<Unit | null>(null);
   if (loading) return <div className="page-stack dashboard-page"><DashboardSearch/><div className="dashboard-grid"><div className="metrics-grid">{[0, 1, 2, 3].map(index => <div className="metric-card" key={index}><div className="metric-top"><span><Skeleton height={10} width="62%"/></span><Skeleton height={30} width={30} radius={8}/></div><div style={{ margin: '11px 0 6px' }}><Skeleton height={22} width="70%"/></div><Skeleton height={9} width="48%"/></div>)}</div><Panel title="Loading overview"><Skeleton height={130}/></Panel><Panel title="Recent activity"><Skeleton height={96}/></Panel></div></div>;
+  const occupied = s?.occupiedUnits ?? 0;
+  const paidCount = s?.paidCount ?? 0;
+  const lateUnits = s?.lateUnits ?? [];
+  const agreementsEndingSoon = s?.agreementsEndingSoon ?? [];
+  const todayLabel = new Date().toLocaleDateString('en-UG', { weekday: 'long', day: 'numeric', month: 'long' });
+  const heroHeadline = occupied === 0
+    ? <>No occupied homes<br/><em>yet.</em></>
+    : <>{paidCount} of {occupied} unit{occupied === 1 ? '' : 's'} have paid.<br/><em>{lateUnits.length ? `${lateUnits.length} unit${lateUnits.length === 1 ? '' : 's'} need${lateUnits.length === 1 ? 's' : ''} a follow-up.` : 'Everything is up to date.'}</em></>;
   return <div className="page-stack dashboard-page"><DashboardSearch/><div className="dashboard-grid">
-     <div className="metrics-grid"><Metric label="Collected this month" numeric={s?.totalCollected ?? 0} format={compact} note="Across all active properties" icon={Wallet} cornerMark/><Metric label="Outstanding" numeric={s?.outstanding ?? 0} format={compact} note={`${s?.lateCount || 0} units need a follow-up`} icon={Clock3} tone="amber" cornerMark/><Metric label="Occupancy" value={`${s?.occupiedUnits ?? 0} / ${s?.totalUnits ?? 0}`} note={`${s?.totalUnits ? Math.round((s.occupiedUnits / s.totalUnits) * 100) : 0}% of homes occupied`} icon={Building2} tone="blue" cornerMark/><Metric label="Paid today" numeric={s?.paidToday ?? 0} format={n => `${Math.round(n)} payment${Math.round(n) === 1 ? '' : 's'}`} note="Verified entries today" icon={CheckCircle2} tone="green" cornerMark/></div>
-    <section className="collection-hero"><div className="hero-copy"><div className="hero-label"><ShieldCheck size={15}/> THE LEDGER IS IN GOOD ORDER</div><h2>Trust, built one<br/><em>record at a time.</em></h2><p>Rent recorded clearly. Agreements kept close. Repairs never forgotten.</p><Link href="/daily-collection" className="button button-cream">Go to daily collection <ArrowUpRight size={16}/></Link></div><div className="trust-seal"><div className="seal-ring"><ShieldCheck size={29}/><strong>{s?.trustPercent ?? 98}%</strong><small>RECORD<br/>CONFIDENCE</small></div><div className="seal-caption">Verified records<br/>this month</div></div><div className="hero-orbit orbit-one"/><div className="hero-orbit orbit-two"/></section>
-      <Panel title="Needs your attention" className="attention-panel" cornerMark><div className="attention-list">{(s?.attention || []).slice(0, 4).map((item, i) => <div key={`${item}-${i}`} className="attention-item"><span className={i === 0 ? 'attention-mark warn' : 'attention-mark'}>{i === 0 ? '!' : <ArrowUpRight size={14}/>}</span><span>{item}</span><button onClick={() => setLocation(i === 0 ? '/daily-collection' : '/repairs')} aria-label={`Review ${item}`}><ArrowUpRight size={15}/></button></div>)}{!(s?.attention || []).length && <div className="calm-empty"><CheckCircle2 size={18}/>Nothing needs attention right now.</div>}</div><Link href="/daily-collection" className="panel-foot-link">Review collection <ArrowUpRight size={14}/></Link></Panel>
+     <div className="metrics-grid"><Metric label="Collected this month" numeric={s?.totalCollected ?? 0} format={compact} note="Across all active properties" icon={Wallet} cornerMark/><Metric label="Outstanding" numeric={s?.outstanding ?? 0} format={compact} note={`${s?.lateCount || 0} units need a follow-up`} icon={Clock3} tone="amber" cornerMark/><Metric label="Occupancy" value={`${s?.occupiedUnits ?? 0} / ${s?.totalUnits ?? 0}`} note={`${s?.totalUnits ? Math.round((s.occupiedUnits / s.totalUnits) * 100) : 0}% of homes occupied`} icon={Building2} tone="blue" cornerMark/><Metric label="Paid today" numeric={s?.paidToday ?? 0} format={n => `${Math.round(n)} payment${Math.round(n) === 1 ? '' : 's'}`} note={s?.paidTodayAmount ? `${fmt(s.paidTodayAmount)} received` : 'No payments recorded yet'} icon={CheckCircle2} tone="green" cornerMark/></div>
+    <section className="collection-hero"><div className="hero-copy"><div className="hero-label"><CalendarDays size={15}/> TODAY · {todayLabel.toUpperCase()}</div><h2>{heroHeadline}</h2><p>{s?.paidTodayAmount ? `${fmt(s.paidTodayAmount)} collected today · ` : ''}{fmt(s?.totalCollected ?? 0)} collected this month.</p><Link href="/daily-collection" className="button button-cream">Go to daily collection <ArrowUpRight size={16}/></Link></div><div className="trust-seal"><div className="seal-ring"><ShieldCheck size={29}/><strong>{paidCount}/{occupied}</strong><small>RENT<br/>PAID</small></div><div className="seal-caption">{fmt(s?.totalCollected ?? 0)}<br/>this month</div></div><div className="hero-orbit orbit-one"/><div className="hero-orbit orbit-two"/></section>
+      <Panel title="Needs your attention" className="attention-panel" cornerMark><div className="attention-list">
+        {lateUnits.slice(0, 3).map(unit => <div key={`late-${unit.id}`} className="attention-item"><span className="attention-mark warn">!</span><span><b>{unit.tenantName || 'Tenant'}</b> · Unit {unit.unitNumber} · {fmt(unit.balance)}{unit.daysLate != null ? ` · ${unit.daysLate} day${unit.daysLate === 1 ? '' : 's'} late` : ''}</span><button className="attention-reminder" onClick={() => setReminderUnit(unit)} aria-label={`Send rent reminder to ${unit.tenantName || 'tenant'} for unit ${unit.unitNumber}`} data-testid={`button-remind-${unit.id}`}>Send reminder</button></div>)}
+        {agreementsEndingSoon.slice(0, 2).map(agreement => <div key={`ending-${agreement.id}`} className="attention-item"><span className="attention-mark"><FileCheck2 size={14}/></span><span>Agreement for <b>{agreement.tenantName}</b> ends in {daysUntilDate(agreement.endDate, new Date())} days</span><button onClick={() => setLocation('/agreements')} aria-label={`Review agreement for ${agreement.tenantName}`}><ArrowUpRight size={15}/></button></div>)}
+        {(s?.unresolvedRepairs ?? 0) > 0 && <div className="attention-item"><span className="attention-mark"><Wrench size={14}/></span><span>{s?.unresolvedRepairs} repair{s?.unresolvedRepairs === 1 ? '' : 's'} need{(s?.unresolvedRepairs ?? 0) === 1 ? 's' : ''} attention</span><button onClick={() => setLocation('/repairs')} aria-label="Review open repairs"><ArrowUpRight size={15}/></button></div>}
+        {!lateUnits.length && !agreementsEndingSoon.length && !(s?.unresolvedRepairs) && <div className="calm-empty"><CheckCircle2 size={18}/>Nothing needs attention right now.</div>}
+      </div><Link href="/daily-collection" className="panel-foot-link">Review collection <ArrowUpRight size={14}/></Link></Panel>
       <Panel title="Units at a glance" action={<Link href="/properties" className="text-link">View all <ArrowUpRight size={14}/></Link>} className="units-panel" cornerMark><div className="unit-grid">{(s?.units || d.units || []).slice(0, 8).map(u => <UnitTile key={u.id} unit={u}/>)}</div>{!(s?.units || d.units)?.length && <Empty title="No units to show" text="Add a property and its units to see the monthly picture here." action={<Link className="text-link" href="/properties">Add a property</Link>}/>}</Panel>
       <UpcomingRentPanel agreements={d.agreements} cornerMark/>
      <Panel title="Recent activity" action={<Link href="/notifications" className="text-link">See activity <ArrowUpRight size={14}/></Link>} className="activity-panel" cornerMark><DataState rows={activities}><div className="activity-list">{activities.slice(0, 5).map(a => <ActivityRow key={a.id} item={a}/>)}</div></DataState></Panel>
     <div className="mobile-money-note"><Smartphone size={17}/><span><b>Mobile money, made clear.</b> MTN MoMo and Airtel Money entries are recorded alongside every receipt.</span><Link href="/payments">View ledger</Link></div>
-  </div></div>;
+  </div>
+  {reminderUnit && <ReminderModal unit={reminderUnit} close={() => setReminderUnit(null)}/>}
+  </div>;
 }
 function UpcomingRentPanel({ agreements, cornerMark = false }: { agreements: Agreement[]; cornerMark?: boolean }) {
   const today = new Date();
@@ -1018,7 +1068,7 @@ function UpcomingRentPanel({ agreements, cornerMark = false }: { agreements: Agr
   </Panel>;
 }
 function UnitTile({ unit }: { unit: Unit }) {
-  return <Link href="/properties" className={`unit-tile unit-${unit.status}`} data-testid={`unit-tile-${unit.id}`}><span>{unit.unitNumber}</span><i/><small>{unit.tenantName || statusLabel(unit.status)}</small><b>{unit.balance > 0 ? fmt(unit.balance) : fmt(unit.rentAmount)}</b></Link>;
+  return <Link href={`/unit/${unit.id}`} className={`unit-tile unit-${unit.status}`} data-testid={`unit-tile-${unit.id}`}><span>{unit.unitNumber}</span><i/><small>{unit.tenantName || statusLabel(unit.status)}</small><b>{unit.balance > 0 ? fmt(unit.balance) : fmt(unit.rentAmount)}</b></Link>;
 }
 function ActivityRow({ item }: { item: Activity }) {
   return <div className="activity-row"><span className={`activity-symbol activity-${item.type}`}><ActivityIcon size={16}/></span><div className="activity-content"><b>{item.title}</b><span>{item.detail}</span></div><time>{dateFmt(item.occurredAt)}</time></div>;
@@ -1275,11 +1325,59 @@ function UnitDrawer({ unit, onClose }: { unit: Unit | null; onClose: () => void 
     <div className="drawer-heading"><div><span className="eyebrow">UNIT RECORD</span><h2 id="unit-drawer-title">{unit.unitNumber}</h2><p>{d.properties?.find(p => p.id === unit.propertyId)?.name || 'Property'} · {unit.bedrooms} bedroom{unit.bedrooms === 1 ? '' : 's'}</p></div><button className="icon-button" aria-label="Close unit details" onClick={onClose}><X size={19}/></button></div>
     <div className="drawer-status-row"><Status value={unit.status}/>{isLandlord && <b>{fmt(unit.rentAmount)} <small>/ month</small></b>}</div>
     <section className="drawer-section"><div className="drawer-section-head"><h3>Tenant</h3>{tenant && <span className="privacy-check"><ShieldCheck size={14}/> Private</span>}</div>{tenant ? <div className="drawer-tenant"><span className="tenant-avatar">{initials(tenant.fullName)}</span><div><b>{tenant.fullName}</b><small>{phoneVisible ? tenant.phone : maskPhone(tenant.phone)}</small></div><button type="button" className="icon-button" aria-label={phoneVisible ? 'Hide tenant phone number' : 'Reveal tenant phone number'} onClick={revealPhone}>{phoneVisible ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div> : <p className="drawer-empty">This unit is currently vacant.</p>}</section>
-    <section className="drawer-section"><div className="drawer-section-head"><h3>Recent payments</h3><Link href="/payments" className="text-link" onClick={onClose}>Ledger <ArrowUpRight size={13}/></Link></div>{payments.length ? <div className="drawer-list">{payments.map(payment => <div className="drawer-list-row" key={payment.id}><span><b>{isLandlord ? fmt(payment.amount) : 'Payment recorded'}</b><small>{dateFmt(payment.recordedAt)}{isLandlord ? ` · ${payment.method === 'mobile_money' ? 'Mobile money' : statusLabel(payment.method)}` : ''}</small></span><Status value={payment.status}/></div>)}</div> : <p className="drawer-empty">No payments recorded yet.</p>}</section>
+    <section className="drawer-section"><div className="drawer-section-head"><h3>Recent payments</h3><Link href="/payments" className="text-link" onClick={onClose}>Ledger <ArrowUpRight size={13}/></Link></div>{payments.length ? <div className="drawer-list">{payments.map(payment => <Link href={`/receipt/${payment.id}`} className="drawer-list-row drawer-payment-row" key={payment.id} onClick={onClose} aria-label={`View receipt for payment of ${fmt(payment.amount)} on ${dateFmt(payment.recordedAt)}`} data-testid={`drawer-payment-${payment.id}`}><span><b>{isLandlord ? fmt(payment.amount) : 'Payment recorded'}</b><small>{dateFmt(payment.recordedAt)}{isLandlord ? ` · ${payment.method === 'mobile_money' ? 'Mobile money' : statusLabel(payment.method)}` : ''}</small></span><Status value={payment.status}/></Link>)}</div> : <p className="drawer-empty">No payments recorded yet.</p>}</section>
     <section className="drawer-section"><div className="drawer-section-head"><h3>Open repairs</h3><span className="count-bubble small-count">{repairs.length}</span></div>{repairs.length ? <div className="drawer-list">{repairs.map(repair => <div className="drawer-list-row" key={repair.id}><span><b>{repair.title}</b><small>{dateFmt(repair.reportedAt)}</small></span><Status value={repair.status}/></div>)}</div> : <p className="drawer-empty">No open repair requests.</p>}</section>
-    {isLandlord && <section className="drawer-section"><h3>Timeline ledger</h3>{timeline.length ? <div className="drawer-list">{timeline.map(item => <div className="drawer-timeline-row" key={item.id}><span className={`timeline-icon type-${item.type}`}><ActivityIcon size={14}/></span><span><b>{item.title}</b><small>{item.detail} · {dateFmt(item.occurredAt)}</small><small>Recorded by {item.actor}</small></span></div>)}</div> : <p className="drawer-empty">Unit activity will appear here.</p>}</section>}
+    {isLandlord && <section className="drawer-section"><div className="drawer-section-head"><h3>Timeline ledger</h3><Link href={`/unit/${unit.id}`} className="text-link" onClick={onClose}>Full record <ArrowUpRight size={13}/></Link></div>{timeline.length ? <div className="drawer-list">{timeline.map(item => <div className="drawer-timeline-row" key={item.id}><span className={`timeline-icon type-${item.type}`}><ActivityIcon size={14}/></span><span><b>{item.title}</b><small>{item.detail} · {dateFmt(item.occurredAt)}</small><small>Recorded by {item.actor}</small></span></div>)}</div> : <p className="drawer-empty">Unit activity will appear here.</p>}</section>}
     <div className="drawer-quick-actions">{isCaretaker ? <button className="button button-primary" disabled={!tenant} onClick={() => { onClose(); setLocation(`/daily-collection?unitId=${unit.id}`); }}><Wallet size={16}/>Record payment</button> : <Link className="button button-primary" href="/payments" onClick={onClose}><ReceiptText size={16}/>View payment ledger</Link>}<button className="button button-quiet" onClick={() => { onClose(); setLocation(`/repairs?unitId=${unit.id}`); }}><Wrench size={16}/>Log repair</button></div>
   </aside></div>;
+}
+function ReminderModal({ unit, close }: { unit: Unit; close: () => void }) {
+  const d = useData();
+  const tenant = d.tenants?.find(item => item.id === unit.tenantId) ?? null;
+  const landlordName = d.role === 'Landlord' ? 'Agnes M.' : 'Amina';
+  const balance = unit.balance || unit.rentAmount;
+  const message = `Hello ${tenant?.fullName?.split(' ')[0] ?? 'there'}, this is a friendly reminder that rent of ${fmt(balance)} for Unit ${unit.unitNumber} at ${d.dashboard?.propertyName || 'the property'} is past due. You can pay by MTN MoMo or Airtel Money, or speak with the caretaker. Thank you. — ${landlordName}`;
+  const phone = tenant?.phone ?? '';
+  const whatsappPhone = phone.replace(/\D/g, '');
+  const smsHref = `sms:${phone}?body=${encodeURIComponent(message)}`;
+  const whatsappHref = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`;
+  const [copied, setCopied] = useState(false);
+  const logReminder = (channel: 'sms' | 'whatsapp' | 'copied', action: () => void) => {
+    if (!tenant) { d.notify('This unit has no tenant to remind.'); return; }
+    try {
+      d.createReminder({ tenantId: tenant.id, unitId: unit.id, channel, message, sentBy: `${landlordName} · ${d.role}` });
+      d.notify(channel === 'copied' ? 'Reminder message copied and logged' : `Reminder opened in ${channel === 'sms' ? 'SMS' : 'WhatsApp'} and logged`);
+    } catch (error) {
+      d.notify(error instanceof Error ? error.message : 'The reminder could not be logged.');
+      return;
+    }
+    action();
+  };
+  const copyMessage = async () => {
+    logReminder('copied', () => { setCopied(true); });
+    try {
+      await navigator.clipboard.writeText(message);
+    } catch {
+      d.notify('Could not copy on this device. Select the message text to copy it manually.');
+    }
+  };
+  return <Modal open title={`Send rent reminder · Unit ${unit.unitNumber}`} close={close}>
+    <div className="reminder-modal">
+      <p className="wizard-intro">A clear, friendly message the tenant also receives. Sending is logged in the activity record.</p>
+      <div className="reminder-recipient">
+        <span className="tenant-avatar">{initials(tenant?.fullName)}</span>
+        <div><b>{tenant?.fullName ?? 'Tenant'}</b><small>{phone ? phone : 'No phone number recorded'}</small></div>
+        <div className="reminder-balance"><b>{fmt(balance)}</b><small>{unit.daysLate != null ? `${unit.daysLate} day${unit.daysLate === 1 ? '' : 's'} late` : 'Past due'}</small></div>
+      </div>
+      <div className="reminder-message-preview" aria-label="Reminder message preview">{message}</div>
+      <div className="reminder-actions">
+        <button type="button" className="button button-primary" onClick={copyMessage} data-testid="button-copy-reminder"><ReceiptText size={15}/>{copied ? 'Copied' : 'Copy message'}</button>
+        <a className="button button-quiet" href={smsHref} onClick={() => logReminder('sms', () => {})} data-testid="link-sms-reminder"><Smartphone size={15}/>Open SMS</a>
+        {whatsappPhone && <a className="button button-quiet" href={whatsappHref} target="_blank" rel="noreferrer" onClick={() => logReminder('whatsapp', () => {})} data-testid="link-whatsapp-reminder"><ArrowUpRight size={15}/>Open WhatsApp</a>}
+      </div>
+      <p className="form-trust"><ShieldCheck size={14}/> Each reminder is recorded with your name, the channel used, and the time.</p>
+    </div>
+  </Modal>;
 }
 function DailyCollectionPage() {
   const d = useData();
@@ -1290,6 +1388,7 @@ function DailyCollectionPage() {
   const [reference, setReference] = useState('');
   const [filter, setFilter] = useState('');
   const [confirmed, setConfirmed] = useState<Payment | null>(null);
+  const [reminderUnit, setReminderUnit] = useState<Unit | null>(null);
   const unpaid = (d.units || []).filter(u => u.tenantId != null && (u.balance > 0 || ['pending', 'late'].includes(u.status)))
     .filter(u => `${u.unitNumber} ${u.tenantName || ''}`.toLowerCase().includes(filter.toLowerCase()));
   const chosen = d.units?.find(u => String(u.id) === unitId);
@@ -1341,11 +1440,12 @@ function DailyCollectionPage() {
       <section className="unpaid-panel">
         <div className="unpaid-heading"><div><span className="eyebrow">COLLECTION FOLLOW-UP</span><h2>Still to collect</h2><p>Occupied homes with a balance or awaiting confirmation.</p></div><span className="count-bubble">{unpaid.length}</span></div>
         <label className="search-field"><Search size={16}/><input aria-label="Search unpaid units" placeholder="Search unit or tenant" value={filter} onChange={e => setFilter(e.target.value)}/></label>
-        <div className="unpaid-list"><DataState rows={unpaid} title="A clear collection list" text="No outstanding unit balances. Nice work.">{unpaid.map(u => <div className="unpaid-row" key={u.id} data-testid={`unpaid-unit-${u.id}`}><span className={`unit-avatar ${u.status}`}>{u.unitNumber}</span><div className="unpaid-info"><b>{u.tenantName || 'Tenant'}</b><small>{u.unitNumber} · Monthly {fmt(u.rentAmount)}</small></div><div className="unpaid-amount"><b>{fmt(u.balance || u.rentAmount)}</b><Status value={u.status}/></div>{canRecord && <button className="icon-button compact-icon" aria-label={`Record payment for ${u.unitNumber}`} onClick={() => { setUnitId(String(u.id)); setAmount(String(u.balance || u.rentAmount)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}><ArrowDownLeft size={16}/></button>}</div>)}</DataState></div>
+        <div className="unpaid-list"><DataState rows={unpaid} title="A clear collection list" text="No outstanding unit balances. Nice work.">{unpaid.map(u => <div className="unpaid-row" key={u.id} data-testid={`unpaid-unit-${u.id}`}><span className={`unit-avatar ${u.status}`}>{u.unitNumber}</span><div className="unpaid-info"><b>{u.tenantName || 'Tenant'}</b><small>{u.unitNumber} · Monthly {fmt(u.rentAmount)}{u.daysLate != null ? ` · ${u.daysLate} day${u.daysLate === 1 ? '' : 's'} late` : ''}</small></div><div className="unpaid-amount"><b>{fmt(u.balance || u.rentAmount)}</b><Status value={u.status}/></div>{!canRecord && u.tenantId != null && <button className="button button-quiet unpaid-remind" onClick={() => setReminderUnit(u)} aria-label={`Send rent reminder to ${u.tenantName || 'tenant'} for unit ${u.unitNumber}`} data-testid={`button-unpaid-remind-${u.id}`}>Remind</button>}{canRecord && <button className="icon-button compact-icon" aria-label={`Record payment for ${u.unitNumber}`} onClick={() => { setUnitId(String(u.id)); setAmount(String(u.balance || u.rentAmount)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}><ArrowDownLeft size={16}/></button>}</div>)}</DataState></div>
         <div className="offline-note"><ShieldCheck size={15}/><span><b>Saved in this browser</b><br/>The ledger works offline, but this data is not shared with another device or account.</span></div>
       </section>
     </div>
     {confirmed && <Modal open title="Payment recorded" close={() => setConfirmed(null)}><div className="receipt-confirmation"><div className="paid-stamp" aria-label="Payment paid">PAID</div><span className="eyebrow">RENTWISE RECEIPT</span><h3>{fmt(confirmed.amount)}</h3><p>Unit {confirmed.unitNumber} · {confirmed.tenantName}</p><div className="receipt-meta"><span>Recorded {dateFmt(confirmed.recordedAt)}</span><span>{confirmed.method === 'mobile_money' ? 'MTN / Airtel mobile money' : statusLabel(confirmed.method)}</span>{confirmed.reference && <span>Reference {confirmed.reference}</span>}</div><div className="receipt-actions"><button type="button" className="button button-quiet" onClick={() => window.print()}><ReceiptText size={15}/>Print</button><button type="button" className="button button-primary" onClick={async () => { const url = `${window.location.origin}${import.meta.env.BASE_URL}receipt/${confirmed.id}`; try { await navigator.clipboard.writeText(url); d.notify('Receipt link copied'); } catch { d.notify('Could not copy the receipt link on this device.'); } }}><ArrowUpRight size={15}/>Copy share link</button></div></div></Modal>}
+    {reminderUnit && <ReminderModal unit={reminderUnit} close={() => setReminderUnit(null)}/>}
   </>;
 }
 function PaymentsPage() {
@@ -1388,7 +1488,7 @@ function PaymentsPage() {
       <div className="toolbar-right"><select value={status} onChange={event => setStatus(event.target.value)} aria-label="Filter by status" data-testid="filter-payment-status"><option value="all">All statuses</option><option value="paid">Paid</option><option value="pending">Pending</option></select><select value={method} onChange={event => setMethod(event.target.value)} aria-label="Filter by method"><option value="all">All methods</option><option value="mobile_money">Mobile money</option><option value="cash">Cash</option><option value="bank">Bank</option></select><button className="button button-quiet" onClick={exportCsv} data-testid="button-export-csv"><Download size={16}/>Export CSV</button></div>
     </div>
     <div className="toolbar ledger-date-tools"><label>From <input type="date" value={fromDate} onChange={event => setFromDate(event.target.value)} aria-label="Payments from date"/></label><label>To <input type="date" value={toDate} onChange={event => setToDate(event.target.value)} aria-label="Payments to date"/></label>{(fromDate || toDate) && <button type="button" className="text-link" onClick={() => { setFromDate(''); setToDate(''); }}>Clear dates</button>}{dateRangeInvalid && <span role="alert" className="date-range-error">Choose a start date before the end date.</span>}</div>
-    <div className="panel table-panel"><DataState rows={records} title="No matching payments" text={dateRangeInvalid ? 'The start date must be earlier than the end date.' : search ? 'Try a different name, unit or reference.' : 'Payments appear here after they are recorded.'}><div className="table-scroll"><table><thead><tr><th>Tenant & unit</th><th>Amount</th><th>Method</th><th>Recorded</th><th>By</th><th>Status</th><th>Reference</th></tr></thead><tbody>{records.map(payment => <tr key={payment.id} data-testid={`payment-row-${payment.id}`}><td><div className="table-person"><span className="avatar mini">{initials(payment.tenantName)}</span><span><b>{payment.tenantName}</b><small>Unit {payment.unitNumber}</small></span></div></td><td className="money-cell">{fmt(payment.amount)}</td><td><span className="method-label"><Smartphone size={14}/>{payment.method === 'mobile_money' ? 'MTN / Airtel' : statusLabel(payment.method)}</span></td><td>{dateFmt(payment.recordedAt)}</td><td>{payment.recordedBy}</td><td><Status value={payment.status}/></td><td className="font-mono">{payment.reference || '—'}</td></tr>)}</tbody></table></div></DataState><div className="table-footer">{records.length} records <span>·</span> UGX amounts</div></div>
+    <div className="panel table-panel"><DataState rows={records} title="No matching payments" text={dateRangeInvalid ? 'The start date must be earlier than the end date.' : search ? 'Try a different name, unit or reference.' : 'Payments appear here after they are recorded.'}><div className="table-scroll"><table><thead><tr><th>Tenant & unit</th><th>Amount</th><th>Method</th><th>Recorded</th><th>By</th><th>Status</th><th>Reference</th><th>Receipt</th></tr></thead><tbody>{records.map(payment => <tr key={payment.id} data-testid={`payment-row-${payment.id}`}><td><div className="table-person"><span className="avatar mini">{initials(payment.tenantName)}</span><span><b>{payment.tenantName}</b><small>Unit {payment.unitNumber}</small></span></div></td><td className="money-cell">{fmt(payment.amount)}</td><td><span className="method-label"><Smartphone size={14}/>{payment.method === 'mobile_money' ? 'MTN / Airtel' : statusLabel(payment.method)}</span></td><td>{dateFmt(payment.recordedAt)}</td><td>{payment.recordedBy}</td><td><Status value={payment.status}/></td><td className="font-mono">{payment.reference || '—'}</td><td><Link href={`/receipt/${payment.id}`} className="receipt-cell-link" aria-label={`View receipt for ${payment.tenantName} payment of ${fmt(payment.amount)}`} data-testid={`receipt-link-${payment.id}`}><ReceiptText size={13}/>RW-{String(payment.id).padStart(6, '0')}</Link></td></tr>)}</tbody></table></div></DataState><div className="table-footer">{records.length} records <span>·</span> UGX amounts</div></div>
   </div>;
 }
 function TenantsPage() {
@@ -1670,6 +1770,69 @@ function ReceiptPage() {
   };
   if (!payment) return <div className="receipt-page"><Empty title="Receipt not found" text="This payment record may have changed or is not available on this device." action={<Link href="/payments" className="button button-primary">Open payment ledger</Link>}/></div>;
   return <div className="receipt-page"><div className="receipt-page-toolbar"><Link href="/payments" className="text-link"><ArrowLeft size={15}/>Back to ledger</Link><div><button className="button button-quiet" onClick={() => window.print()}><ReceiptText size={15}/>Print receipt</button><button className="button button-primary" onClick={copyLink}><ArrowUpRight size={15}/>Copy share link</button></div></div><article className="receipt-page-card"><div className="receipt-brand"><span className="brand-mark"><House size={18}/></span><span><b>rentwise</b><small>PROPERTY LEDGER</small></span></div><div className="paid-stamp">PAID</div><span className="eyebrow">OFFICIAL RENT RECEIPT</span><h2>{fmt(payment.amount)}</h2><p>Payment recorded for {payment.tenantName}</p><div className="receipt-page-details"><div><span>Unit</span><b>{payment.unitNumber}</b></div><div><span>Recorded on</span><b>{dateFmt(payment.recordedAt)}</b></div><div><span>Payment method</span><b>{payment.method === 'mobile_money' ? 'Mobile money (MTN / Airtel)' : statusLabel(payment.method)}</b></div><div><span>Recorded by</span><b>{payment.recordedBy}</b></div><div><span>Transaction reference</span><b>{payment.reference || 'Not provided'}</b></div><div><span>Receipt number</span><b>RW-{String(payment.id).padStart(6, '0')}</b></div></div><div className="receipt-page-foot"><ShieldCheck size={16}/><span>This receipt reflects a payment recorded in the property ledger.</span></div></article></div>;
+}
+function UnitTimelinePage() {
+  const d = useData();
+  const [, params] = useRoute('/unit/:id');
+  const unit = (d.units || []).find(item => item.id === Number(params?.id));
+  const [, setLocation] = useLocation();
+  if (!unit) return <div className="page-stack"><Empty title="Unit not found" text="This unit may have been removed, or the link is not valid on this device." action={<Link href="/properties" className="button button-primary">Back to properties</Link>}/></div>;
+  const tenant = d.tenants?.find(item => item.id === unit.tenantId);
+  const property = d.properties?.find(item => item.id === unit.propertyId);
+  const payments = (d.payments || []).filter(item => item.unitId === unit.id);
+  const repairs = (d.repairs || []).filter(item => item.unitId === unit.id);
+  const agreement = (d.agreements || []).filter(item => item.unitId === unit.id).sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
+  const reminderEntries = (d.reminders || []).filter(item => item.unitId === unit.id);
+  const events: { key: string; occurredAt: string; type: string; icon: typeof Wallet; title: string; detail: string; actor: string; href?: string }[] = [
+    ...payments.map(payment => ({
+      key: `payment-${payment.id}`,
+      occurredAt: payment.recordedAt,
+      type: 'payment',
+      icon: Wallet,
+      title: `Payment of ${fmt(payment.amount)}`,
+      detail: `${payment.method === 'mobile_money' ? 'Mobile money' : statusLabel(payment.method)}${payment.reference ? ` · Reference ${payment.reference}` : ''}`,
+      actor: payment.recordedBy,
+      href: `/receipt/${payment.id}`,
+    })),
+    ...repairs.flatMap(repair => (repair.history?.length ? repair.history : []).map((entry, index) => ({
+      key: `repair-${repair.id}-${index}`,
+      occurredAt: entry.occurredAt,
+      type: 'repair',
+      icon: Wrench,
+      title: repair.title,
+      detail: entry.detail + (repair.cost != null ? ` · Cost ${fmt(repair.cost)}` : ''),
+      actor: entry.actor,
+    }))),
+    ...agreement ? [{
+      key: `agreement-${agreement.id}`,
+      occurredAt: agreement.signedAt ?? `${agreement.startDate}T00:00:00.000Z`,
+      type: 'agreement',
+      icon: FileCheck2,
+      title: agreement.signedAt ? 'Agreement signed' : 'Agreement recorded',
+      detail: `${fmt(agreement.monthlyRent)} / month · deposit ${fmt(agreement.deposit)} · ${dateFmt(agreement.startDate)} — ${dateFmt(agreement.endDate)}`,
+      actor: agreement.signedBy ?? tenant?.fullName ?? 'Workspace team',
+    }] : [],
+    ...reminderEntries.map(reminder => ({
+      key: `reminder-${reminder.id}`,
+      occurredAt: reminder.sentAt,
+      type: 'message',
+      icon: Bell,
+      title: 'Rent reminder sent',
+      detail: reminder.channel === 'whatsapp' ? 'Opened in WhatsApp' : reminder.channel === 'sms' ? 'Opened in SMS' : 'Message copied',
+      actor: reminder.sentBy,
+    })),
+  ].sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
+  return <div className="page-stack unit-timeline-page">
+    <div className="receipt-page-toolbar"><Link href="/properties" className="text-link"><ArrowLeft size={15}/>Back to properties</Link><div><button className="button button-quiet" onClick={() => setLocation(`/daily-collection?unitId=${unit.id}`)}><Wallet size={15}/>Collection</button><button className="button button-primary" onClick={() => setLocation('/repairs')}><Wrench size={15}/>Log repair</button></div></div>
+    <section className="unit-record-hero">
+      <div className="unit-record-identity"><span className={`unit-avatar large-unit-avatar ${unit.status}`}>{unit.unitNumber}</span><div><span className="eyebrow">UNIT RECORD · {property?.name ?? 'Property'}</span><h2>Unit {unit.unitNumber}</h2><p>{unit.bedrooms} bedroom{unit.bedrooms === 1 ? '' : 's'} · {fmt(unit.rentAmount)} / month</p></div></div>
+      <div className="unit-record-facts"><div><Status value={unit.status}/>{unit.daysLate != null && <span className="unit-days-late">{unit.daysLate} day{unit.daysLate === 1 ? '' : 's'} late</span>}</div><div><small>Tenant</small><b>{tenant?.fullName ?? 'Vacant'}</b></div><div><small>Balance</small><b className={unit.balance > 0 ? 'text-danger' : ''}>{fmt(unit.balance)}</b></div></div>
+    </section>
+    <div className="unit-record-trust"><ShieldCheck size={15}/><span><b>Complete record.</b> Every entry below shows who recorded it and when. Entries are kept exactly as they were saved in this browser.</span></div>
+    <section className="panel notifications-panel unit-timeline-panel"><div className="panel-head"><h2>Everything on record for Unit {unit.unitNumber}</h2><span className="toolbar-meta">{events.length} entries</span></div><DataState rows={events} title="Nothing recorded yet" text="Payments, repairs, agreements and reminders for this unit will appear here in order."><div className="timeline">
+      {events.map((event, index) => { const Icon = event.icon; return <div className="timeline-entry" key={event.key} data-testid={`unit-event-${index}`}><div className="timeline-rail"><span className={`timeline-icon type-${event.type}`}><Icon size={16}/></span>{index < events.length - 1 && <i/>}</div><div className="timeline-body"><div className="timeline-title"><b>{event.title}</b><time>{dateFmt(event.occurredAt)}</time></div><p>{event.detail}</p><div className="timeline-meta"><span>Unit {unit.unitNumber}</span><span>Recorded by {event.actor}</span></div>{event.href && <Link className="receipt-link" href={event.href}><ReceiptText size={14}/>View receipt <ArrowUpRight size={13}/></Link>}</div></div>; })}
+    </div></DataState></section>
+  </div>;
 }
 function NotificationsPage() {
   const d = useData();

@@ -547,3 +547,4 @@
   .app-shell.role-landlord .floor-unit,
   .app-shell.role-landlord .dashboard-page .dashboard-grid .metric-card { animation: none; transition: none; }
 }
+.app-shell.role-landlord .attention-reminder,.app-shell.role-landlord .unpaid-remind { border: 1px solid hsl(222 18% 88%); background: transparent; color: hsl(var(--exec-brass)); border-radius: 6px; padding: 6px 8px; font-size: 9px; text-transform: uppercase; letter-spacing: .05em; cursor: pointer; transition: background .18s, color .18s; } .app-shell.role-landlord .attention-reminder:hover,.app-shell.role-landlord .unpaid-remind:hover { background: hsl(var(--secondary)); }

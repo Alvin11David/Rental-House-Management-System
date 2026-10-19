@@ -31,6 +31,7 @@ export interface Unit {
   tenantId: number | null;
   tenantName: string | null;
   balance: number;
+  daysLate: number | null;
 }
 
 export interface UnitInput {
@@ -73,6 +74,36 @@ export interface ContactReveal {
   unitId: number | null;
   actorRole: Role;
   occurredAt: string;
+}
+
+export type ReminderChannel = "sms" | "whatsapp" | "copied";
+
+export interface Reminder {
+  id: number;
+  tenantId: number;
+  unitId: number;
+  channel: ReminderChannel;
+  message: string;
+  sentBy: string;
+  sentAt: string;
+  tenantName: string | null;
+  unitNumber: string | null;
+}
+
+export interface ReminderInput {
+  tenantId: number;
+  unitId: number;
+  channel: ReminderChannel;
+  message: string;
+  sentBy: string;
+}
+
+export interface Caretaker {
+  id: number;
+  name: string;
+  phone: string;
+  unitIds: number[];
+  active: boolean;
 }
 
 export interface Payment {
@@ -174,10 +205,16 @@ export interface Dashboard {
   occupiedUnits: number;
   totalUnits: number;
   paidToday: number;
+  paidTodayAmount: number;
   trustPercent: number;
   lateCount: number;
   unresolvedRepairs: number;
   unverifiedPayments: number;
+  paidCount: number;
+  pendingCount: number;
+  vacantCount: number;
+  lateUnits: Unit[];
+  agreementsEndingSoon: Agreement[];
   units: Unit[];
   attention: string[];
   activity: Activity[];
@@ -212,9 +249,10 @@ interface StoredAgreement extends Omit<Agreement, "tenantName" | "unitNumber"> {
   tenantId: number;
   unitId: number;
 }
+interface StoredReminder extends Omit<Reminder, "tenantName" | "unitNumber"> {}
 
 export interface WorkspaceRecords {
-  version: 1;
+  version: 2;
   nextId: number;
   properties: StoredProperty[];
   units: StoredUnit[];
@@ -223,6 +261,8 @@ export interface WorkspaceRecords {
   repairs: StoredRepair[];
   agreements: StoredAgreement[];
   contactReveals: ContactReveal[];
+  reminders: StoredReminder[];
+  caretakers: Caretaker[];
 }
 
 export interface WorkspaceView {
@@ -232,6 +272,8 @@ export interface WorkspaceView {
   payments: Payment[];
   repairs: Repair[];
   agreements: Agreement[];
+  reminders: Reminder[];
+  caretakers: Caretaker[];
   activity: Activity[];
   dashboard: Dashboard;
   getAnalytics: (period: AnalyticsPeriod) => Analytics;
@@ -249,6 +291,12 @@ function addMonths(date: Date, amount: number): Date {
   return result;
 }
 
+function daysBetween(fromDay: Date, toDay: Date): number {
+  const from = Date.UTC(fromDay.getFullYear(), fromDay.getMonth(), fromDay.getDate());
+  const to = Date.UTC(toDay.getFullYear(), toDay.getMonth(), toDay.getDate());
+  return Math.round((to - from) / 86_400_000);
+}
+
 export function createSeedRecords(now = new Date()): WorkspaceRecords {
   const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const lastMonth = addMonths(now, -1);
@@ -256,7 +304,7 @@ export function createSeedRecords(now = new Date()): WorkspaceRecords {
   const danielStart = dateOnly(addMonths(now, -10));
 
   return {
-    version: 1,
+    version: 2,
     nextId: 14,
     properties: [{
       id: 1,
@@ -287,22 +335,30 @@ export function createSeedRecords(now = new Date()): WorkspaceRecords {
       { id: 13, tenantId: 3, unitId: 5, monthlyRent: 600000, deposit: 600000, startDate: danielStart, endDate: dateOnly(addMonths(now, 1)), nextDueDate: dateOnly(addMonths(now, 1)), signedAt: addMonths(now, -10).toISOString() },
     ],
     contactReveals: [],
+    reminders: [],
+    caretakers: [],
   };
 }
 
 function parseRecords(raw: string): WorkspaceRecords {
   const value: unknown = JSON.parse(raw);
+  const baseKeys = ["properties", "units", "tenants", "payments", "repairs", "agreements", "contactReveals"];
   if (
     !value
     || typeof value !== "object"
-    || (value as WorkspaceRecords).version !== 1
     || !Number.isInteger((value as WorkspaceRecords).nextId)
-    || !["properties", "units", "tenants", "payments", "repairs", "agreements", "contactReveals"]
-      .every((key) => Array.isArray((value as Record<string, unknown>)[key]))
+    || !baseKeys.every((key) => Array.isArray((value as Record<string, unknown>)[key]))
   ) {
     throw new Error("Saved rental data is invalid. It was not replaced; check this browser's stored workspace data.");
   }
-  return value as WorkspaceRecords;
+  const records = value as WorkspaceRecords;
+  if ((records as any).version === 1 || (records as any).version === undefined) {
+    return { ...records, version: 2, reminders: [], caretakers: [] } as any;
+  }
+  if (records.version !== 2 || !Array.isArray(records.reminders) || !Array.isArray(records.caretakers)) {
+    throw new Error("Saved rental data is invalid. It was not replaced; check this browser's stored workspace data.");
+  }
+  return records;
 }
 
 export function readWorkspaceRecords(): WorkspaceRecords {
@@ -331,6 +387,13 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
       collected.set(payment.unitId, (collected.get(payment.unitId) ?? 0) + payment.amount);
     }
   }
+  const agreementByUnit = new Map<number, StoredAgreement>();
+  for (const agreement of records.agreements) {
+    const existing = agreementByUnit.get(agreement.unitId);
+    if (!existing || agreement.startDate > existing.startDate) {
+      agreementByUnit.set(agreement.unitId, agreement);
+    }
+  }
 
   const units: Unit[] = [...records.units]
     .sort((a, b) => a.unitNumber.localeCompare(b.unitNumber))
@@ -345,6 +408,18 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
           : balance <= 0
             ? "paid"
             : now.getDate() > 5 ? "late" : "pending";
+      let daysLate: number | null = null;
+      if (unit.tenantId !== null && balance > 0 && status !== "repair") {
+        const agreement = agreementByUnit.get(unit.id);
+        if (agreement) {
+          const [year, month, day] = agreement.nextDueDate.slice(0, 10).split("-").map(Number);
+          const dueInDays = daysBetween(new Date(Date.UTC(year, month - 1, day)), now);
+          if (dueInDays > 0) daysLate = dueInDays;
+        }
+        if (daysLate === null && status === "late") {
+          daysLate = Math.max(1, now.getDate() - 5);
+        }
+      }
       return {
         ...unit,
         status,
@@ -352,6 +427,7 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
           ? null
           : records.tenants.find((tenant) => tenant.id === unit.tenantId)?.fullName ?? null,
         balance,
+        daysLate,
       };
     });
   const unitById = new Map(units.map((unit) => [unit.id, unit]));
@@ -473,6 +549,20 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
         occurredAt: reveal.occurredAt,
       };
     }),
+    ...records.reminders.map((reminder) => ({
+      id: 4_000_000 + reminder.id,
+      unitId: reminder.unitId,
+      unitNumber: unitById.get(reminder.unitId)?.unitNumber ?? "—",
+      title: "Rent reminder sent",
+      detail: reminder.channel === "whatsapp"
+        ? "Reminder opened in WhatsApp"
+        : reminder.channel === "sms"
+          ? "Reminder opened in SMS"
+          : "Reminder message copied",
+      actor: reminder.sentBy,
+      type: "message" as const,
+      occurredAt: reminder.sentAt,
+    })),
   ].sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()).slice(0, 20);
 
   const totalCollected = records.payments
@@ -480,14 +570,34 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
     .reduce((total, payment) => total + payment.amount, 0);
   const occupiedUnits = units.filter((unit) => unit.tenantId !== null).length;
   const outstanding = units.reduce((total, unit) => total + unit.balance, 0);
-  const paidToday = records.payments.filter((payment) => {
+  const todaysPayments = records.payments.filter((payment) => {
     const recorded = new Date(payment.recordedAt);
     return recorded.getFullYear() === now.getFullYear()
       && recorded.getMonth() === now.getMonth()
       && recorded.getDate() === now.getDate();
-  }).length;
+  });
+  const paidToday = todaysPayments.length;
+  const paidTodayAmount = todaysPayments.reduce((total, payment) => total + payment.amount, 0);
   const lateCount = units.filter((unit) => unit.status === "late").length;
   const unresolvedRepairs = records.repairs.filter((repair) => repair.status !== "done").length;
+  const paidCount = units.filter((unit) => unit.tenantId !== null && unit.status === "paid").length;
+  const pendingCount = units.filter((unit) => unit.status === "pending").length;
+  const vacantCount = units.filter((unit) => unit.status === "vacant").length;
+  const lateUnits = units
+    .filter((unit) => unit.status === "late")
+    .sort((a, b) => (b.daysLate ?? 0) - (a.daysLate ?? 0));
+  const todayKey = dateOnly(now);
+  const agreementsEndingSoon = agreements.filter((agreement) => {
+    const daysLeft = daysBetween(now, new Date(`${agreement.endDate.slice(0, 10)}T00:00:00`));
+    return agreement.startDate <= todayKey && daysLeft >= 0 && daysLeft <= 60;
+  });
+  const reminders: Reminder[] = [...records.reminders]
+    .sort((a, b) => b.sentAt.localeCompare(a.sentAt))
+    .map((reminder) => ({
+      ...reminder,
+      unitNumber: unitById.get(reminder.unitId)?.unitNumber ?? "—",
+      tenantName: tenantById.get(reminder.tenantId)?.fullName ?? null,
+    }));
   const dashboard: Dashboard = {
     propertyName: properties[0]?.name ?? "Your property",
     totalCollected,
@@ -495,6 +605,7 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
     occupiedUnits,
     totalUnits: units.length,
     paidToday,
+    paidTodayAmount,
     trustPercent: totalCollected === 0
       ? 0
       : Math.round((records.payments
@@ -503,9 +614,15 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
     lateCount,
     unresolvedRepairs,
     unverifiedPayments: 0,
+    paidCount,
+    pendingCount,
+    vacantCount,
+    lateUnits,
+    agreementsEndingSoon,
     units,
     attention: [
       ...(lateCount ? [`${lateCount} rent payment${lateCount === 1 ? "" : "s"} overdue`] : []),
+      ...(agreementsEndingSoon.length ? [`${agreementsEndingSoon.length} agreement${agreementsEndingSoon.length === 1 ? "" : "s"} ending within 60 days`] : []),
       ...(unresolvedRepairs ? [`${unresolvedRepairs} repair${unresolvedRepairs === 1 ? "" : "s"} need attention`] : []),
     ],
     activity,
@@ -574,5 +691,17 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
     };
   };
 
-  return { properties, units, tenants, payments, repairs, agreements, activity, dashboard, getAnalytics };
+  return {
+    properties,
+    units,
+    tenants,
+    payments,
+    repairs,
+    agreements,
+    reminders,
+    caretakers: [...records.caretakers],
+    activity,
+    dashboard,
+    getAnalytics,
+  };
 }
