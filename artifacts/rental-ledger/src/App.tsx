@@ -56,12 +56,14 @@ import {
   BarChart3, MapPin, Smartphone, Eye, EyeOff, ReceiptText, House, TrendingUp, ImagePlus,
 } from 'lucide-react';
 import { Link, Redirect, Route, Switch, useLocation, useRoute, Router as WouterRouter } from 'wouter';
-import { readReminderChannel, readTenantLanguage, tenantCopy, type TenantLanguage } from '@/lib/tenant-copy';
+import { readReminderChannel, readTenantLanguage, tenantCopy, type TenantCopy, type TenantLanguage } from '@/lib/tenant-copy';
 
 type DataContextValue = {
   refresh: () => void;
   role: Role;
   setRole: (value: Role) => void;
+  language: TenantLanguage;
+  setLanguage: (value: TenantLanguage) => void;
   createProperty: (input: PropertyInput) => Property;
   createUnit: (input: UnitInput) => Unit;
   createTenant: (input: TenantInput) => Tenant;
@@ -71,7 +73,7 @@ type DataContextValue = {
   createContactReveal: (input: ContactRevealInput) => void;
   createReminder: (input: ReminderInput) => Reminder;
   createMessage: (input: MessageInput) => Message;
-  markMessagesRead: () => void;
+  markMessagesRead: (unitId?: number) => void;
   updateTenant: (id: number, update: { phone?: string }) => void;
   createRepair: (input: RepairInput) => Repair;
   updateRepair: (id: number, update: RepairUpdate) => Repair;
@@ -102,6 +104,14 @@ const navGroupsByRole: Record<Role, { title: string; links: NavLink[] }[]> = {
   ],
 };
 const fmt = (n?: number | null) => `UGX ${(n ?? 0).toLocaleString('en-UG')}`;
+const tenantNavText: Record<string, (c: TenantCopy) => string> = {
+  '/dashboard': c => c.navHome,
+  '/payments': c => c.navPayments,
+  '/messages': c => c.navMessages,
+  '/repairs': c => c.navRepairs,
+  '/agreements': c => c.navAgreement,
+  '/notifications': c => c.navActivity,
+};
 const compact = (n?: number) => `UGX ${(n ?? 0).toLocaleString('en-UG', { notation: 'compact', maximumFractionDigits: 1 })}`;
 const dateFmt = (value?: string | null) => value ? new Date(value).toLocaleDateString('en-UG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 const localDateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -151,6 +161,11 @@ function WorkspaceData({ children }: { children: ReactNode }) {
   const [records, setRecords] = useState(readWorkspaceRecords);
   const recordsRef = useRef(records);
   const [role, setRole] = useState<Role>(() => (localStorage.getItem('ledger-role') as Role) || 'Landlord');
+  const [language, setLanguageState] = useState<TenantLanguage>(readTenantLanguage);
+  const setLanguage = (value: TenantLanguage) => {
+    setLanguageState(value);
+    localStorage.setItem('ledger-language', value);
+  };
   const [notice, setNotice] = useState<{ message: string; undo?: () => void } | null>(null);
   const noticeTimer = useRef<number | null>(null);
   const notify = (message: string, undo?: () => void) => {
@@ -370,10 +385,10 @@ function WorkspaceData({ children }: { children: ReactNode }) {
     });
     return created;
   };
-  const markMessagesRead = () => {
+  const markMessagesRead = (unitId?: number) => {
     commitRecords(current => ({
       ...current,
-      messages: (current.messages ?? []).map(message => message.from === 'property' && !message.read ? { ...message, read: true } : message),
+      messages: (current.messages ?? []).map(message => message.from === 'property' && !message.read && (unitId == null || message.unitId === unitId) ? { ...message, read: true } : message),
     }));
   };
   const createRepair = (input: RepairInput) => {
@@ -502,6 +517,8 @@ function WorkspaceData({ children }: { children: ReactNode }) {
     refresh,
     role,
     setRole,
+    language,
+    setLanguage,
     createProperty,
     createUnit,
     createTenant,
@@ -536,9 +553,12 @@ function AppShell() {
     localStorage.setItem('ledger-theme', theme);
   }, [theme]);
   const roleNav = navGroupsByRole[d.role];
+  const isTenant = d.role === 'Tenant';
+  const c = tenantCopy(d.language);
   const allRoleNav = Object.values(navGroupsByRole).flatMap(groups => groups.flatMap(group => group.links));
-  const title = path.startsWith('/receipt/') ? 'Receipt' : path === '/settings' ? 'Preferences' : (roleNav.flatMap(g => g.links).find(([href]) => href === path)?.[1] as string) || (allRoleNav.find(([href]) => href === path)?.[1] as string) || (path === '/dashboard' ? (d.role === 'Tenant' ? 'My home' : d.role === 'Caretaker' ? 'My day' : 'Overview') : 'Rentwise');
-  const roleSubtitle = d.role === 'Caretaker' ? 'A practical view of today’s collection and the homes in your care.' : d.role === 'Tenant' ? 'A simple, clear record of home, rent and care.' : 'A clearer view of home, and everything that keeps it running.';
+  const rawTitle = path.startsWith('/receipt/') ? (isTenant ? c.pageReceipt : 'Receipt') : path === '/settings' ? (isTenant ? c.pageSettings : 'Preferences') : (roleNav.flatMap(g => g.links).find(([href]) => href === path)?.[1] as string) || (allRoleNav.find(([href]) => href === path)?.[1] as string) || (path === '/dashboard' ? (isTenant ? 'My home' : d.role === 'Caretaker' ? 'My day' : 'Overview') : 'Rentwise');
+  const title = isTenant && tenantNavText[path] ? tenantNavText[path](c) : rawTitle;
+  const roleSubtitle = d.role === 'Caretaker' ? 'A practical view of today’s collection and the homes in your care.' : isTenant ? c.roleSubtitle : 'A clearer view of home, and everything that keeps it running.';
   const tenantName = getDemoTenant(d)?.fullName ?? 'Tenant';
   const tenantNameParts = tenantName.split(' ');
   const tenantDisplayName = `${tenantNameParts[0]} ${tenantNameParts[tenantNameParts.length - 1]?.[0] ?? ''}.`;
@@ -552,43 +572,46 @@ function AppShell() {
     : d.dashboard?.propertyName || d.properties?.[0]?.name || 'Mirembe Court';
   const todayKey = localDateKey(new Date());
   const occupiedUnits = d.units.filter(unit => unit.tenantId != null);
-  const collectedUnitIds = new Set(d.payments.filter(payment => payment.recordedAt.slice(0, 10) === todayKey).map(payment => payment.unitId));
+  const collectedUnitIds = new Set(d.payments.filter(payment => payment.status !== 'pending' && payment.recordedAt.slice(0, 10) === todayKey).map(payment => payment.unitId));
   const collectionProgress = occupiedUnits.length ? Math.round(occupiedUnits.filter(unit => collectedUnitIds.has(unit.id)).length / occupiedUnits.length * 100) : 0;
   const sidebar = <aside id="workspace-sidebar" className={classes('sidebar', drawer && 'sidebar-open')} aria-label="Rentwise workspace sidebar">
     <div className="brand-lockup"><span className="brand-mark"><House size={19}/></span><span><b>rentwise</b><small>PROPERTY LEDGER</small></span><button className="sidebar-collapse-button" type="button" onClick={() => setSidebarCollapsed(value => !value)} aria-label={sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={!sidebarCollapsed} aria-controls="workspace-sidebar" title={sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'} data-testid="button-sidebar-collapse"><ChevronLeft size={17}/></button><button className="sidebar-close" onClick={() => setDrawer(false)} aria-label="Close navigation"><X size={19}/></button></div>
-    <div className="workspace-label">{d.role === 'Landlord' ? 'MANAGEMENT DESK' : d.role === 'Caretaker' ? 'ON-SITE DESK' : 'PRIVATE HOME'}</div>
-    <div className="property-picker" title={d.role === 'Tenant' ? 'Your home' : `${workspaceProperty} · ${d.role === 'Landlord' ? 'All properties' : 'Property in your care'}`}><span className="property-symbol">{workspaceProperty[0]}</span><span><b>{workspaceProperty}</b><small>{d.role === 'Landlord' ? 'All properties' : d.role === 'Caretaker' ? 'Property in your care' : 'Your rented home'}</small></span>{d.role === 'Landlord' && <ChevronDown size={15}/>}</div>
-    <nav aria-label="Main navigation">{roleNav.map(group => <div className="nav-group" key={group.title}><p>{group.title}</p>{group.links.map(([href, label, Icon]) => <Link key={href} href={href} onClick={() => setDrawer(false)} aria-label={href === '/messages' && tenantUnreadMessages ? `${label} · ${tenantUnreadMessages} unread` : label} title={label} className={classes('nav-item', path === href && 'active')} data-testid={`nav-${label.toLowerCase().replaceAll(' ', '-')}`}><Icon size={18}/><span>{label}</span>{href === '/daily-collection' && d.dashboard?.lateCount ? <em>{d.dashboard.lateCount}</em> : href === '/messages' && tenantUnreadMessages ? <em>{tenantUnreadMessages}</em> : null}</Link>)}</div>)}</nav>
+    <div className="workspace-label">{d.role === 'Landlord' ? 'MANAGEMENT DESK' : d.role === 'Caretaker' ? 'ON-SITE DESK' : c.deskLabel}</div>
+    <div className="property-picker" title={d.role === 'Tenant' ? 'Your home' : `${workspaceProperty} · ${d.role === 'Landlord' ? 'All properties' : 'Property in your care'}`}><span className="property-symbol">{workspaceProperty[0]}</span><span><b>{workspaceProperty}</b><small>{d.role === 'Landlord' ? 'All properties' : d.role === 'Caretaker' ? 'Property in your care' : c.propertySubLabel}</small></span>{d.role === 'Landlord' && <ChevronDown size={15}/>}</div>
+    <nav aria-label="Main navigation">{roleNav.map(group => <div className="nav-group" key={group.title}><p>{group.title}</p>{group.links.map(([href, label, Icon]) => {
+      const displayLabel = isTenant && tenantNavText[href] ? tenantNavText[href](c) : label;
+      return <Link key={href} href={href} onClick={() => setDrawer(false)} aria-label={href === '/messages' && tenantUnreadMessages ? c.unreadNavAria(displayLabel, tenantUnreadMessages) : displayLabel} title={displayLabel} className={classes('nav-item', path === href && 'active')} data-testid={`nav-${label.toLowerCase().replaceAll(' ', '-')}`}><Icon size={18}/><span>{displayLabel}</span>{href === '/daily-collection' && d.dashboard?.lateCount ? <em>{d.dashboard.lateCount}</em> : href === '/messages' && tenantUnreadMessages ? <em>{tenantUnreadMessages}</em> : null}</Link>;
+    })}</div>)}</nav>
      <div className="sidebar-bottom">
-       <div className="sync-card" title="Records are saved only in this browser"><span className="sync-dot"/><div><b>Saved on this device</b><small>Local storage · no account sync</small></div><Check size={15}/></div>
-       <Link href="/settings" aria-label="Preferences" title="Preferences" className={classes('nav-item', path === '/settings' && 'active')} data-testid="nav-settings"><Settings size={18}/><span>Preferences</span></Link>
-       <section className="sidebar-account" aria-label="Current workspace profile" data-testid="sidebar-account">
-         <div className="sidebar-account-kicker"><span>WORKSPACE PROFILE</span><i>DEMO</i></div>
-         <div className="sidebar-account-identity">
-           <span className="avatar sidebar-account-avatar" aria-hidden="true">{initials(displayName)}</span>
-           <span className="sidebar-account-copy"><b>{displayName}</b><small>{d.role} workspace</small></span>
-         </div>
-         <div className="sidebar-account-property"><span className="sidebar-account-property-icon"><Building2 size={14}/></span><span><small>{d.role === 'Tenant' ? 'YOUR RENTAL HOME' : 'CURRENT PROPERTY'}</small><b title={workspaceProperty}>{workspaceProperty}</b></span></div>
-         <button type="button" className="sidebar-signout" onClick={() => { setDrawer(false); setLocation('/'); }} aria-label="Sign out of Rentwise" data-testid="sidebar-sign-out"><LogOut size={15}/><span>Sign out</span><small>Leave workspace</small></button>
-       </section>
+        <div className="sync-card" title={isTenant ? c.syncSub : 'Records are saved only in this browser'}><span className="sync-dot"/><div><b>{isTenant ? c.syncTitle : 'Saved on this device'}</b><small>{isTenant ? c.syncSub : 'Local storage · no account sync'}</small></div><Check size={15}/></div>
+        <Link href="/settings" aria-label={isTenant ? c.pageSettings : 'Preferences'} title={isTenant ? c.pageSettings : 'Preferences'} className={classes('nav-item', path === '/settings' && 'active')} data-testid="nav-settings"><Settings size={18}/><span>{isTenant ? c.pageSettings : 'Preferences'}</span></Link>
+        <section className="sidebar-account" aria-label="Current workspace profile" data-testid="sidebar-account">
+          <div className="sidebar-account-kicker"><span>{isTenant ? c.accountKicker : 'WORKSPACE PROFILE'}</span><i>DEMO</i></div>
+          <div className="sidebar-account-identity">
+            <span className="avatar sidebar-account-avatar" aria-hidden="true">{initials(displayName)}</span>
+            <span className="sidebar-account-copy"><b>{displayName}</b><small>{isTenant ? c.accountRole(d.role) : `${d.role} workspace`}</small></span>
+          </div>
+          <div className="sidebar-account-property"><span className="sidebar-account-property-icon"><Building2 size={14}/></span><span><small>{isTenant ? c.accountPropertyHead : 'CURRENT PROPERTY'}</small><b title={workspaceProperty}>{workspaceProperty}</b></span></div>
+          <button type="button" className="sidebar-signout" onClick={() => { setDrawer(false); setLocation('/'); }} aria-label={isTenant ? c.signOut : 'Sign out of Rentwise'} data-testid="sidebar-sign-out"><LogOut size={15}/><span>{isTenant ? c.signOut : 'Sign out'}</span><small>{isTenant ? c.signOutSub : 'Leave workspace'}</small></button>
+        </section>
      </div>
   </aside>;
   return <div className={classes('app-shell', `role-${d.role.toLowerCase()}`)}><div className={classes('shell-layout', sidebarCollapsed && 'sidebar-is-collapsed')}>{sidebar}{drawer && <button className="scrim" onClick={() => setDrawer(false)} aria-label="Close menu"/>}<main className="main-area">
     {d.role !== 'Tenant' && <div className="ambient-status" role="progressbar" aria-label="Today’s collection progress" aria-valuenow={collectionProgress} aria-valuemin={0} aria-valuemax={100} title={`${collectionProgress}% of occupied homes recorded a payment today`}><i style={{ width: `${collectionProgress}%`, backgroundColor: `hsl(${Math.round(collectionProgress * 1.2)} 43% 46%)` }}/></div>}
-    <header className="topbar"><button className="mobile-menu icon-button" onClick={() => setDrawer(true)} aria-label="Open menu"><Menu size={20}/></button><div className="crumb"><span>{d.role === 'Tenant' ? 'My home' : 'Workspace'}</span><span>/</span><b>{title}</b></div><div className="top-actions"><span className="connection"><span/>Browser-only</span><button className="icon-button" aria-label="Refresh workspace" onClick={d.refresh} data-testid="button-refresh"><RefreshCw size={17}/></button><Link href="/notifications" className="icon-button notify-button" aria-label={tenantUnreadMessages > 0 ? `Receipts and activity · ${tenantUnreadMessages} new` : 'Receipts and activity'} data-testid="link-top-activity"><Bell size={18}/>{d.role === 'Tenant' ? (tenantUnreadMessages > 0 && <i/>) : <i/>}</Link><span className="top-divider"/><DropdownMenu>
+    <header className="topbar"><button className="mobile-menu icon-button" onClick={() => setDrawer(true)} aria-label="Open menu"><Menu size={20}/></button><div className="crumb"><span>{isTenant ? c.crumbHome : 'Workspace'}</span><span>/</span><b>{title}</b></div><div className="top-actions"><span className="connection"><span/>{isTenant ? c.connectionLabel : 'Browser-only'}</span><button className="icon-button" aria-label={isTenant ? c.refreshLabel : 'Refresh workspace'} onClick={d.refresh} data-testid="button-refresh"><RefreshCw size={17}/></button><Link href="/notifications" className="icon-button notify-button" aria-label={tenantUnreadMessages > 0 ? c.unreadNavAria(isTenant ? c.activityAria : 'Receipts and activity', tenantUnreadMessages) : (isTenant ? c.activityAria : 'Receipts and activity')} data-testid="link-top-activity"><Bell size={18}/>{d.role === 'Tenant' ? (tenantUnreadMessages > 0 && <i/>) : <i/>}</Link><span className="top-divider"/><DropdownMenu>
         <DropdownMenuTrigger asChild><button className="profile-button" data-testid="button-profile" aria-label="Open account menu"><span className="avatar small-avatar">{initials(displayName)}</span><span>{displayName}</span><ChevronDown size={14}/></button></DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel className="flex items-center gap-2.5 py-2">
             <span className="avatar small-avatar">{initials(displayName)}</span>
-            <span className="flex flex-col gap-0.5"><b className="text-[13px] font-semibold">{displayName}</b><small className="text-[11px] text-muted-foreground">{d.role} workspace</small></span>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator/>
-          <DropdownMenuItem onSelect={() => setLocation('/settings')} data-testid="menu-preferences"><Settings size={16}/> Preferences</DropdownMenuItem>
-          <DropdownMenuSeparator/>
-          <DropdownMenuItem onSelect={() => setLocation('/')} className="focus:bg-destructive focus:text-destructive-foreground" data-testid="menu-sign-out"><LogOut size={16}/> Sign out</DropdownMenuItem>
+             <span className="flex flex-col gap-0.5"><b className="text-[13px] font-semibold">{displayName}</b><small className="text-[11px] text-muted-foreground">{isTenant ? c.accountRole(d.role) : `${d.role} workspace`}</small></span>
+           </DropdownMenuLabel>
+           <DropdownMenuSeparator/>
+           <DropdownMenuItem onSelect={() => setLocation('/settings')} data-testid="menu-preferences"><Settings size={16}/> {isTenant ? c.pageSettings : 'Preferences'}</DropdownMenuItem>
+           <DropdownMenuSeparator/>
+           <DropdownMenuItem onSelect={() => setLocation('/')} className="focus:bg-destructive focus:text-destructive-foreground" data-testid="menu-sign-out"><LogOut size={16}/> {isTenant ? c.signOut : 'Sign out'}</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu></div></header>
-      <div className="content-area"><div className="page-heading"><div><div className="eyebrow">{path === '/dashboard' ? `${d.role.toUpperCase()} WORKSPACE · UGANDA` : 'RENTWISE · UGANDA'}</div><h1>{title}</h1>{path === '/dashboard' && <p className="heading-sub">{roleSubtitle}</p>}</div>{path === '/dashboard' && d.role === 'Landlord' && <Link href="/daily-collection" className="button button-primary" data-testid="button-collect-rent"><Wallet size={17}/>View collection</Link>}</div>
+      <div className="content-area"><div className="page-heading"><div><div className="eyebrow">{path === '/dashboard' ? (isTenant ? c.dashboardEyebrow : `${d.role.toUpperCase()} WORKSPACE · UGANDA`) : 'RENTWISE · UGANDA'}</div><h1>{title}</h1>{path === '/dashboard' && <p className="heading-sub">{roleSubtitle}</p>}</div>{path === '/dashboard' && d.role === 'Landlord' && <Link href="/daily-collection" className="button button-primary" data-testid="button-collect-rent"><Wallet size={17}/>View collection</Link>}</div>
       <div className="page-enter"><Switch>
         <Route path="/" component={() => <Redirect to="/dashboard"/>}/>
         <Route path="/dashboard" component={RoleDashboardPage}/>
@@ -637,7 +660,10 @@ function RoleGate({ allow, children }: { allow: Role[]; children: ReactNode }) {
     <Link href="/dashboard" className="button button-primary" data-testid="link-return-workspace">Return to your workspace <ArrowUpRight size={15}/></Link>
   </section>;
 }
-const getDemoTenant = (d: DataContextValue) => d.tenants.find(tenant => tenant.unitId != null) ?? d.tenants[0];
+const getDemoTenant = (d: DataContextValue) =>
+  d.tenants.find(tenant => tenant.unitId != null && (d.messages ?? []).some(message => message.unitId === tenant.unitId && message.from === 'property'))
+    ?? d.tenants.find(tenant => tenant.unitId != null)
+    ?? d.tenants[0];
 
 type DashboardSearchResult = {
   title: string;
@@ -979,7 +1005,7 @@ function CaretakerAgreementsPage() {
 function TenantPaymentsPage() {
   const d = useData(); const tenant = getDemoTenant(d); const unit = d.units.find(item => item.id === tenant?.unitId); const payments = d.payments.filter(payment => payment.unitId === tenant?.unitId);
   const agreement = d.agreements.find(item => item.tenantId === tenant?.id);
-  const c = tenantCopy(readTenantLanguage());
+  const c = tenantCopy(d.language);
   const [payOpen, setPayOpen] = useState(false);
   const now = new Date();
   const paidThisMonth = payments.filter(payment => payment.status !== 'pending').filter(payment => { const at = new Date(payment.recordedAt); return at.getFullYear() === now.getFullYear() && at.getMonth() === now.getMonth(); }).reduce((sum, payment) => sum + payment.amount, 0);
@@ -997,7 +1023,7 @@ function TenantRepairsPage() {
   const tenant = getDemoTenant(d);
   const unit = d.units.find(item => item.id === tenant?.unitId);
   const repairs = d.repairs.filter(repair => repair.unitId === tenant?.unitId);
-  const c = tenantCopy(readTenantLanguage());
+  const c = tenantCopy(d.language);
   const [reportOpen, setReportOpen] = useState(false);
   return <div className="page-stack"><div className="role-page-intro"><span className="role-page-icon"><Wrench size={19}/></span><div><span className="eyebrow">{c.repairsEyebrow}</span><h2>{c.repairsTitle}</h2><p>{c.repairsIntro}</p></div>{tenant && unit && <button type="button" className="button button-primary role-intro-action" onClick={() => setReportOpen(true)} data-testid="button-open-report"><Plus size={15}/>{c.quickReport}</button>}</div>
     <section className="panel role-record-panel"><DataState rows={repairs} title={c.noRepairs} text={c.noRepairsHint} action={tenant && unit ? <button type="button" className="button button-primary" onClick={() => setReportOpen(true)} data-testid="button-empty-report"><Wrench size={15}/>{c.ctaReport}</button> : undefined}><div className="role-record-list">{repairs.map(repair => <article className="role-repair-row" key={repair.id} data-testid={`tenant-repair-${repair.id}`}><span className="repair-activity-icon"><Wrench size={16}/></span><div><b>{repair.title}</b><small>{c.reportedOn(dateFmt(repair.reportedAt))} · Unit {repair.unitNumber}</small><p>{repair.description}</p>{repair.assignedTo && <small className="repair-handler">{c.handledBy(repair.assignedTo)}</small>}{repair.photoDataUrl && <img className="repair-photo" src={repair.photoDataUrl} alt={`Photo attached to ${repair.title}`}/>}<RepairHistoryList repair={repair}/></div><span className={classes('status-pill', `status-${repair.status.replaceAll('_', '-')}`)}><i/>{c.repairStatusLabel(repair.status)}</span></article>)}</div></DataState></section>
@@ -1006,14 +1032,14 @@ function TenantRepairsPage() {
 }
 function TenantAgreementPage() {
   const d = useData(); const tenant = getDemoTenant(d); const agreement = d.agreements.find(item => item.tenantId === tenant?.id);
-  const c = tenantCopy(readTenantLanguage());
+  const c = tenantCopy(d.language);
   const [signing, setSigning] = useState(false);
   if (!agreement) return <Empty title={c.noAgreement} text={c.noAgreementHint}/>;
   return <div className="page-stack"><div className="role-page-intro"><span className="role-page-icon"><FileCheck2 size={19}/></span><div><span className="eyebrow">{c.agreementEyebrow(agreement.unitNumber)}</span><h2>{c.agreementTitle}</h2><p>{c.agreementIntro}</p></div></div><article className="agreement-card tenant-own-agreement"><div className="agreement-card-head"><span className="agreement-file"><FileCheck2 size={18}/></span><span className={agreement.signedAt ? 'signed-label' : 'unsigned-label'}>{agreement.signedAt ? c.signedLabel : c.unsignedLabel}</span></div><div className="agreement-rent">{fmt(agreement.monthlyRent)}<small>{c.perMonth}</small></div><div className="agreement-details"><div><span>{c.deposit}</span><b>{fmt(agreement.deposit)}</b></div><div><span>{c.agreementTerm}</span><b>{dateFmt(agreement.startDate)} — {dateFmt(agreement.endDate)}</b></div><div><span>{c.nextRentDue}</span><b className="due-date"><CalendarDays size={14}/>{dateFmt(agreement.nextDueDate)}</b></div></div><div className="agreement-card-foot"><span>{agreement.signedAt ? `${c.signedLabel} ${dateFmt(agreement.signedAt)}${agreement.signedBy ? ` · ${agreement.signedBy}` : ''}` : c.agreementOnFile}</span>{!agreement.signedAt && <button type="button" className="button button-primary" onClick={() => setSigning(true)}>{c.signAgreement} <ArrowUpRight size={14}/></button>}</div>{agreement.signatureDataUrl && <div className="agreement-signature"><img src={agreement.signatureDataUrl} alt={`Signature ${agreement.signedBy ?? ''}`}/></div>}</article>{signing && <AgreementSignatureModal agreement={agreement} close={() => setSigning(false)}/>}</div>;
 }
 function PrivateActivityPage() {
   const d = useData(); const tenant = getDemoTenant(d); const isTenant = d.role === 'Tenant';
-  const c = tenantCopy(readTenantLanguage());
+  const c = tenantCopy(d.language);
   const [filter, setFilter] = useState('all');
   const activities = d.activity.filter(item => {
     if (isTenant) return item.unitId === tenant?.unitId && item.type !== 'contact_reveal';
@@ -1773,18 +1799,18 @@ function AnalyticsPage() {
 function ReceiptPage() {
   const d = useData(); const [, params] = useRoute('/receipt/:id'); const payment = d.payments?.find(item => item.id === Number(params?.id));
   const isTenant = d.role === 'Tenant';
-  const c = tenantCopy(readTenantLanguage());
+  const c = tenantCopy(d.language);
   const ownTenantUnit = getDemoTenant(d)?.unitId;
   const receiptIsVisible = d.role === 'Landlord'
     || (d.role === 'Tenant' && payment?.unitId === ownTenantUnit)
     || (d.role === 'Caretaker' && Boolean(payment && (payment.recordedBy.toLowerCase().includes('caretaker') || payment.recordedBy.toLowerCase().includes('amina'))));
-  if (!receiptIsVisible) return <RoleGate allow={['Landlord']}><Empty title={isTenant ? c.receiptNotAvailable : 'Receipt not available'} text="This receipt is not part of the records available in your workspace." action={<Link href="/dashboard" className="button button-primary">Return to your workspace</Link>}/></RoleGate>;
+  if (!receiptIsVisible) return <RoleGate allow={['Landlord']}><Empty title={isTenant ? c.receiptNotAvailable : 'Receipt not available'} text={isTenant ? c.receiptNotAvailableHint : 'This receipt is not part of the records available in your workspace.'} action={<Link href="/dashboard" className="button button-primary">{isTenant ? c.receiptReturn : 'Return to your workspace'}</Link>}/></RoleGate>;
   const copyLink = async () => {
-    try { await navigator.clipboard.writeText(window.location.href); d.notify('Receipt link copied'); }
-    catch { d.notify('Could not copy the receipt link on this device.'); }
+    try { await navigator.clipboard.writeText(window.location.href); d.notify(isTenant ? c.receiptCopied : 'Receipt link copied'); }
+    catch { d.notify(isTenant ? c.receiptCopyFailed : 'Could not copy the receipt link on this device.'); }
   };
-  if (!payment) return <div className="receipt-page"><Empty title={isTenant ? c.receiptNotFound : 'Receipt not found'} text="This payment record may have changed or is not available on this device." action={<Link href="/payments" className="button button-primary">{isTenant ? c.receiptBack : 'Open payment ledger'}</Link>}/></div>;
-  return <div className="receipt-page"><div className="receipt-page-toolbar"><Link href="/payments" className="text-link"><ArrowLeft size={15}/>{isTenant ? c.receiptBack : 'Back to ledger'}</Link><div><button className="button button-quiet" onClick={() => window.print()}><ReceiptText size={15}/>{isTenant ? c.receiptPrint : 'Print receipt'}</button><button className="button button-primary" onClick={copyLink}><ArrowUpRight size={15}/>{isTenant ? c.receiptCopy : 'Copy share link'}</button></div></div><article className="receipt-page-card"><div className="receipt-brand"><span className="brand-mark"><House size={18}/></span><span><b>rentwise</b><small>PROPERTY LEDGER</small></span></div><div className="paid-stamp">PAID</div><span className="eyebrow">OFFICIAL RENT RECEIPT</span><h2>{fmt(payment.amount)}</h2><p>Payment recorded for {payment.tenantName}</p><div className="receipt-page-details"><div><span>Unit</span><b>{payment.unitNumber}</b></div><div><span>Recorded on</span><b>{dateFmt(payment.recordedAt)}</b></div><div><span>Payment method</span><b>{payment.method === 'mobile_money' ? 'Mobile money (MTN / Airtel)' : statusLabel(payment.method)}</b></div><div><span>Recorded by</span><b>{payment.recordedBy}</b></div><div><span>Transaction reference</span><b>{payment.reference || 'Not provided'}</b></div><div><span>Receipt number</span><b>RW-{String(payment.id).padStart(6, '0')}</b></div></div><div className="receipt-page-foot"><ShieldCheck size={16}/><span>This receipt reflects a payment recorded in the property ledger.</span></div></article></div>;
+  if (!payment) return <div className="receipt-page"><Empty title={isTenant ? c.receiptNotFound : 'Receipt not found'} text={isTenant ? c.receiptNotFoundHint : 'This payment record may have changed or is not available on this device.'} action={<Link href="/payments" className="button button-primary">{isTenant ? c.receiptBack : 'Open payment ledger'}</Link>}/></div>;
+  return <div className="receipt-page"><div className="receipt-page-toolbar"><Link href="/payments" className="text-link"><ArrowLeft size={15}/>{isTenant ? c.receiptBack : 'Back to ledger'}</Link><div><button className="button button-quiet" onClick={() => window.print()}><ReceiptText size={15}/>{isTenant ? c.receiptPrint : 'Print receipt'}</button><button className="button button-primary" onClick={copyLink}><ArrowUpRight size={15}/>{isTenant ? c.receiptCopy : 'Copy share link'}</button></div></div><article className="receipt-page-card"><div className="receipt-brand"><span className="brand-mark"><House size={18}/></span><span><b>rentwise</b><small>PROPERTY LEDGER</small></span></div><div className="paid-stamp">{isTenant ? c.receiptPaidStamp : 'PAID'}</div><span className="eyebrow">{isTenant ? c.receiptOfficial : 'OFFICIAL RENT RECEIPT'}</span><h2>{fmt(payment.amount)}</h2><p>{isTenant ? c.receiptRecordedFor(payment.tenantName) : `Payment recorded for ${payment.tenantName}`}</p><div className="receipt-page-details"><div><span>{isTenant ? c.receiptUnitLabel : 'Unit'}</span><b>{payment.unitNumber}</b></div><div><span>{isTenant ? c.receiptRecordedOn : 'Recorded on'}</span><b>{dateFmt(payment.recordedAt)}</b></div><div><span>{isTenant ? c.receiptMethodLabel : 'Payment method'}</span><b>{payment.method === 'mobile_money' ? (isTenant ? c.receiptMethodMobile : 'Mobile money (MTN / Airtel)') : statusLabel(payment.method)}</b></div><div><span>{isTenant ? c.receiptRecordedByLabel : 'Recorded by'}</span><b>{payment.recordedBy}</b></div><div><span>{isTenant ? c.receiptReferenceLabel : 'Transaction reference'}</span><b>{payment.reference || (isTenant ? c.receiptNotProvided : 'Not provided')}</b></div><div><span>{isTenant ? c.receiptNumberLabel : 'Receipt number'}</span><b>RW-{String(payment.id).padStart(6, '0')}</b></div></div><div className="receipt-page-foot"><ShieldCheck size={16}/><span>{isTenant ? c.receiptFoot : 'This receipt reflects a payment recorded in the property ledger.'}</span></div></article></div>;
 }
 function UnitTimelinePage() {
   const d = useData();
@@ -1887,17 +1913,12 @@ function TenantPortalPage({ showDashboardSearch = false }: { showDashboardSearch
   const dueIn = dueDate ? daysUntilDate(dueDate, new Date()) : null;
   const balance = tenant?.balance ?? unit?.balance ?? 0;
   const propertyName = d.properties.find(property => property.id === unit?.propertyId)?.name || 'Your home';
-  const [language, setLanguage] = useState<TenantLanguage>(readTenantLanguage);
   const [payOpen, setPayOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [messageOpen, setMessageOpen] = useState(false);
-  const c = tenantCopy(language);
+  const c = tenantCopy(d.language);
   const reminderChannel = readReminderChannel();
-
-  const changeLanguage = (value: TenantLanguage) => {
-    setLanguage(value);
-    localStorage.setItem('ledger-language', value);
-  };
+  const changeLanguage = (value: TenantLanguage) => d.setLanguage(value);
   if (!tenant || !unit) return <div className="page-stack"><Empty title={c.homeUnlinked} text={c.homeUnlinkedHint}/></div>;
 
   const latestPayment = allPayments[0];
@@ -1933,22 +1954,22 @@ function TenantPortalPage({ showDashboardSearch = false }: { showDashboardSearch
     }
   };
 
-  const greetingName = tenant?.fullName?.split(' ')[0] || (language === 'Luganda' ? 'munange' : 'there');
+  const greetingName = tenant?.fullName?.split(' ')[0] || (d.language === 'Luganda' ? 'munange' : 'there');
   const greetingHour = new Date().getHours();
   const greetingText = greetingHour < 12 ? c.greetingMorning(greetingName) : greetingHour < 17 ? c.greetingAfternoon(greetingName) : c.greetingEvening(greetingName);
 
   return <div className="tenant-portal tenant-private-portal" data-testid="tenant-home-portal">
     <section className="portal-welcome">
-      <div className="portal-brand"><span className="brand-mark"><House size={18}/></span>rentwise <span>· YOUR HOME</span></div>
-      <div className="portal-head-actions"><span className="portal-protected"><ShieldCheck size={14}/> Private view</span><label className="portal-language"><span className="sr-only">{c.languageLabel}</span><select aria-label={c.languageLabel} data-testid="tenant-language" value={language} onChange={event => changeLanguage(event.target.value as TenantLanguage)}><option>English</option><option>Luganda</option></select></label></div>
+      <div className="portal-brand"><span className="brand-mark"><House size={18}/></span>rentwise <span>{c.brandHome}</span></div>
+      <div className="portal-head-actions"><span className="portal-protected"><ShieldCheck size={14}/> {c.privateView}</span><label className="portal-language"><span className="sr-only">{c.languageLabel}</span><select aria-label={c.languageLabel} data-testid="tenant-language" value={d.language} onChange={event => changeLanguage(event.target.value as TenantLanguage)}><option>English</option><option>Luganda</option></select></label></div>
       <span className="eyebrow">{c.heroEyebrow}</span>
       <h2>{greetingText}</h2>
       <p>{c.heroSubtitle}</p>
-      <div className="portal-home-card has-corner-mark"><span className="portal-home-icon"><House size={20}/></span><div><b>{propertyName}</b><small>{unit?.unitNumber ? `Unit ${unit.unitNumber} · ${unit.bedrooms} bedroom${unit.bedrooms === 1 ? '' : 's'}` : 'Your rented home'}</small></div><span className="portal-active">ACTIVE TENANCY</span><span className="card-corner-mark" aria-hidden="true"><ArrowUpRight size={12}/></span></div>
+      <div className="portal-home-card has-corner-mark"><span className="portal-home-icon"><House size={20}/></span><div><b>{propertyName}</b><small>{unit?.unitNumber ? c.homeUnitLine(unit.unitNumber, unit.bedrooms) : c.propertySubLabel}</small></div><span className="portal-active">{c.activeTenancy}</span><span className="card-corner-mark" aria-hidden="true"><ArrowUpRight size={12}/></span></div>
     </section>
     <div className="portal-content">
       {showDashboardSearch && <DashboardSearch/>}
-      <section className="portal-balance portal-balance-due has-corner-mark" aria-label="Current rent and due date">
+      <section className="portal-balance portal-balance-due has-corner-mark" aria-label={c.balanceAria}>
         <div><span className="eyebrow">{c.balanceEyebrow}</span><b>{fmt(balance)}</b><small>{balance > 0 ? c.balanceCheck : c.balanceUpToDate}</small></div>
         <div className="portal-due-detail"><span className="balance-icon"><CalendarDays size={20}/></span><span><small>{c.nextDue}</small><b>{dateFmt(dueDate)}</b><em>{dueLabel}</em></span></div>
         <div className="portal-balance-status" data-testid="tenant-payment-status"><span className={classes('status-pill', statusConfirmed ? 'status-paid' : 'status-pending')}><i/>{statusPillText}</span><span>{statusText}</span></div>
@@ -2005,7 +2026,7 @@ function TenantPortalPage({ showDashboardSearch = false }: { showDashboardSearch
 function PayRentModal({ tenant, unit, agreement, close }: { tenant: Tenant; unit: Unit; agreement?: Agreement; close: () => void }) {
   const d = useData();
   const [, setLocation] = useLocation();
-  const c = tenantCopy(readTenantLanguage());
+  const c = tenantCopy(d.language);
   const owed = tenant.balance > 0 ? tenant.balance : unit.rentAmount;
   const [amount, setAmount] = useState(String(owed));
   const [provider, setProvider] = useState<'mtn' | 'airtel'>('mtn');
@@ -2016,7 +2037,7 @@ function PayRentModal({ tenant, unit, agreement, close }: { tenant: Tenant; unit
   const amountValue = Number(amount) || 0;
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (amountValue <= 0) { d.notify('Enter the amount you are paying.'); return; }
+    if (amountValue <= 0) { d.notify(c.payAmountRequired); return; }
     let created: Payment;
     try {
       created = d.createPayment({ unitId: unit.id, amount: amountValue, method: 'mobile_money', recordedBy: `${tenant.fullName} · Tenant`, status: 'pending', ...(reference.trim() ? { reference } : {}) });
@@ -2029,10 +2050,10 @@ function PayRentModal({ tenant, unit, agreement, close }: { tenant: Tenant; unit
     if (phone.trim() && phone.trim() !== tenant.phone) {
       try { d.updateTenant(tenant.id, { phone: phone.trim() }); } catch { /* phone update is best-effort */ }
     }
-    d.notify(`${provider === 'mtn' ? 'MTN' : 'Airtel'} is confirming your payment…`);
+    d.notify(c.payConfirming(provider === 'mtn' ? 'MTN' : 'Airtel'));
     window.setTimeout(() => {
       d.confirmPayment(created.id);
-      d.notify('Payment confirmed — your receipt is ready.');
+      d.notify(c.payConfirmedToast);
       setPhase('done');
     }, 3000);
   };
@@ -2062,15 +2083,15 @@ function PayRentModal({ tenant, unit, agreement, close }: { tenant: Tenant; unit
       <div className="paid-stamp" aria-label="Payment paid">PAID</div>
       <span className="eyebrow">{c.confirmedTitle}</span>
       <h3>{fmt(payment.amount)}</h3>
-      <p>Unit {unit.unitNumber} · {tenant.fullName}</p>
-      <div className="receipt-meta"><span>Recorded {dateFmt(payment.recordedAt)}</span><span>{provider === 'mtn' ? 'MTN MoMo' : 'Airtel Money'}</span>{payment.reference && <span>Reference {payment.reference}</span>}</div>
+      <p>{c.receiptUnitLabel} {unit.unitNumber} · {tenant.fullName}</p>
+      <div className="receipt-meta"><span>{c.receiptRecordedOn} {dateFmt(payment.recordedAt)}</span><span>{provider === 'mtn' ? 'MTN MoMo' : 'Airtel Money'}</span>{payment.reference && <span>{c.receiptReferenceLabel} {payment.reference}</span>}</div>
       <div className="receipt-actions"><button type="button" className="button button-primary" onClick={() => { close(); setLocation(`/receipt/${payment.id}`); }} data-testid="button-open-new-receipt"><ReceiptText size={15}/>{c.viewReceipt}</button><button type="button" className="button button-quiet" onClick={close}>{c.backHome}</button></div>
     </div>}
   </Modal>;
 }
 function RepairReportForm({ tenant, unit, onSent, titleId, submitTestId = 'button-submit-repair' }: { tenant: Tenant; unit: Unit; onSent?: () => void; titleId?: string; submitTestId?: string }) {
   const d = useData();
-  const c = tenantCopy(readTenantLanguage());
+  const c = tenantCopy(d.language);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
@@ -2114,21 +2135,22 @@ function RepairReportForm({ tenant, unit, onSent, titleId, submitTestId = 'butto
   </form>;
 }
 function QuickRepairModal({ tenant, unit, close }: { tenant: Tenant; unit: Unit; close: () => void }) {
-  const c = tenantCopy(readTenantLanguage());
+  const d = useData();
+  const c = tenantCopy(d.language);
   return <Modal open title={`${c.quickReport} · Unit ${unit.unitNumber}`} close={close}>
     <RepairReportForm tenant={tenant} unit={unit} onSent={close} submitTestId="button-submit-quick-repair"/>
   </Modal>;
 }
 function MessageComposerModal({ tenant, unit, close, initialContext = 'general' }: { tenant: Tenant; unit: Unit; close: () => void; initialContext?: MessageContext }) {
   const d = useData();
-  const c = tenantCopy(readTenantLanguage());
+  const c = tenantCopy(d.language);
   const [context, setContext] = useState<MessageContext>(initialContext);
   const [body, setBody] = useState('');
   const latestPayment = d.payments.find(payment => payment.unitId === unit.id);
   const openRepair = d.repairs.find(repair => repair.unitId === unit.id && repair.status !== 'done');
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (!body.trim()) { d.notify('Write a message before sending.'); return; }
+    if (!body.trim()) { d.notify(c.messageEmpty); return; }
     try {
       d.createMessage({
         unitId: unit.id,
@@ -2165,13 +2187,13 @@ function TenantMessagesPage() {
   const tenant = getDemoTenant(d);
   const unit = d.units.find(item => item.id === tenant?.unitId);
   const messages = (d.messages ?? []).filter(message => message.unitId === tenant?.unitId).slice().sort((a, b) => a.sentAt.localeCompare(b.sentAt));
-  const c = tenantCopy(readTenantLanguage());
+  const c = tenantCopy(d.language);
   const [composing, setComposing] = useState(false);
   const threadEnd = useRef<HTMLDivElement>(null);
   const hasUnread = messages.some(message => message.from === 'property' && !message.read);
   useEffect(() => {
-    if (hasUnread) d.markMessagesRead();
-  }, [hasUnread]);
+    if (hasUnread) d.markMessagesRead(tenant?.unitId ?? undefined);
+  }, [hasUnread, tenant?.unitId]);
   useEffect(() => {
     threadEnd.current?.scrollIntoView({ block: 'nearest' });
   }, [messages.length]);
@@ -2192,8 +2214,9 @@ function SettingsPage({ theme, setTheme }: { theme: string; setTheme: (s: string
   const d = useData();
   const tenant = d.role === 'Tenant' ? getDemoTenant(d) : null;
   const [phone, setPhone] = useState(tenant?.phone ?? '');
-  const [language, setLanguage] = useState(localStorage.getItem('ledger-language') || 'English');
-  const c = tenantCopy(language === 'Luganda' ? 'Luganda' : 'English');
+  const isTenant = d.role === 'Tenant';
+  const language = d.language;
+  const c = tenantCopy(language);
   const [alerts, setAlerts] = useState(localStorage.getItem('ledger-alerts') !== 'off');
   const [saved, setSaved] = useState(false);
   const [channels, setChannels] = useState<string[]>(() => {
@@ -2202,29 +2225,34 @@ function SettingsPage({ theme, setTheme }: { theme: string; setTheme: (s: string
       return Array.isArray(stored) ? stored.filter((item): item is string => ['sms', 'whatsapp', 'email'].includes(item)) : ['sms'];
     } catch { return ['sms']; }
   });
-  const updateLanguage = (s: string) => { setLanguage(s); localStorage.setItem('ledger-language', s); setSaved(true); d.notify('Language preference saved'); };
+  const updateLanguage = (s: string) => {
+    const value = s === 'Luganda' ? 'Luganda' : 'English';
+    d.setLanguage(value);
+    setSaved(true);
+    d.notify(isTenant ? tenantCopy(value).settingsLanguageSaved : 'Language preference saved');
+  };
   const savePhone = (event: FormEvent) => {
     event.preventDefault();
     if (!tenant) return;
-    if (!phone.trim()) { d.notify('Enter a phone number before saving.'); return; }
+    if (!phone.trim()) { d.notify(isTenant ? c.settingsPhoneEmpty : 'Enter a phone number before saving.'); return; }
     d.updateTenant(tenant.id, { phone });
-    d.notify('Phone number updated on this device');
+    d.notify(isTenant ? c.settingsPhoneSaved : 'Phone number updated on this device');
   };
-  const updateAlerts = () => { const n = !alerts; setAlerts(n); localStorage.setItem('ledger-alerts', n ? 'on' : 'off'); d.notify(n ? 'Notifications enabled' : 'Notifications paused'); };
+  const updateAlerts = () => { const n = !alerts; setAlerts(n); localStorage.setItem('ledger-alerts', n ? 'on' : 'off'); d.notify(n ? (isTenant ? c.settingsAlertEnabled : 'Notifications enabled') : (isTenant ? c.settingsAlertPaused : 'Notifications paused')); };
   const toggleChannel = (channel: string) => {
     const next = channels.includes(channel) ? channels.filter(item => item !== channel) : [...channels, channel];
     setChannels(next);
     localStorage.setItem('ledger-notification-channels', JSON.stringify(next));
-    d.notify('Notification preferences saved on this device');
+    d.notify(isTenant ? c.settingsChannelSaved : 'Notification preferences saved on this device');
   };
   return <div className="settings-layout">
-    <section className="settings-intro"><span className="settings-mark"><Settings size={21}/></span><div><h2>A workspace that fits the way you work.</h2><p>These preferences are saved on this device.</p></div></section>
+    <section className="settings-intro"><span className="settings-mark"><Settings size={21}/></span><div><h2>{isTenant ? c.settingsIntroTitle : 'A workspace that fits the way you work.'}</h2><p>{isTenant ? c.settingsIntroSub : 'These preferences are saved on this device.'}</p></div></section>
     {d.role === 'Landlord' && <section className="settings-section"><div className="settings-section-title"><span><UserRound size={18}/></span><div><h2>Demo workspace role</h2><p>Preview role-based screens. This does not create accounts or secure access.</p></div></div><div className="role-options">{(['Landlord','Caretaker','Tenant'] as Role[]).map(role => <button key={role} onClick={() => { d.setRole(role); d.notify(`${role} demo workspace selected`); }} className={classes('role-option', d.role === role && 'selected')} aria-pressed={d.role === role} data-testid={`role-${role.toLowerCase()}`}><span className="role-icon">{role === 'Landlord' ? <Building2 size={18}/> : role === 'Caretaker' ? <ClipboardList size={18}/> : <UserRound size={18}/>}</span><span><b>{role}</b><small>{role === 'Landlord' ? 'Portfolio overview and records' : role === 'Caretaker' ? 'Fast collection and repairs' : 'A simple tenant-facing portal'}</small></span>{d.role === role && <CheckCircle2 size={18} className="role-check"/>}</button>)}</div></section>}
-    <section className="settings-section"><div className="settings-section-title"><span><Sun size={18}/></span><div><h2>Appearance</h2><p>Choose a light or dark ledger.</p></div></div><div className="appearance-options"><button onClick={() => setTheme('light')} className={classes('appearance-choice', theme === 'light' && 'selected')} aria-pressed={theme === 'light'} data-testid="theme-light"><Sun size={18}/><span>Light</span>{theme === 'light' && <Check size={15}/>}</button><button onClick={() => setTheme('dark')} className={classes('appearance-choice', theme === 'dark' && 'selected')} aria-pressed={theme === 'dark'} data-testid="theme-dark"><Moon size={18}/><span>Dark</span>{theme === 'dark' && <Check size={15}/>}</button></div></section>
-    <section className="settings-section"><div className="settings-section-title"><span><Bell size={18}/></span><div><h2>Notifications</h2><p>Choose which activity reminders you want on this device.</p></div></div><button className="settings-toggle-row" role="switch" aria-checked={alerts} onClick={updateAlerts} data-testid="toggle-notifications"><span><b>Activity and payment reminders</b><small>Receipts, collection follow-ups and repair updates</small></span><i className={classes('switch', alerts && 'on')}><em/></i></button><div className="notification-channel-options"><span>Preferred channels</span>{[['sms','SMS'],['whatsapp','WhatsApp'],['email','Email']].map(([key,label]) => <label key={key}><input type="checkbox" checked={channels.includes(key)} onChange={() => toggleChannel(key)}/>{label}</label>)}</div><p className="settings-hint">These are saved preferences only. Sending SMS, WhatsApp, or email is not connected in this browser demo.</p></section>
+    <section className="settings-section"><div className="settings-section-title"><span><Sun size={18}/></span><div><h2>{isTenant ? c.settingsAppearanceTitle : 'Appearance'}</h2><p>{isTenant ? c.settingsAppearanceSub : 'Choose a light or dark ledger.'}</p></div></div><div className="appearance-options"><button onClick={() => setTheme('light')} className={classes('appearance-choice', theme === 'light' && 'selected')} aria-pressed={theme === 'light'} data-testid="theme-light"><Sun size={18}/><span>{isTenant ? c.settingsLight : 'Light'}</span>{theme === 'light' && <Check size={15}/>}</button><button onClick={() => setTheme('dark')} className={classes('appearance-choice', theme === 'dark' && 'selected')} aria-pressed={theme === 'dark'} data-testid="theme-dark"><Moon size={18}/><span>{isTenant ? c.settingsDark : 'Dark'}</span>{theme === 'dark' && <Check size={15}/>}</button></div></section>
+    <section className="settings-section"><div className="settings-section-title"><span><Bell size={18}/></span><div><h2>{isTenant ? c.settingsNotificationsTitle : 'Notifications'}</h2><p>{isTenant ? c.settingsNotificationsSub : 'Choose which activity reminders you want on this device.'}</p></div></div><button className="settings-toggle-row" role="switch" aria-checked={alerts} onClick={updateAlerts} data-testid="toggle-notifications"><span><b>{isTenant ? c.settingsAlertTitle : 'Activity and payment reminders'}</b><small>{isTenant ? c.settingsAlertSub : 'Receipts, collection follow-ups and repair updates'}</small></span><i className={classes('switch', alerts && 'on')}><em/></i></button><div className="notification-channel-options"><span>{isTenant ? c.settingsChannels : 'Preferred channels'}</span>{[['sms','SMS'],['whatsapp','WhatsApp'],['email','Email']].map(([key,label]) => <label key={key}><input type="checkbox" checked={channels.includes(key)} onChange={() => toggleChannel(key)}/>{label}</label>)}</div><p className="settings-hint">{isTenant ? c.settingsChannelsHint : 'These are saved preferences only. Sending SMS, WhatsApp, or email is not connected in this browser demo.'}</p></section>
     {d.role === 'Tenant' && tenant && <section className="settings-section"><div className="settings-section-title"><span><Smartphone size={18}/></span><div><h2>{c.settingsPhoneTitle}</h2><p>{c.settingsPhoneHint}</p></div></div><form className="phone-settings-row" onSubmit={savePhone}><input value={phone} onChange={event => setPhone(event.target.value)} inputMode="tel" aria-label={c.settingsPhoneTitle} placeholder="+256 7xx xxx xxx" data-testid="input-tenant-phone"/><button className="button button-primary" type="submit" data-testid="button-save-tenant-phone">{c.saveNumber}</button><span className="phone-mask">{maskPhone(phone)}</span></form></section>}
-    <section className="settings-section"><div className="settings-section-title"><span><CircleHelp size={18}/></span><div><h2>Language</h2><p>Language used for labels and date formats.</p></div></div><div className="language-row"><select value={language} onChange={event => updateLanguage(event.target.value)} aria-label="Language preference"><option>English</option><option>Luganda</option></select><span>UGX · Uganda Shillings</span></div></section>
-    <section className="settings-section role-summary"><div className="settings-section-title"><span><ShieldCheck size={18}/></span><div><h2>Privacy and data</h2><p>Rental records, contact details, role, and display preferences are saved in this browser only; they do not sync to other devices or users.</p></div></div><span className="privacy-check"><CheckCircle2 size={16}/> Saved in this browser</span></section>{saved && <span className="sr-only">Language setting saved</span>}
+    <section className="settings-section"><div className="settings-section-title"><span><CircleHelp size={18}/></span><div><h2>{isTenant ? c.settingsLanguageTitle : 'Language'}</h2><p>{isTenant ? c.settingsLanguageSub : 'Language used for labels and date formats.'}</p></div></div><div className="language-row"><select value={language} onChange={event => updateLanguage(event.target.value)} aria-label={isTenant ? c.settingsLanguageTitle : 'Language preference'}><option>English</option><option>Luganda</option></select><span>{isTenant ? c.settingsCurrency : 'UGX · Uganda Shillings'}</span></div></section>
+    <section className="settings-section role-summary"><div className="settings-section-title"><span><ShieldCheck size={18}/></span><div><h2>{isTenant ? c.settingsPrivacyTitle : 'Privacy and data'}</h2><p>{isTenant ? c.settingsPrivacySub : 'Rental records, contact details, role, and display preferences are saved in this browser only; they do not sync to other devices or users.'}</p></div></div><span className="privacy-check"><CheckCircle2 size={16}/> {isTenant ? c.settingsPrivacyCheck : 'Saved in this browser'}</span></section>{saved && <span className="sr-only">{isTenant ? c.settingsLanguageSaved : 'Language setting saved'}</span>}
   </div>;
 }
 function Field({ label, children }: { label: string; children: ReactNode }) { return <label className="form-field"><span>{label}</span>{children}</label>; }

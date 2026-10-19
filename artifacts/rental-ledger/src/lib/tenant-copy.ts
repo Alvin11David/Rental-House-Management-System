@@ -144,6 +144,80 @@ export interface TenantCopy {
   saveNumber: string;
   homeUnlinked: string;
   homeUnlinkedHint: string;
+  navHome: string;
+  navPayments: string;
+  navMessages: string;
+  navRepairs: string;
+  navAgreement: string;
+  navActivity: string;
+  pageReceipt: string;
+  pageSettings: string;
+  roleSubtitle: string;
+  dashboardEyebrow: string;
+  crumbHome: string;
+  connectionLabel: string;
+  refreshLabel: string;
+  activityAria: string;
+  unreadNavAria: (label: string, count: number) => string;
+  deskLabel: string;
+  propertySubLabel: string;
+  syncTitle: string;
+  syncSub: string;
+  accountKicker: string;
+  accountRole: (role: string) => string;
+  accountPropertyHead: string;
+  signOut: string;
+  signOutSub: string;
+  brandHome: string;
+  privateView: string;
+  activeTenancy: string;
+  homeUnitLine: (unitNumber: string, bedrooms: number) => string;
+  balanceAria: string;
+  receiptOfficial: string;
+  receiptRecordedFor: (name: string) => string;
+  receiptUnitLabel: string;
+  receiptRecordedOn: string;
+  receiptMethodLabel: string;
+  receiptMethodMobile: string;
+  receiptRecordedByLabel: string;
+  receiptReferenceLabel: string;
+  receiptNumberLabel: string;
+  receiptNotProvided: string;
+  receiptFoot: string;
+  receiptPaidStamp: string;
+  receiptNotAvailableHint: string;
+  receiptNotFoundHint: string;
+  receiptReturn: string;
+  receiptCopied: string;
+  receiptCopyFailed: string;
+  settingsIntroTitle: string;
+  settingsIntroSub: string;
+  settingsAppearanceTitle: string;
+  settingsAppearanceSub: string;
+  settingsLight: string;
+  settingsDark: string;
+  settingsNotificationsTitle: string;
+  settingsNotificationsSub: string;
+  settingsAlertTitle: string;
+  settingsAlertSub: string;
+  settingsChannels: string;
+  settingsChannelsHint: string;
+  settingsLanguageTitle: string;
+  settingsLanguageSub: string;
+  settingsCurrency: string;
+  settingsPrivacyTitle: string;
+  settingsPrivacySub: string;
+  settingsPrivacyCheck: string;
+  settingsLanguageSaved: string;
+  settingsPhoneSaved: string;
+  settingsPhoneEmpty: string;
+  settingsAlertEnabled: string;
+  settingsAlertPaused: string;
+  settingsChannelSaved: string;
+  payAmountRequired: string;
+  payConfirming: (provider: string) => string;
+  payConfirmedToast: string;
+  messageEmpty: string;
 }
 
 const english: TenantCopy = {
@@ -290,6 +364,80 @@ const english: TenantCopy = {
   saveNumber: 'Save number',
   homeUnlinked: 'Your home is not linked yet',
   homeUnlinkedHint: 'Ask the property team to connect your tenant record to a unit, then your rent, receipts and updates will appear here.',
+  navHome: 'My home',
+  navPayments: 'My payments',
+  navMessages: 'Messages',
+  navRepairs: 'My repairs',
+  navAgreement: 'My agreement',
+  navActivity: 'Receipts & activity',
+  pageReceipt: 'Receipt',
+  pageSettings: 'Preferences',
+  roleSubtitle: 'A simple, clear record of home, rent and care.',
+  dashboardEyebrow: 'TENANT WORKSPACE · UGANDA',
+  crumbHome: 'My home',
+  connectionLabel: 'Browser-only',
+  refreshLabel: 'Refresh workspace',
+  activityAria: 'Receipts and activity',
+  unreadNavAria: (label, count) => `${label} · ${count} unread`,
+  deskLabel: 'PRIVATE HOME',
+  propertySubLabel: 'Your rented home',
+  syncTitle: 'Saved on this device',
+  syncSub: 'Local storage · no account sync',
+  accountKicker: 'WORKSPACE PROFILE',
+  accountRole: (role) => `${role} workspace`,
+  accountPropertyHead: 'YOUR RENTAL HOME',
+  signOut: 'Sign out',
+  signOutSub: 'Leave workspace',
+  brandHome: '· YOUR HOME',
+  privateView: 'Private view',
+  activeTenancy: 'ACTIVE TENANCY',
+  homeUnitLine: (unitNumber, bedrooms) => `Unit ${unitNumber} · ${bedrooms} bedroom${bedrooms === 1 ? '' : 's'}`,
+  balanceAria: 'Current rent and due date',
+  receiptOfficial: 'OFFICIAL RENT RECEIPT',
+  receiptRecordedFor: (name) => `Payment recorded for ${name}`,
+  receiptUnitLabel: 'Unit',
+  receiptRecordedOn: 'Recorded on',
+  receiptMethodLabel: 'Payment method',
+  receiptMethodMobile: 'Mobile money (MTN / Airtel)',
+  receiptRecordedByLabel: 'Recorded by',
+  receiptReferenceLabel: 'Transaction reference',
+  receiptNumberLabel: 'Receipt number',
+  receiptNotProvided: 'Not provided',
+  receiptFoot: 'This receipt reflects a payment recorded in the property ledger.',
+  receiptPaidStamp: 'PAID',
+  receiptNotAvailableHint: 'This receipt is not part of the records available in your workspace.',
+  receiptNotFoundHint: 'This payment record may have changed or is not available on this device.',
+  receiptReturn: 'Return to your workspace',
+  receiptCopied: 'Receipt link copied',
+  receiptCopyFailed: 'Could not copy the receipt link on this device.',
+  settingsIntroTitle: 'A workspace that fits the way you work.',
+  settingsIntroSub: 'These preferences are saved on this device.',
+  settingsAppearanceTitle: 'Appearance',
+  settingsAppearanceSub: 'Choose a light or dark ledger.',
+  settingsLight: 'Light',
+  settingsDark: 'Dark',
+  settingsNotificationsTitle: 'Notifications',
+  settingsNotificationsSub: 'Choose which activity reminders you want on this device.',
+  settingsAlertTitle: 'Activity and payment reminders',
+  settingsAlertSub: 'Receipts, collection follow-ups and repair updates',
+  settingsChannels: 'Preferred channels',
+  settingsChannelsHint: 'These are saved preferences only. Sending SMS, WhatsApp, or email is not connected in this browser demo.',
+  settingsLanguageTitle: 'Language',
+  settingsLanguageSub: 'Language used for labels and date formats.',
+  settingsCurrency: 'UGX · Uganda Shillings',
+  settingsPrivacyTitle: 'Privacy and data',
+  settingsPrivacySub: 'Rental records, contact details, role, and display preferences are saved in this browser only; they do not sync to other devices or users.',
+  settingsPrivacyCheck: 'Saved in this browser',
+  settingsLanguageSaved: 'Language preference saved',
+  settingsPhoneSaved: 'Phone number updated on this device',
+  settingsPhoneEmpty: 'Enter a phone number before saving.',
+  settingsAlertEnabled: 'Notifications enabled',
+  settingsAlertPaused: 'Notifications paused',
+  settingsChannelSaved: 'Notification preferences saved on this device',
+  payAmountRequired: 'Enter the amount you are paying.',
+  payConfirming: (provider) => `${provider} is confirming your payment…`,
+  payConfirmedToast: 'Payment confirmed — your receipt is ready.',
+  messageEmpty: 'Write a message before sending.',
 };
 
 const luganda: TenantCopy = {
@@ -436,6 +584,80 @@ const luganda: TenantCopy = {
   saveNumber: 'Tereka namba',
   homeUnlinked: 'Ennyumba yo tennateebwawo',
   homeUnlinkedHint: 'Saba abalabirizi b’ennyumba okuteeka ekiwandiiko kyo ku nnyumba, olwo obupangisa, risiti n’ebipya bijja kulabikira wano.',
+  navHome: 'Ennyumba yange',
+  navPayments: 'Ebisale byange',
+  navMessages: 'Obubaka',
+  navRepairs: 'Okuddaabiriza kwange',
+  navAgreement: 'Endagaano yange',
+  navActivity: 'Risiti n’ebikoleddwa',
+  pageReceipt: 'Risiti',
+  pageSettings: 'Ennoonebazibwa',
+  roleSubtitle: 'Ekitundu ky’ebiruwanjuri, obupangisa n’okulabirira.',
+  dashboardEyebrow: 'ENNYUMBA YO · UGANDA',
+  crumbHome: 'Ennyumba yange',
+  connectionLabel: 'Ku browser',
+  refreshLabel: 'Yungula ebyawandiikiddwa',
+  activityAria: 'Risiti n’ebikoleddwa',
+  unreadNavAria: (label, count) => `${label} · ${count} tebajjadde`,
+  deskLabel: 'ENNYUMBA Y’EKYAMA',
+  propertySubLabel: 'Ennyumba yo ey’okukwata',
+  syncTitle: 'Kiteekeddwa ku ddaala lino',
+  syncSub: 'Ku browser · tey’egutanibwa',
+  accountKicker: 'EBY’OKUKWATA KITUNDU',
+  accountRole: (role) => role === 'Tenant' ? 'Kitundu ky’omupangisa' : `${role} workspace`,
+  accountPropertyHead: 'ENNIMBI Y’OKUKWATA',
+  signOut: 'Ggulawo',
+  signOutSub: 'Egga mu kitundu',
+  brandHome: '· ENNYUMBA YO',
+  privateView: 'Ekyama',
+  activeTenancy: 'OKUKWATA OKWIGUDDE',
+  homeUnitLine: (unitNumber, bedrooms) => `Ekifo ${unitNumber} · amawanga ${bedrooms}`,
+  balanceAria: 'Obupangisa obw’okusingawo ne lunaku lw’okuliwanika',
+  receiptOfficial: 'RISITI Y’OBUPANGISA EYEKUUMA',
+  receiptRecordedFor: (name) => `Okusasula kuwandiikiddwa eri ${name}`,
+  receiptUnitLabel: 'Ekifo',
+  receiptRecordedOn: 'Kyawandiikiddwa ku',
+  receiptMethodLabel: 'Engeri y’okusasulira',
+  receiptMethodMobile: 'Ssimu (MTN / Airtel)',
+  receiptRecordedByLabel: 'Kyawandiikibwa',
+  receiptReferenceLabel: 'Namba y’olukalala',
+  receiptNumberLabel: 'Namba ya risiti',
+  receiptNotProvided: 'Tewandiikiddwa',
+  receiptFoot: 'Risiti eno eraga ssente eziwandiikiddwa mu buwandiike bwa nnyumba.',
+  receiptPaidStamp: 'KYASASUDDWA',
+  receiptNotAvailableHint: 'Risiti eno tewali mu bikwata ku kitundu kyo.',
+  receiptNotFoundHint: 'Ekiwandiiko kino kiyinza okukyusibwa oba tekiri ku ddaala lino.',
+  receiptReturn: 'Dda ku kitundu kyo',
+  receiptCopied: 'Link ya risiti koppiddwa',
+  receiptCopyFailed: 'Link ya risiti tegi koppiddwa ku ddaala lino.',
+  settingsIntroTitle: 'Kitundu ekikwata n’engeri gye okolamu.',
+  settingsIntroSub: 'Ebikwata ku nnoonebazibwa bino kiteekeddwa ku ddaala lino.',
+  settingsAppearanceTitle: 'Ennungi',
+  settingsAppearanceSub: 'Londa ettaala oba ekiruma.',
+  settingsLight: 'Ettala',
+  settingsDark: 'Ekiruma',
+  settingsNotificationsTitle: 'Okujjukiza',
+  settingsNotificationsSub: 'Londa bye byetaaga okujjukizibwa ku ddaala lino.',
+  settingsAlertTitle: 'Okujjukiza n’ebipya by’essente',
+  settingsAlertSub: 'Risiti, okugoberera n’ebipya by’okuddaabiriza',
+  settingsChannels: 'Enninja ezisankiddwa',
+  settingsChannelsHint: 'Bino bye nnoonebazibwa yokka. Okweerezza SMS, WhatsApp oba email tekikwatanisiddwa mu browser eno.',
+  settingsLanguageTitle: 'Olulimi',
+  settingsLanguageSub: 'Olulimi olw’ebiwandiiko n’ennaku.',
+  settingsCurrency: 'UGX · Eshillingi ya Uganda',
+  settingsPrivacyTitle: 'Ebyama n’ebiwandiiko',
+  settingsPrivacySub: 'Ebiwandiiko by’obupangisa, ennamba z’essimu, ekitundu n’ennungi bino bira ku ddaala lino yokka; tebujja kusengeka ku ddala endala oba abantu endala.',
+  settingsPrivacyCheck: 'Kiteekeddwa ku ddaala lino',
+  settingsLanguageSaved: 'Olulimi lw’obusankwadde lulonkiddwa',
+  settingsPhoneSaved: 'Namba ya ssimu yuzaiddwawo ku ddaala lino',
+  settingsPhoneEmpty: 'Teeka namba ya ssimu ng’otaddayo.',
+  settingsAlertEnabled: 'Okujjukiza kuwagiddwa',
+  settingsAlertPaused: 'Okujjukiza kusiddwawo',
+  settingsChannelSaved: 'Ebikwata ku kujjukiza bikuumiddwa ku ddaala lino',
+  payAmountRequired: 'Teeka ssemuundi gg’osasulira.',
+  payConfirming: (provider) => `${provider} ekakasa okusasula kwo…`,
+  payConfirmedToast: 'Okusasula kukakasiddwa — risiti y’o eyongeraayo eriwo.',
+  messageEmpty: 'Wandiika obubaka nga tuddamu okubeereza.',
 };
 
 export const tenantCopy = (language: TenantLanguage): TenantCopy => (language === 'Luganda' ? luganda : english);

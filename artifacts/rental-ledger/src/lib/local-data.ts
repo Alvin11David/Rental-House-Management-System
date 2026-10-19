@@ -423,6 +423,7 @@ export function saveWorkspaceRecords(records: WorkspaceRecords): void {
 
 export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): WorkspaceView {
   const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const settled = records.payments.filter((payment) => payment.status !== "pending");
   const collected = new Map<number, number>();
   for (const payment of records.payments) {
     if (payment.status === "pending") continue;
@@ -536,7 +537,7 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
         }],
     }));
   const activity: Activity[] = [
-    ...records.payments.map((payment) => ({
+    ...settled.map((payment) => ({
       id: payment.id,
       unitId: payment.unitId,
       unitNumber: unitById.get(payment.unitId)?.unitNumber ?? "—",
@@ -624,12 +625,12 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
     })),
   ].sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()).slice(0, 20);
 
-  const totalCollected = records.payments
+  const totalCollected = settled
     .filter((payment) => new Date(payment.recordedAt).getTime() >= currentMonth)
     .reduce((total, payment) => total + payment.amount, 0);
   const occupiedUnits = units.filter((unit) => unit.tenantId !== null).length;
   const outstanding = units.reduce((total, unit) => total + unit.balance, 0);
-  const todaysPayments = records.payments.filter((payment) => {
+  const todaysPayments = settled.filter((payment) => {
     const recorded = new Date(payment.recordedAt);
     return recorded.getFullYear() === now.getFullYear()
       && recorded.getMonth() === now.getMonth()
@@ -669,7 +670,7 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
     paidTodayAmount,
     trustPercent: totalCollected === 0
       ? 0
-      : Math.round((records.payments
+      : Math.round((settled
         .filter((payment) => payment.method !== "cash" && new Date(payment.recordedAt).getTime() >= currentMonth)
         .reduce((total, payment) => total + payment.amount, 0) / totalCollected) * 100),
     lateCount,
@@ -695,13 +696,13 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
     const points: AnalyticsPoint[] = period === "year"
       ? Array.from({ length: 12 }, (_, index) => ({
         label: new Date(year, index, 1).toLocaleString("en", { month: "short" }),
-        collected: records.payments
+        collected: settled
           .filter((payment) => {
             const date = new Date(payment.recordedAt);
             return date.getFullYear() === year && date.getMonth() === index;
           })
           .reduce((total, payment) => total + payment.amount, 0),
-        outstanding: Math.max(0, expectedRent - records.payments
+        outstanding: Math.max(0, expectedRent - settled
           .filter((payment) => {
             const date = new Date(payment.recordedAt);
             return date.getFullYear() === year && date.getMonth() === index;
@@ -711,7 +712,7 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
       : Array.from({ length: 4 }, (_, index) => {
         const firstDay = index * 7 + 1;
         const lastDay = index === 3 ? new Date(year, month + 1, 0).getDate() : firstDay + 6;
-        const collectedThisWeek = records.payments
+        const collectedThisWeek = settled
           .filter((payment) => {
             const date = new Date(payment.recordedAt);
             return date.getFullYear() === year
@@ -729,7 +730,7 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
     const current = points.reduce((total, point) => total + point.collected, 0);
     const previousYear = period === "year" ? year - 1 : month === 0 ? year - 1 : year;
     const previousMonth = month === 0 ? 11 : month - 1;
-    const previous = records.payments
+    const previous = settled
       .filter((payment) => {
         const date = new Date(payment.recordedAt);
         return date.getFullYear() === previousYear
