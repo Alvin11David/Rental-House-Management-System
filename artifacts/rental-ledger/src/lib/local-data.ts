@@ -125,6 +125,32 @@ export interface PaymentInput {
   method: PaymentMethod;
   recordedBy: string;
   reference?: string;
+  status?: "paid" | "pending";
+}
+
+export type MessageContext = "general" | "payment" | "repair";
+
+export interface Message {
+  id: number;
+  unitId: number;
+  tenantId: number;
+  from: "tenant" | "property";
+  sentBy: string;
+  body: string;
+  context: MessageContext;
+  contextId: number | null;
+  sentAt: string;
+  read: boolean;
+}
+
+export interface MessageInput {
+  unitId: number;
+  tenantId: number;
+  from: "tenant" | "property";
+  sentBy: string;
+  body: string;
+  context?: MessageContext;
+  contextId?: number | null;
 }
 
 export interface Repair {
@@ -262,6 +288,7 @@ export interface WorkspaceRecords {
   agreements: StoredAgreement[];
   contactReveals: ContactReveal[];
   reminders: StoredReminder[];
+  messages: Message[];
   caretakers: Caretaker[];
 }
 
@@ -273,6 +300,7 @@ export interface WorkspaceView {
   repairs: Repair[];
   agreements: Agreement[];
   reminders: Reminder[];
+  messages: Message[];
   caretakers: Caretaker[];
   activity: Activity[];
   dashboard: Dashboard;
@@ -305,7 +333,7 @@ export function createSeedRecords(now = new Date()): WorkspaceRecords {
 
   return {
     version: 2,
-    nextId: 14,
+    nextId: 15,
     properties: [{
       id: 1,
       name: "Mirembe Court",
@@ -322,7 +350,7 @@ export function createSeedRecords(now = new Date()): WorkspaceRecords {
       { id: 6, propertyId: 1, unitNumber: "B1", bedrooms: 1, rentAmount: 350000, tenantId: null, status: "vacant" },
     ],
     payments: [
-      { id: 7, unitId: 4, amount: 450000, method: "mobile_money", status: "paid", recordedBy: "Amina · Caretaker", recordedAt: now.toISOString(), reference: "MTN-804215" },
+      { id: 7, unitId: 4, amount: 250000, method: "mobile_money", status: "paid", recordedBy: "Amina · Caretaker", recordedAt: now.toISOString(), reference: "MTN-804215" },
       { id: 8, unitId: 5, amount: 250000, method: "cash", status: "paid", recordedBy: "Amina · Caretaker", recordedAt: yesterday.toISOString(), reference: null },
       { id: 9, unitId: 4, amount: 450000, method: "bank", status: "paid", recordedBy: "Amina · Caretaker", recordedAt: lastMonth.toISOString(), reference: "BANK-392818" },
     ],
@@ -336,6 +364,20 @@ export function createSeedRecords(now = new Date()): WorkspaceRecords {
     ],
     contactReveals: [],
     reminders: [],
+    messages: [
+      {
+        id: 14,
+        unitId: 4,
+        tenantId: 2,
+        from: "property",
+        sentBy: "Amina · Caretaker",
+        body: "Hello Grace, the plumber will come by on Thursday morning to fix the porch light. No action needed from you.",
+        context: "repair",
+        contextId: 11,
+        sentAt: new Date(now.getTime() - 5 * 60 * 60 * 1000).toISOString(),
+        read: false,
+      },
+    ],
     caretakers: [],
   };
 }
@@ -353,12 +395,12 @@ function parseRecords(raw: string): WorkspaceRecords {
   }
   const records = value as WorkspaceRecords;
   if ((records as any).version === 1 || (records as any).version === undefined) {
-    return { ...records, version: 2, reminders: [], caretakers: [] } as any;
+    return { ...records, version: 2, reminders: [], messages: [], caretakers: [] } as any;
   }
   if (records.version !== 2 || !Array.isArray(records.reminders) || !Array.isArray(records.caretakers)) {
     throw new Error("Saved rental data is invalid. It was not replaced; check this browser's stored workspace data.");
   }
-  return records;
+  return { ...records, messages: Array.isArray(records.messages) ? records.messages : [] };
 }
 
 export function readWorkspaceRecords(): WorkspaceRecords {
@@ -383,6 +425,7 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
   const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
   const collected = new Map<number, number>();
   for (const payment of records.payments) {
+    if (payment.status === "pending") continue;
     if (new Date(payment.recordedAt).getTime() >= currentMonth) {
       collected.set(payment.unitId, (collected.get(payment.unitId) ?? 0) + payment.amount);
     }
@@ -563,6 +606,22 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
       type: "message" as const,
       occurredAt: reminder.sentAt,
     })),
+    ...(records.messages ?? []).map((message) => ({
+      id: 5_000_000 + message.id,
+      unitId: message.unitId,
+      unitNumber: unitById.get(message.unitId)?.unitNumber ?? "—",
+      title: message.from === "tenant"
+        ? `${tenantById.get(message.tenantId)?.fullName ?? "Tenant"} sent a message`
+        : "Message from the property team",
+      detail: message.context === "payment"
+        ? `About rent payment · ${message.body}`
+        : message.context === "repair"
+          ? `About a repair · ${message.body}`
+          : message.body,
+      actor: message.sentBy,
+      type: "message" as const,
+      occurredAt: message.sentAt,
+    })),
   ].sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()).slice(0, 20);
 
   const totalCollected = records.payments
@@ -598,6 +657,8 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
       unitNumber: unitById.get(reminder.unitId)?.unitNumber ?? "—",
       tenantName: tenantById.get(reminder.tenantId)?.fullName ?? null,
     }));
+  const messages: Message[] = [...(records.messages ?? [])]
+    .sort((a, b) => b.sentAt.localeCompare(a.sentAt));
   const dashboard: Dashboard = {
     propertyName: properties[0]?.name ?? "Your property",
     totalCollected,
@@ -699,6 +760,7 @@ export function deriveWorkspace(records: WorkspaceRecords, now = new Date()): Wo
     repairs,
     agreements,
     reminders,
+    messages,
     caretakers: [...records.caretakers],
     activity,
     dashboard,

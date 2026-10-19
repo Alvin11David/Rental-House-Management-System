@@ -120,6 +120,13 @@ const stepsByRole: Record<Role, TourStep[]> = {
       visual: { label: 'HOME SUMMARY', title: 'Important details together', detail: 'Rent · agreement · dates' },
       icon: FileCheck2,
     },
+    {
+      label: 'PAY & MESSAGE',
+      title: 'Pay rent and reach the team',
+      text: 'Pay by MTN MoMo or Airtel Money, then message the caretaker or landlord about any payment or repair.',
+      visual: { label: 'PAY & MESSAGE', title: 'Everything within reach', detail: 'Pay · message · follow up' },
+      icon: Wallet,
+    },
   ],
 };
 

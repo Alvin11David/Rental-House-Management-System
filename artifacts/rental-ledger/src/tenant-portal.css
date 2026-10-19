@@ -634,3 +634,219 @@
     transition: none !important;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   12. Dashboard-first additions — pay, status, reminders, messages.
+   Appended on top of the existing tenant theme; no existing rule changed.
+   ───────────────────────────────────────────────────────────── */
+
+/* Balance card also carries the payment status and primary actions */
+.app-shell.role-tenant .portal-balance { flex-wrap: wrap; row-gap: 12px; }
+.app-shell.role-tenant .portal-balance-status,
+.app-shell.role-tenant .portal-balance-actions { flex: 0 0 100%; width: 100%; }
+.app-shell.role-tenant .portal-balance-status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-top: 12px;
+  border-top: 1px solid hsl(var(--border) / .7);
+  color: hsl(var(--muted-foreground));
+  font-size: 10px;
+}
+.app-shell.role-tenant .portal-balance-status .status-pill { flex: 0 0 auto; }
+.app-shell.role-tenant .portal-balance-actions { display: flex; flex-wrap: wrap; gap: 10px; padding-right: 44px; }
+.app-shell.role-tenant .portal-balance-actions .button { flex: 1 1 auto; min-width: 168px; justify-content: center; }
+
+/* Payment status pills inside rows */
+.app-shell.role-tenant .portal-payment .status-pill { margin-top: 6px; align-self: flex-start; }
+.app-shell.role-tenant .role-record-row > div .status-pill { margin-top: 6px; }
+
+/* Agreement glance rows */
+.app-shell.role-tenant .portal-fact-list { display: grid; padding: 2px 15px 0; }
+.app-shell.role-tenant .portal-fact-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 38px;
+  border-bottom: 1px solid hsl(var(--border) / .72);
+}
+.app-shell.role-tenant .portal-fact-list > div:last-child { border-bottom: 0; }
+.app-shell.role-tenant .portal-fact-list span { color: hsl(var(--muted-foreground)); font-size: 9px; }
+.app-shell.role-tenant .portal-fact-list b { font-family: var(--tenant-display); font-weight: 600; font-size: 10px; font-variant-numeric: tabular-nums; }
+.app-shell.role-tenant .portal-fact-list .due-date { color: hsl(var(--primary)); }
+
+/* Reminder card */
+.app-shell.role-tenant .portal-reminder { display: flex; align-items: center; gap: 12px; padding: 8px 15px 18px; }
+.app-shell.role-tenant .portal-reminder-icon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 13px 13px 13px 5px;
+  color: hsl(150 48% 15%);
+  background: linear-gradient(140deg, hsl(var(--tenant-lime)), hsl(75 68% 47%));
+  box-shadow: 0 6px 15px hsl(75 60% 35% / .28);
+}
+.app-shell.role-tenant .portal-reminder > div { flex: 1; min-width: 0; }
+.app-shell.role-tenant .portal-reminder b { display: block; font-family: var(--tenant-display); font-weight: 600; font-size: 11px; }
+.app-shell.role-tenant .portal-reminder small { display: block; margin-top: 4px; color: hsl(var(--muted-foreground)); font-size: 9px; }
+.app-shell.role-tenant .portal-reminder .button { flex: 0 0 auto; }
+
+/* Messages preview */
+.app-shell.role-tenant .portal-messages { padding: 0 15px 4px; }
+.app-shell.role-tenant .portal-message { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid hsl(var(--border) / .72); }
+.app-shell.role-tenant .portal-message:last-child { border-bottom: 0; }
+.app-shell.role-tenant .portal-message-icon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 11px 11px 11px 4px;
+  color: hsl(var(--primary));
+  background: linear-gradient(145deg, hsl(var(--secondary)), hsl(var(--secondary) / .4));
+}
+.app-shell.role-tenant .portal-message > span:last-child { min-width: 0; }
+.app-shell.role-tenant .portal-message b { display: block; font-size: 10px; }
+.app-shell.role-tenant .portal-message small { display: block; margin-top: 3px; color: hsl(var(--muted-foreground)); font-size: 8px; }
+.app-shell.role-tenant .portal-message p { margin: 6px 0 0; font-size: 9px; line-height: 1.5; }
+
+/* Keep new panel content clear of the corner mark, and let a lone fifth panel span */
+.app-shell.role-tenant .portal-panels .panel.has-corner-mark .portal-fact-list,
+.app-shell.role-tenant .portal-panels .panel.has-corner-mark .portal-reminder,
+.app-shell.role-tenant .portal-panels .panel.has-corner-mark .portal-messages { padding-bottom: 33px; }
+.app-shell.role-tenant .portal-panels > .panel:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+/* Quick links: four across on wide screens */
+.app-shell.role-tenant .portal-quick-links { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.app-shell.role-tenant button.portal-quick-link { width: 100%; font: inherit; text-align: left; cursor: pointer; color: hsl(var(--primary)); }
+.app-shell.role-tenant .portal-quick-link:nth-child(4) { animation-delay: .35s; }
+.app-shell.role-tenant .portal-panels > .panel:nth-child(3) { animation-delay: .22s; }
+.app-shell.role-tenant .portal-panels > .panel:nth-child(4) { animation-delay: .28s; }
+.app-shell.role-tenant .portal-panels > .panel:nth-child(5) { animation-delay: .34s; }
+
+/* Intro action buttons (payments, messages) */
+.app-shell.role-tenant .role-page-intro > .role-intro-action { margin-left: auto; flex: 0 0 auto; }
+
+/* Pay rent modal */
+.app-shell.role-tenant .pay-amount-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 12px 14px;
+  border: 1px solid hsl(var(--tenant-gold) / .35);
+  border-radius: 14px;
+  background: hsl(var(--tenant-gold) / .1);
+}
+.app-shell.role-tenant .pay-amount-note span { color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.app-shell.role-tenant .pay-amount-note b { font-family: var(--tenant-display); font-weight: 600; font-size: 12px; }
+.app-shell.role-tenant .pay-amount-note small { flex: 0 0 100%; color: hsl(var(--muted-foreground)); font-size: 9px; }
+.app-shell.role-tenant .pay-amount-note small b { font-size: 10px; color: hsl(var(--foreground)); }
+.app-shell.role-tenant .pay-processing { text-align: center; padding: 22px 10px 12px; }
+.app-shell.role-tenant .pay-spinner {
+  display: block;
+  width: 46px;
+  height: 46px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  border: 3px solid hsl(var(--primary) / .18);
+  border-top-color: hsl(var(--primary));
+  animation: tenant-spin .9s linear infinite;
+}
+.app-shell.role-tenant .pay-processing b { display: block; font-family: var(--tenant-display); font-weight: 600; font-size: 15px; }
+.app-shell.role-tenant .pay-processing p { margin: 8px auto 0; max-width: 300px; color: hsl(var(--muted-foreground)); font-size: 10px; line-height: 1.55; }
+.app-shell.role-tenant .pay-processing-meta { display: flex; justify-content: center; gap: 18px; margin-top: 16px; color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 10px; }
+@keyframes tenant-spin { to { transform: rotate(360deg); } }
+
+/* Messages page thread */
+.app-shell.role-tenant .tenant-message-thread > .tenant-message-row { align-items: flex-start; padding: 14px 0; }
+.app-shell.role-tenant .tenant-message-row > div p { margin: 7px 0 0; font-size: 10px; line-height: 1.55; }
+.app-shell.role-tenant .tenant-message-row.from-tenant { background: hsl(var(--secondary) / .25); border-radius: 12px; padding-left: 10px; padding-right: 10px; }
+
+/* A text link rendered as a button */
+.app-shell.role-tenant .button-link { border: 0; background: transparent; font: inherit; cursor: pointer; padding: 0; }
+
+/* Tenant phone settings row */
+.phone-settings-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.phone-settings-row input {
+  flex: 1 1 220px;
+  min-height: 40px;
+  padding: 8px 11px;
+  border: 1px solid hsl(var(--input));
+  border-radius: 8px;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font: 400 12px var(--app-font-sans);
+}
+.phone-settings-row input:focus { outline: 0; border-color: hsl(var(--primary) / .55); box-shadow: 0 0 0 4px hsl(var(--primary) / .12); }
+.phone-settings-row .phone-mask { color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 11px; }
+
+@media (max-width: 1100px) {
+  .app-shell.role-tenant .portal-quick-links { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .app-shell.role-tenant .portal-quick-links { grid-template-columns: minmax(0, 1fr); }
+  .app-shell.role-tenant .portal-balance-actions .button { min-width: 0; }
+  .app-shell.role-tenant .portal-reminder { flex-wrap: wrap; }
+  .app-shell.role-tenant .portal-reminder .button { width: 100%; justify-content: center; }
+  .app-shell.role-tenant .role-page-intro > .role-intro-action { width: 100%; justify-content: center; margin-top: 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.role-tenant .pay-spinner { animation-duration: 1.6s; }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   13. UX refinements — summary row, clear-balance state, handlers.
+   Appended only; no existing rule changed.
+   ───────────────────────────────────────────────────────────── */
+
+/* Payments summary */
+.app-shell.role-tenant .tenant-pay-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 11px; }
+.app-shell.role-tenant .tenant-pay-summary > div {
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px;
+  background: hsl(var(--card));
+  padding: 13px 15px;
+}
+.app-shell.role-tenant .tenant-pay-summary span {
+  display: block;
+  color: hsl(var(--muted-foreground));
+  font-family: var(--app-font-mono);
+  font-size: 8px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.app-shell.role-tenant .tenant-pay-summary b {
+  display: block;
+  margin-top: 7px;
+  font-family: var(--tenant-display);
+  font-weight: 600;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.app-shell.role-tenant .tenant-pay-summary b.due { color: hsl(var(--primary)); }
+
+/* "Up to date" clear state inside the balance actions */
+.app-shell.role-tenant .portal-balance-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: hsl(var(--primary));
+  font-family: var(--tenant-display);
+  font-weight: 600;
+  font-size: 11px;
+}
+
+/* Who is handling a repair */
+.app-shell.role-tenant .repair-handler { color: hsl(var(--primary)); font-weight: 500; }
+
+/* Messages thread: end sentinel keeps auto-scroll smooth */
+.app-shell.role-tenant .tenant-message-thread > div:last-child { height: 0; }
+
+@media (max-width: 640px) {
+  .app-shell.role-tenant .tenant-pay-summary { grid-template-columns: minmax(0, 1fr); }
+}
