@@ -235,12 +235,6 @@
 
   .app-shell .nav-item.active > svg { color: hsl(var(--sidebar-primary)); }
   .app-shell .sidebar-bottom { padding-top: 10px; }
-  .app-shell .sync-card {
-    min-height: 58px;
-    border: 1px solid hsl(var(--sidebar-foreground) / .09);
-    border-radius: 15px;
-    background: hsl(var(--sidebar-foreground) / .045);
-  }
 
   .app-shell .sidebar-account {
     margin-top: 9px;

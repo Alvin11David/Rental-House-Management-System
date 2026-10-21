@@ -587,7 +587,6 @@ function AppShell() {
       return <Link key={href} href={href} onClick={() => setDrawer(false)} aria-label={href === '/messages' && tenantUnreadMessages ? c.unreadNavAria(displayLabel, tenantUnreadMessages) : displayLabel} title={displayLabel} className={classes('nav-item', path === href && 'active')} data-testid={`nav-${label.toLowerCase().replaceAll(' ', '-')}`}><Icon size={18}/><span>{displayLabel}</span>{href === '/daily-collection' && d.dashboard?.lateCount ? <em>{d.dashboard.lateCount}</em> : href === '/messages' && tenantUnreadMessages ? <em>{tenantUnreadMessages}</em> : null}</Link>;
     })}</div>)}</nav>
      <div className="sidebar-bottom">
-        <div className="sync-card" title={isTenant ? c.syncSub : 'Records are saved only in this browser'}><span className="sync-dot"/><div><b>{isTenant ? c.syncTitle : 'Saved on this device'}</b><small>{isTenant ? c.syncSub : 'Local storage · no account sync'}</small></div><Check size={15}/></div>
         <Link href="/settings" aria-label={isTenant ? c.pageSettings : 'Preferences'} title={isTenant ? c.pageSettings : 'Preferences'} className={classes('nav-item', path === '/settings' && 'active')} data-testid="nav-settings"><Settings size={18}/><span>{isTenant ? c.pageSettings : 'Preferences'}</span></Link>
         <section className="sidebar-account" aria-label="Current workspace profile" data-testid="sidebar-account">
           <div className="sidebar-account-kicker"><span>{isTenant ? c.accountKicker : 'WORKSPACE PROFILE'}</span><i>DEMO</i></div>

@@ -161,8 +161,6 @@ export interface TenantCopy {
   unreadNavAria: (label: string, count: number) => string;
   deskLabel: string;
   propertySubLabel: string;
-  syncTitle: string;
-  syncSub: string;
   accountKicker: string;
   accountRole: (role: string) => string;
   accountPropertyHead: string;
@@ -381,8 +379,6 @@ const english: TenantCopy = {
   unreadNavAria: (label, count) => `${label} · ${count} unread`,
   deskLabel: 'PRIVATE HOME',
   propertySubLabel: 'Your rented home',
-  syncTitle: 'Saved on this device',
-  syncSub: 'Local storage · no account sync',
   accountKicker: 'WORKSPACE PROFILE',
   accountRole: (role) => `${role} workspace`,
   accountPropertyHead: 'YOUR RENTAL HOME',
@@ -601,8 +597,6 @@ const luganda: TenantCopy = {
   unreadNavAria: (label, count) => `${label} · ${count} tebajjadde`,
   deskLabel: 'ENNYUMBA Y’EKYAMA',
   propertySubLabel: 'Ennyumba yo ey’okukwata',
-  syncTitle: 'Kiteekeddwa ku ddaala lino',
-  syncSub: 'Ku browser · tey’egutanibwa',
   accountKicker: 'EBY’OKUKWATA KITUNDU',
   accountRole: (role) => role === 'Tenant' ? 'Kitundu ky’omupangisa' : `${role} workspace`,
   accountPropertyHead: 'ENNIMBI Y’OKUKWATA',
