@@ -367,10 +367,14 @@
   .signup-round-button { width: 31px; height: 31px; }
   .signup-menu-button { margin-top: 0; }
   .signup-rail-caption { position: static; width: auto; margin-left: auto; color: #4d6175; font-size: 8px; transform: none; }
-  .signup-stage { grid-row: auto; min-height: clamp(500px, 74svh, 720px); border-radius: 12px; --signup-join-bar: 141px; }
-  .signup-photo-main { right: 0; clip-path: none; border-radius: 12px; }
+  .signup-stage { grid-row: auto; min-height: clamp(430px, 62svh, 560px); border-radius: 12px; --signup-join-bar: 141px; background: linear-gradient(168deg, #cfe6fb 0%, #e4f1fd 42%, #ffffff 84%); }
+  .signup-photo-main { display: none; }
   .signup-photo-rail { display: none; }
-  .signup-photo-main img { object-position: 50% center; }
+  .signup-photo-note { display: none; }
+  .signup-location-pin { display: none; }
+  .signup-home-thumbs { display: none; }
+  .signup-orbit { stroke: rgb(8 119 232 / 18%); }
+  .signup-orbit circle { fill: rgb(255 255 255 / 92%); }
   .signup-brand { top: 13px; left: 13px; }
   .signup-protected { top: 21px; right: 14px; padding: 7px 9px; border-radius: 20px; background: rgb(255 255 255 / 80%); font-size: 8px; }
   .signup-home-thumbs { top: 59px; right: 13px; gap: 6px; padding: 4px 6px; }
@@ -383,7 +387,7 @@
   .signup-photo-note-left { top: 43%; left: 7%; }
   .signup-photo-note-right { top: 43%; left: auto; right: 7%; }
   .signup-location-pin { top: 30%; right: 13%; width: 43px; height: 43px; }
-  .signup-story { bottom: 0; width: 100%; min-width: 0; padding: 16px 20px calc(var(--signup-join-bar) + 12px) 16px; clip-path: none; border-radius: 12px 12px 0 0; }
+  .signup-story { bottom: 0; width: 100%; min-width: 0; padding: 16px 20px calc(var(--signup-join-bar) + 12px) 16px; clip-path: none; border-radius: 12px 12px 0 0; box-shadow: 0 -12px 30px rgb(25 65 101 / 7%); }
   .signup-story h1 { font-size: clamp(29px, 8vw, 39px); }
   .signup-story p { max-width: 390px; font-size: 10px; }
   .signup-join-card {
@@ -434,7 +438,7 @@
   .signup-rail { min-height: 34px; }
   .signup-round-button { width: 30px; height: 30px; }
   .signup-rail-caption { font-size: 7px; letter-spacing: .08em; }
-  .signup-stage { min-height: clamp(490px, 73svh, 660px); --signup-join-bar: 141px; }
+  .signup-stage { min-height: clamp(410px, 58svh, 530px); --signup-join-bar: 141px; }
   .signup-brand { top: 11px; left: 11px; gap: 6px; }
   .signup-brand-mark { width: 29px; height: 29px; }
   .signup-brand b { font-size: 15px; }
@@ -472,7 +476,7 @@
 }
 
 @media (max-width: 680px) and (max-height: 560px) {
-  .signup-stage { min-height: 440px; --signup-join-bar: 141px; }
+  .signup-stage { min-height: 360px; --signup-join-bar: 141px; }
   .signup-story { padding-bottom: calc(var(--signup-join-bar) + 11px); }
   .signup-join-card { bottom: 0; }
 }

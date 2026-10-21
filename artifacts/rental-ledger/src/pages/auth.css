@@ -127,11 +127,11 @@
 }
 @media(max-width: 720px) {
   .auth-page { padding: 0; background: #fcfbf7; }
-  .auth-layout { min-height: 100dvh; display: flex; flex-direction: column-reverse; border: 0; border-radius: 0; box-shadow: none; }
-  .auth-main { min-height: calc(100dvh - 170px); padding: 18px clamp(22px, 7vw, 48px) 14px; }
+  .auth-layout { min-height: 100dvh; display: flex; flex-direction: column; border: 0; border-radius: 0; box-shadow: none; }
+  .auth-main { min-height: 100dvh; padding: 18px clamp(22px, 7vw, 48px) 14px; }
   .auth-form-wrap { width: min(100%, 460px); padding: 28px 0 30px; }
   .auth-heading { margin-top: 24px; }
-  .auth-visual { display: block; min-height: 210px; height: 210px; margin: 0; border-radius: 0 0 0 62px; }
+  .auth-visual { display: none; }
   .auth-visual--login { border-radius: 0 0 0 62px; }
   .auth-visual--create-account { height: 220px; min-height: 220px; margin: 0 12px; border-width: 6px; border-radius: 112px 12px 12px 12px; }
   .auth-visual--forgot-password { height: 220px; min-height: 220px; margin: 10px 28px 14px; border-radius: 50% 50% 10px 10px / 34% 34% 10px 10px; box-shadow: 0 0 0 6px #eee9dd, 0 0 0 7px rgb(68 79 60 / 16%); }

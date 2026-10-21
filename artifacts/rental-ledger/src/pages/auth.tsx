@@ -8,6 +8,7 @@ import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useMediaQuery } from '@/hooks/use-mobile';
 import signInHome from '@assets/generated_images/rentwise-signin-living-room.jpg';
 import signUpHome from '@assets/generated_images/rentwise-signup-townhouse.jpg';
 import recoveryHome from '@assets/generated_images/rentwise-recovery-courtyard.jpg';
@@ -272,6 +273,7 @@ export default function AuthPage() {
       ? { eyebrow: 'SET A NEW PASSWORD', title: 'Choose a new password.', intro: 'Enter a new password for your account. Once you’re done, you’ll return to sign in.' }
       : pageContent[mode];
   const visual = visualContent[mode];
+  const narrow = useMediaQuery('(max-width: 720px)');
   const onSubmit = () => {
     if (mode === 'forgot-password') {
       setLocation('/login');
@@ -316,7 +318,7 @@ export default function AuthPage() {
         <footer className="auth-footer"><span>RENTWISE <i>·</i> UGANDA</span><span>Records you can come home to.</span></footer>
       </section>
       <aside className={`auth-visual auth-visual--${mode}`} aria-label="A place to belong">
-        <img src={visual.image} alt={visual.alt} />
+        {!narrow && <img src={visual.image} alt={visual.alt} />}
         <div className="auth-image-shade"/>
         <div className="auth-image-top"><span><span className="auth-image-dot"/> {visual.label}</span><span className="auth-image-count">{mode === 'login' ? '01' : mode === 'create-account' ? '02' : '03'} <i/> 03</span></div>
         <div className="auth-image-copy">

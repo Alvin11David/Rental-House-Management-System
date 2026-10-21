@@ -2,7 +2,10 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { ArrowRight, ArrowUpRight, Check, ChevronRight, Clock3, House, Menu, ShieldCheck, X } from 'lucide-react';
 import { Link } from 'wouter';
 import homesHero from '@assets/generated_images/rentwise-houses-hero.jpg';
+import { useMediaQuery } from '@/hooks/use-mobile';
 import './sign-up.css';
+
+const BLANK_IMAGE = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
 const homes = [
   {
@@ -31,12 +34,14 @@ const homes = [
 export default function SignUpPage() {
   const [activeHomeIndex, setActiveHomeIndex] = useState(1);
   const [menuOpen, setMenuOpen] = useState(false);
+  const narrow = useMediaQuery('(max-width: 680px)');
   const signupStageRef = useRef<HTMLElement>(null);
   const pointerFrameRef = useRef<number | null>(null);
   const pendingPointerRef = useRef({ x: 0, y: 0 });
   const menuPanelRef = useRef<HTMLElement>(null);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const activeHome = homes[activeHomeIndex];
+  const heroImage = narrow ? BLANK_IMAGE : homesHero;
 
   useEffect(() => () => {
     if (pointerFrameRef.current !== null) {
@@ -88,6 +93,7 @@ export default function SignUpPage() {
   };
 
   const handlePhotoPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
+    if (narrow) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const stage = signupStageRef.current;
     if (!stage) return;
@@ -141,7 +147,7 @@ export default function SignUpPage() {
               <div className="signup-photo-pointer">
                 <img
                   key={activeHomeIndex}
-                  src={homesHero}
+                  src={heroImage}
                   alt={`A bright, leafy residential setting — ${activeHome.label.toLowerCase()}`}
                   style={{ objectPosition: activeHome.position }}
                 />
@@ -152,7 +158,7 @@ export default function SignUpPage() {
           <div className="signup-photo-rail">
             <div className="signup-photo-drift">
               <div className="signup-photo-pointer">
-                <img src={homesHero} alt="" />
+                <img src={heroImage} alt="" />
               </div>
             </div>
             <span className="signup-photo-rail-tag"><House size={14} /> YOUR NEXT CHAPTER</span>
@@ -209,7 +215,7 @@ export default function SignUpPage() {
                   aria-pressed={activeHomeIndex === index}
                   title={home.label}
                   onClick={() => setActiveHomeIndex(index)}
-                  style={{ backgroundImage: `url("${homesHero}")`, backgroundPosition: home.position }}
+                  style={{ backgroundImage: narrow ? 'none' : `url("${homesHero}")`, backgroundPosition: home.position }}
                 />
               ))}
             </div>
