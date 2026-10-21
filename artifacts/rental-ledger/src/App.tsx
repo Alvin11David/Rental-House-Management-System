@@ -635,17 +635,15 @@ function AppShell() {
       <footer className="footer"><span>Rentwise <i>·</i> A reliable record, for everyone under one roof.</span><span>UGX <i>·</i> Kampala, Uganda</span></footer>
     </div>
     <nav className="mobile-bottom-nav" aria-label="Quick navigation">
-      {mobileNav.map(([href, label, Icon]) => {
-        const displayLabel = isTenant && tenantNavText[href] ? tenantNavText[href](c) : label;
-        return <Link key={href} href={href} onClick={() => setDrawer(false)} aria-current={path === href ? 'page' : undefined} className={classes('mobile-nav-item', path === href && 'active')} data-testid={`mobile-nav-${label.toLowerCase().replaceAll(' ', '-')}`}>
-          <span className="mobile-nav-icon"><Icon size={19}/>{href === '/messages' && tenantUnreadMessages > 0 && <i/>}</span>
-          <span className="mobile-nav-label">{displayLabel}</span>
-        </Link>;
-      })}
-      <button type="button" className={classes('mobile-nav-item', (drawer || !mobileNav.some(([href]) => href === path)) && 'active')} onClick={() => setDrawer(value => !value)} aria-label="Open all navigation" aria-expanded={drawer} aria-controls="workspace-sidebar">
-        <span className="mobile-nav-icon"><MoreHorizontal size={20}/></span>
-        <span className="mobile-nav-label">More</span>
-      </button>
+      <div className="mobile-nav-tabs">
+        {mobileNav.map(([href, label, Icon]) => {
+          const displayLabel = isTenant && tenantNavText[href] ? tenantNavText[href](c) : label;
+          return <Link key={href} href={href} onClick={() => setDrawer(false)} aria-current={path === href ? 'page' : undefined} className={classes('mobile-nav-item', path === href && 'active')} data-testid={`mobile-nav-${label.toLowerCase().replaceAll(' ', '-')}`}>
+            <span className="mobile-nav-icon"><Icon size={19}/>{href === '/messages' && tenantUnreadMessages > 0 && <i/>}</span>
+            <span className="mobile-nav-label">{displayLabel}</span>
+          </Link>;
+        })}
+      </div>
     </nav>
     <OnboardingTour key={d.role} role={d.role}/>
   </main></div></div>;
