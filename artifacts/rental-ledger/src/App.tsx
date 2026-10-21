@@ -4,6 +4,7 @@ import './dashboard.css';
 import './tenant-portal.css';
 import './caretaker.css';
 import './landlord-exec.css';
+import './mobile-navigation.css';
 import unitHomeTownhouse from '@assets/generated_images/rentwise-signup-townhouse.jpg';
 import unitHomeCourt from '@assets/generated_images/rentwise-houses-hero.jpg';
 import OnboardingTour from '@/components/OnboardingTour';
@@ -555,6 +556,7 @@ function AppShell() {
     localStorage.setItem('ledger-theme', theme);
   }, [theme]);
   const roleNav = navGroupsByRole[d.role];
+  const mobileNav = roleNav.flatMap(group => group.links).slice(0, 4);
   const isTenant = d.role === 'Tenant';
   const c = tenantCopy(d.language);
   const allRoleNav = Object.values(navGroupsByRole).flatMap(groups => groups.flatMap(group => group.links));
@@ -632,6 +634,19 @@ function AppShell() {
       </Switch></div>
       <footer className="footer"><span>Rentwise <i>·</i> A reliable record, for everyone under one roof.</span><span>UGX <i>·</i> Kampala, Uganda</span></footer>
     </div>
+    <nav className="mobile-bottom-nav" aria-label="Quick navigation">
+      {mobileNav.map(([href, label, Icon]) => {
+        const displayLabel = isTenant && tenantNavText[href] ? tenantNavText[href](c) : label;
+        return <Link key={href} href={href} onClick={() => setDrawer(false)} aria-current={path === href ? 'page' : undefined} className={classes('mobile-nav-item', path === href && 'active')} data-testid={`mobile-nav-${label.toLowerCase().replaceAll(' ', '-')}`}>
+          <span className="mobile-nav-icon"><Icon size={19}/>{href === '/messages' && tenantUnreadMessages > 0 && <i/>}</span>
+          <span className="mobile-nav-label">{displayLabel}</span>
+        </Link>;
+      })}
+      <button type="button" className={classes('mobile-nav-item', (drawer || !mobileNav.some(([href]) => href === path)) && 'active')} onClick={() => setDrawer(value => !value)} aria-label="Open all navigation" aria-expanded={drawer} aria-controls="workspace-sidebar">
+        <span className="mobile-nav-icon"><MoreHorizontal size={20}/></span>
+        <span className="mobile-nav-label">More</span>
+      </button>
+    </nav>
     <OnboardingTour key={d.role} role={d.role}/>
   </main></div></div>;
 }
