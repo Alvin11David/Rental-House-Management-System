@@ -648,6 +648,8 @@
   .app-shell.role-landlord .agreement-banner { border-radius: 14px; }
   .app-shell.role-landlord .unit-record-hero { flex-direction: column; align-items: stretch; gap: 16px; padding: 18px; }
   .app-shell.role-landlord .unit-record-facts { justify-content: space-between; gap: 14px; }
+  .app-shell.role-landlord .unpaid-row>.unpaid-remind { font-size: 11px; padding: 0 13px; min-height: 44px; letter-spacing: .04em; }
+  .app-shell.role-landlord .collection-readonly-summary>b { font-size: clamp(24px, 8vw, 32px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .app-shell.role-landlord .button,

@@ -331,8 +331,13 @@ button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 .font-display { font-family: var(--app-font-serif); }
 .font-mono { font-family: var(--app-font-mono); }
 .app-shell { min-height: 100dvh; }
-.page-enter { animation: page-in .35s ease both; }
-@keyframes page-in { from { opacity: .2; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+/* The fill mode is 'backwards', not 'both': a retained end-frame transform
+   would make .page-enter the containing block for every position:fixed overlay
+   rendered inside the page (unit drawer, modals, toasts), pinning them to the
+   document instead of the viewport. 'backwards' drops the transform once the
+   animation finishes. */
+.page-enter { animation: page-in .35s ease backwards; }
+@keyframes page-in { from { opacity: .2; transform: translateY(7px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
