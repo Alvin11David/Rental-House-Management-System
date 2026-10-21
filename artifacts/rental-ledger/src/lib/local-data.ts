@@ -32,6 +32,7 @@ export interface Unit {
   tenantName: string | null;
   balance: number;
   daysLate: number | null;
+  photoDataUrl?: string | null;
 }
 
 export interface UnitInput {
@@ -39,6 +40,7 @@ export interface UnitInput {
   unitNumber: string;
   bedrooms: number;
   rentAmount: number;
+  photoDataUrl?: string | null;
 }
 
 export interface Tenant {

@@ -940,6 +940,46 @@
 .floor-unit.assignment-hover { outline:2px solid hsl(var(--primary));outline-offset:2px;z-index:3; }
 .floor-unit.assignment-invalid { cursor:not-allowed; }
 .floor-unit>em { position:absolute;z-index:4;left:50%;bottom:calc(100% + 5px);width:max-content;max-width:140px;transform:translateX(-50%);padding:5px 7px;border-radius:5px;background:hsl(var(--foreground));color:hsl(var(--background));font:600 8px var(--app-font-sans);font-style:normal;box-shadow:0 4px 12px hsl(var(--foreground) / .18); }
+/* Unit map — home cards */
+.app-shell .property-plan-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); }
+.app-shell .floorplan { padding: 14px; border-radius: 14px; }
+.app-shell .floorplan-label { margin-bottom: 12px; }
+.app-shell .floorplan-units { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 188px), 1fr)); gap: 12px; margin: 0; }
+.app-shell .floor-unit { display: flex; flex-direction: column; align-items: stretch; gap: 0; min-height: 0; padding: 0; text-align: left; border-radius: 12px; background: hsl(var(--card)); font-family: var(--app-font-sans); }
+.app-shell .floorplan-units .floor-unit:hover,
+.app-shell .floorplan-units .floor-unit:focus-visible { transform: translateY(-2px); }
+.app-shell .floor-unit-media { position: relative; display: block; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 11px 11px 0 0; background: hsl(var(--muted)); }
+.app-shell .floor-unit-media img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .45s cubic-bezier(.2,.8,.3,1); }
+.app-shell .floor-unit:hover .floor-unit-media img,
+.app-shell .floor-unit:focus-visible .floor-unit-media img { transform: scale(1.06); }
+.app-shell .floor-unit-status { position: absolute; top: 8px; left: 8px; display: inline-flex; align-items: center; gap: 3px; padding: 3px 7px; border-radius: 999px; background: hsl(var(--card) / .94); color: hsl(var(--foreground)); font: 700 8px var(--app-font-mono); letter-spacing: .06em; text-transform: uppercase; box-shadow: 0 2px 8px hsl(var(--foreground) / .16); backdrop-filter: blur(4px); }
+.app-shell .floor-unit.floor-paid .floor-unit-status { color: hsl(75 52% 24%); background: hsl(75 80% 90%); }
+.app-shell .floor-unit.floor-late .floor-unit-status { color: hsl(3 58% 38%); background: hsl(3 80% 94%); }
+.app-shell .floor-unit.floor-vacant .floor-unit-status { color: hsl(var(--muted-foreground)); background: hsl(var(--muted)); }
+.app-shell .floor-unit.floor-pending .floor-unit-status,
+.app-shell .floor-unit.floor-repair .floor-unit-status { color: hsl(254 44% 40%); background: hsl(254 68% 94%); }
+.app-shell .floor-unit-info { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px 12px; }
+.app-shell .floor-unit-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.app-shell .floor-unit-head b { font-size: 13px; letter-spacing: .01em; }
+.app-shell .floor-unit-head small { flex: 0 0 auto; color: hsl(var(--muted-foreground)); font-size: 9px; }
+.app-shell .floor-unit-tenant { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.app-shell .floor-unit-rent { margin-top: 2px; color: hsl(var(--foreground)); font: 600 10px var(--app-font-mono); font-variant-numeric: tabular-nums; }
+.app-shell .floor-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 12px; padding-top: 10px; border-top: 1px solid hsl(var(--border) / .7); font-size: 9px; }
+.app-shell .floor-legend > span { display: inline-flex; align-items: center; gap: 5px; }
+.app-shell .floor-legend i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+.app-shell .floor-legend .vacant-dot { background: hsl(var(--muted-foreground) / .45); }
+.app-shell .property-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid hsl(var(--border) / .8); font-size: 10px; }
+.app-shell .property-foot > span b { color: hsl(var(--foreground)); font-size: 12px; }
+.app-shell .property-add-unit { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border: 1px solid hsl(var(--border)); border-radius: 8px; background: hsl(var(--card)); color: hsl(var(--foreground)); font-size: 10px; font-weight: 600; }
+.app-shell .property-add-unit:hover,
+.app-shell .property-add-unit:focus-visible { border-color: hsl(var(--primary) / .5); background: hsl(var(--secondary)); }
+.app-shell .drawer-photo { margin: 2px 0 14px; overflow: hidden; border: 1px solid hsl(var(--border)); border-radius: 12px; aspect-ratio: 16 / 7; }
+.app-shell .drawer-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+@media (prefers-reduced-motion: reduce) {
+  .app-shell .floor-unit-media img,
+  .app-shell .floorplan-units .floor-unit:hover,
+  .app-shell .floorplan-units .floor-unit:focus-visible { transition: none; transform: none; }
+}
 .confirm-assignment>p { margin:0 0 12px;color:hsl(var(--muted-foreground));font-size:12px;line-height:1.55; }
 .confirm-assignment>p:first-child { color:hsl(var(--foreground)); }
 .date-filter { font-size:9px;color:hsl(var(--muted-foreground)); }
@@ -1053,6 +1093,13 @@
 .tenant-photo-upload span { font-size:10px;font-weight:600; }
 .tenant-photo-upload small { margin-top:3px;color:hsl(var(--muted-foreground));font-size:8px;font-weight:400; }
 .tenant-photo-upload input { width:1px;height:1px;position:absolute;opacity:0; }
+.tenant-photo-field { display:flex;flex-direction:column;gap:8px; }
+.tenant-photo-label { color:hsl(var(--foreground));font-size:10px;font-weight:600; }
+.tenant-photo-label small { margin-left:5px;color:hsl(var(--muted-foreground));font-size:9px;font-weight:400; }
+.tenant-photo-icon { display:grid;place-items:center;width:34px;height:34px;flex:0 0 auto;border-radius:9px;background:hsl(var(--secondary)/.6); }
+.tenant-photo-copy { display:flex;flex-direction:column;gap:3px; }
+.tenant-photo-upload .tenant-photo-icon { display:grid; }
+.tenant-photo-upload .tenant-photo-copy { display:flex; }
 .tenant-report-note { margin:-2px 0 0;color:hsl(var(--muted-foreground));font-size:8px;line-height:1.5;text-align:center; }
 .agreement-frequency { color:hsl(var(--muted-foreground));font:400 8px var(--app-font-sans); }
 @media (max-width:767px) {

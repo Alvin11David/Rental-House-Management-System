@@ -470,11 +470,101 @@
 .app-shell.role-caretaker .receipt-page-card h2,
 .app-shell.role-caretaker .receipt-page-toolbar h1 { font-family: var(--ops-display); text-transform: uppercase; letter-spacing: .02em; }
 
+/* Unit record page (unit timeline) — shares the field-ops sheet language */
+.app-shell.role-caretaker .unit-timeline-page { gap: 14px; }
+.app-shell.role-caretaker .unit-record-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  padding: 20px 24px;
+  border: 1.5px solid hsl(var(--ops-line));
+  border-radius: 8px;
+  background-image: var(--ops-grid);
+  background-size: 22px 22px;
+  background-color: hsl(var(--card));
+  box-shadow: var(--ops-hard);
+}
+.app-shell.role-caretaker .unit-record-identity { display: flex; align-items: center; gap: 15px; min-width: 0; }
+.app-shell.role-caretaker .unit-record-identity .eyebrow { margin: 0 0 4px; }
+.app-shell.role-caretaker .unit-record-identity h2 {
+  margin: 0;
+  font-family: var(--ops-display);
+  font-size: 26px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+.app-shell.role-caretaker .unit-record-identity p { margin: 3px 0 0; color: hsl(var(--muted-foreground)); font-size: 11px; }
+.app-shell.role-caretaker .large-unit-avatar {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  font: 700 18px var(--ops-display);
+  color: hsl(var(--ops-signal-ink));
+  background: hsl(var(--ops-signal));
+}
+.app-shell.role-caretaker .large-unit-avatar.late,
+.app-shell.role-caretaker .large-unit-avatar.pending { color: hsl(3 62% 30%); background: hsl(3 62% 90%); }
+.app-shell.role-caretaker .large-unit-avatar.vacant { color: hsl(var(--muted-foreground)); background: hsl(var(--muted)); }
+.app-shell.role-caretaker .large-unit-avatar.has-photo { padding: 0; overflow: hidden; background: hsl(var(--muted)); }
+.app-shell.role-caretaker .large-unit-avatar.has-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.app-shell.role-caretaker .unit-record-facts { display: flex; align-items: center; gap: 26px; flex: 0 0 auto; }
+.app-shell.role-caretaker .unit-record-facts > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.app-shell.role-caretaker .unit-record-facts > div:first-child { flex-direction: row; align-items: center; gap: 8px; }
+.app-shell.role-caretaker .unit-record-facts small {
+  color: hsl(var(--muted-foreground));
+  font-family: var(--app-font-mono);
+  font-size: 8px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.app-shell.role-caretaker .unit-record-facts b {
+  font-family: var(--ops-display);
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.app-shell.role-caretaker .unit-record-facts .text-danger { color: hsl(3 62% 44%); }
+.app-shell.role-caretaker .unit-days-late {
+  color: hsl(3 56% 42%);
+  font-family: var(--app-font-mono);
+  font-size: 9px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.app-shell.role-caretaker .unit-record-trust {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  border: 1.5px dashed hsl(var(--ops-line));
+  border-radius: 8px;
+  background: hsl(var(--ops-signal) / .06);
+  color: hsl(var(--muted-foreground));
+  font-size: 10px;
+  line-height: 1.5;
+}
+.app-shell.role-caretaker .unit-record-trust svg { color: hsl(var(--ops-signal)); flex: 0 0 auto; }
+.app-shell.role-caretaker .unit-record-trust b { color: hsl(var(--foreground)); font-weight: 700; }
+.app-shell.role-caretaker .unit-timeline-panel .panel-head { border-bottom: 1.5px solid hsl(var(--ops-line)); }
+.dark .app-shell.role-caretaker .large-unit-avatar.late,
+.dark .app-shell.role-caretaker .large-unit-avatar.pending { color: hsl(3 70% 78%); background: hsl(3 36% 24%); }
+.dark .app-shell.role-caretaker .unit-record-facts .text-danger,
+.dark .app-shell.role-caretaker .unit-days-late { color: hsl(3 70% 72%); }
+
 /* ─────────────────────────────────────────────────────────────
    9. Responsive + motion
    ───────────────────────────────────────────────────────────── */
 @media (max-width: 767px) {
   .app-shell.role-caretaker .role-page-intro { padding: 14px 15px 14px 18px; }
+  .app-shell.role-caretaker .unit-record-hero { flex-direction: column; align-items: stretch; gap: 16px; padding: 18px; }
+  .app-shell.role-caretaker .unit-record-facts { justify-content: space-between; gap: 14px; }
   .app-shell.role-caretaker .caretaker-home-tile:hover,
   .app-shell.role-caretaker .caretaker-home-tile:focus-visible { transform: none; }
 }

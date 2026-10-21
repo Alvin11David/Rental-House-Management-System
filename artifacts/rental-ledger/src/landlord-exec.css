@@ -260,13 +260,21 @@
 .app-shell.role-landlord .floorplan { border: 1px solid hsl(222 18% 86%); background: hsl(40 30% 98%); }
 .app-shell.role-landlord .floorplan-label { color: hsl(var(--exec-brass)); font-family: var(--app-font-mono); letter-spacing: .12em; }
 .app-shell.role-landlord .floorplan-label span { color: hsl(var(--muted-foreground)); }
-.app-shell.role-landlord .floor-unit { border-color: hsl(222 20% 84%); background: hsl(222 30% 96%); }
-.app-shell.role-landlord .floor-unit > span { font-family: var(--app-font-mono); }
-.app-shell.role-landlord .floor-unit.floor-paid { border-color: hsl(36 46% 74%); background: hsl(37 52% 92%); }
+.app-shell.role-landlord .floor-unit { border-color: hsl(222 20% 84%); background: hsl(var(--card)); }
+.app-shell.role-landlord .floor-unit-head b { font-family: var(--app-font-mono); font-weight: 700; }
+.app-shell.role-landlord .floor-unit.floor-paid { border-color: hsl(36 46% 74%); }
 .app-shell.role-landlord .floor-unit.floor-pending,
-.app-shell.role-landlord .floor-unit.floor-repair { border-color: hsl(210 32% 74%); background: hsl(210 40% 93%); }
-.app-shell.role-landlord .floor-unit.floor-late { border-color: hsl(3 40% 78%); background: hsl(3 60% 94%); }
-.app-shell.role-landlord .floor-unit.floor-vacant { border-color: hsl(222 16% 84%); background: hsl(222 20% 95%); }
+.app-shell.role-landlord .floor-unit.floor-repair { border-color: hsl(210 32% 74%); }
+.app-shell.role-landlord .floor-unit.floor-late { border-color: hsl(3 40% 78%); }
+.app-shell.role-landlord .floor-unit.floor-vacant { border-color: hsl(222 16% 84%); }
+.app-shell.role-landlord .floor-unit.floor-paid .floor-unit-status { background: hsl(var(--exec-brass)); color: hsl(var(--exec-brass-ink)); }
+.app-shell.role-landlord .floor-unit.floor-pending .floor-unit-status,
+.app-shell.role-landlord .floor-unit.floor-repair .floor-unit-status { background: hsl(210 40% 90%); color: hsl(210 34% 32%); }
+.app-shell.role-landlord .floor-unit.floor-late .floor-unit-status { background: hsl(3 62% 92%); color: hsl(3 54% 36%); }
+.app-shell.role-landlord .floor-unit.floor-vacant .floor-unit-status { background: hsl(222 20% 92%); color: hsl(222 14% 40%); }
+.app-shell.role-landlord .property-add-unit { border-color: hsl(var(--exec-brass) / .55); color: hsl(var(--exec-brass-ink)); background: hsl(40 42% 97%); }
+.app-shell.role-landlord .property-add-unit:hover,
+.app-shell.role-landlord .property-add-unit:focus-visible { border-color: hsl(var(--exec-brass)); background: hsl(38 50% 93%); }
 .app-shell.role-landlord .floor-unit:hover,
 .app-shell.role-landlord .floor-unit:focus-visible { box-shadow: 0 8px 20px hsl(var(--exec-brass) / .16); }
 .app-shell.role-landlord .floor-legend .paid-dot { background: hsl(var(--exec-brass)); }
@@ -534,12 +542,112 @@
 .app-shell.role-landlord .drawer-quick-actions { border-top: var(--exec-rule); }
 
 /* ─────────────────────────────────────────────────────────────
+   10b. Unit record page (unit timeline)
+   ───────────────────────────────────────────────────────────── */
+.app-shell.role-landlord .unit-timeline-page { gap: 14px; }
+.app-shell.role-landlord .unit-record-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  padding: 20px 24px;
+  border: 1px solid hsl(222 20% 87%);
+  border-radius: 16px;
+  background:
+    linear-gradient(120deg, hsl(var(--exec-ink) / .04), transparent 58%),
+    hsl(var(--card));
+  box-shadow: inset 0 3px 0 0 hsl(var(--exec-brass) / .4), 0 10px 26px hsl(222 30% 20% / .05);
+}
+.app-shell.role-landlord .unit-record-identity { display: flex; align-items: center; gap: 15px; min-width: 0; }
+.app-shell.role-landlord .unit-record-identity .eyebrow { margin: 0 0 4px; }
+.app-shell.role-landlord .unit-record-identity h2 {
+  margin: 0;
+  font-family: var(--exec-display);
+  font-size: 25px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+.app-shell.role-landlord .unit-record-identity p { margin: 3px 0 0; color: hsl(var(--muted-foreground)); font-size: 11px; }
+.app-shell.role-landlord .large-unit-avatar {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  font: 600 18px var(--exec-display);
+  color: hsl(var(--exec-brass-ink));
+  background: hsl(37 46% 90%);
+}
+.app-shell.role-landlord .large-unit-avatar.late,
+.app-shell.role-landlord .large-unit-avatar.pending { color: hsl(3 52% 34%); background: hsl(3 58% 93%); }
+.app-shell.role-landlord .large-unit-avatar.vacant { color: hsl(var(--muted-foreground)); background: hsl(var(--muted)); }
+.app-shell.role-landlord .large-unit-avatar.has-photo { padding: 0; overflow: hidden; background: hsl(var(--muted)); }
+.app-shell.role-landlord .large-unit-avatar.has-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.app-shell.role-landlord .unit-record-facts { display: flex; align-items: center; gap: 26px; flex: 0 0 auto; }
+.app-shell.role-landlord .unit-record-facts > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.app-shell.role-landlord .unit-record-facts > div:first-child { flex-direction: row; align-items: center; gap: 8px; }
+.app-shell.role-landlord .unit-record-facts small {
+  color: hsl(var(--muted-foreground));
+  font-family: var(--app-font-mono);
+  font-size: 8px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.app-shell.role-landlord .unit-record-facts b {
+  font-family: var(--exec-display);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.app-shell.role-landlord .unit-record-facts .text-danger { color: hsl(3 62% 44%); }
+.app-shell.role-landlord .unit-days-late {
+  color: hsl(3 56% 42%);
+  font-family: var(--app-font-mono);
+  font-size: 9px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.app-shell.role-landlord .unit-record-trust {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  border: 1px solid hsl(var(--exec-brass) / .22);
+  border-radius: 10px;
+  background: hsl(40 40% 96%);
+  color: hsl(var(--muted-foreground));
+  font-size: 10px;
+  line-height: 1.5;
+}
+.app-shell.role-landlord .unit-record-trust svg { color: hsl(var(--exec-brass)); flex: 0 0 auto; }
+.app-shell.role-landlord .unit-record-trust b { color: hsl(var(--foreground)); font-weight: 600; }
+.app-shell.role-landlord .unit-timeline-panel .panel-head { border-bottom: var(--exec-rule); }
+.app-shell.role-landlord .unit-timeline-panel .timeline { padding: 4px 0 0; }
+.dark .app-shell.role-landlord .unit-record-hero {
+  border-color: hsl(222 20% 26%);
+  background:
+    linear-gradient(120deg, hsl(var(--exec-brass) / .06), transparent 60%),
+    hsl(222 24% 16%);
+}
+.dark .app-shell.role-landlord .large-unit-avatar { color: hsl(38 70% 74%); background: hsl(34 30% 24%); }
+.dark .app-shell.role-landlord .large-unit-avatar.late,
+.dark .app-shell.role-landlord .large-unit-avatar.pending { color: hsl(3 70% 76%); background: hsl(3 36% 24%); }
+.dark .app-shell.role-landlord .unit-record-trust { border-color: hsl(34 40% 30%); background: hsl(34 26% 18%); }
+.dark .app-shell.role-landlord .unit-record-facts .text-danger,
+.dark .app-shell.role-landlord .unit-days-late { color: hsl(3 70% 72%); }
+
+/* ─────────────────────────────────────────────────────────────
    11. Responsive + motion
    ───────────────────────────────────────────────────────────── */
 @media (max-width: 767px) {
   .app-shell.role-landlord .collection-hero { border-radius: 18px; }
   .app-shell.role-landlord .page-heading h1 { font-size: 28px; }
   .app-shell.role-landlord .agreement-banner { border-radius: 14px; }
+  .app-shell.role-landlord .unit-record-hero { flex-direction: column; align-items: stretch; gap: 16px; padding: 18px; }
+  .app-shell.role-landlord .unit-record-facts { justify-content: space-between; gap: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .app-shell.role-landlord .button,
