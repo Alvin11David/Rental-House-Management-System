@@ -226,7 +226,10 @@ export default function SignUpPage() {
             <Link className="signup-join-button" href="/create-account" data-testid="link-signup-join">
               JOIN TODAY <ArrowRight size={16} />
             </Link>
-            <small>Already have an account? <Link href="/login" data-testid="link-signup-login">Sign in</Link></small>
+            <small className="signup-join-note">
+              <span className="signup-join-note-text">Already have an account?</span>
+              <Link className="signup-join-signin" href="/login" data-testid="link-signup-login">Sign in</Link>
+            </small>
           </section>
         </section>
 

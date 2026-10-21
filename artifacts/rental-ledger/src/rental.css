@@ -1095,8 +1095,6 @@
 }
 
 /* Completed browser-only workflows */
-.ambient-status { height:3px;flex:0 0 3px;background:hsl(var(--border));overflow:hidden; }
-.ambient-status>i { display:block;height:100%;min-width:0;transition:width .42s ease,background-color .42s ease; }
 .collection-readonly-summary { display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:12px 3px; }
 .collection-readonly-summary>b { color:hsl(var(--primary));font:700 clamp(24px,4vw,34px)/1 var(--app-font-serif);font-variant-numeric:tabular-nums; }
 .collection-readonly-summary>span { color:hsl(var(--muted-foreground));font-size:11px; }
@@ -1157,9 +1155,6 @@
   .tenant-unit-map>.button { grid-column:1;justify-self:stretch;min-height:44px; }
   .signature-pad { height:100px; }
   .button,.icon-button,.filter-pills button,.segmented button { min-height:44px; }
-}
-@media (prefers-reduced-motion:reduce) {
-  .ambient-status>i { transition:none !important; }
 }
 .caretaker-home-tile { display:flex;width:100%;flex-direction:column;text-align:left;color:hsl(var(--foreground));font:inherit;cursor:pointer;transition:transform .2s,box-shadow .2s,border-color .2s; }
 .caretaker-home-tile:hover,.caretaker-home-tile:focus-visible { transform:translateY(-2px);box-shadow:0 8px 19px hsl(var(--foreground) / .1);outline:2px solid hsl(var(--ring));outline-offset:2px; }

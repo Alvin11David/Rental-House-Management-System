@@ -574,10 +574,6 @@ function AppShell() {
   const workspaceProperty = d.role === 'Tenant'
     ? d.properties.find(property => property.id === tenantUnit?.propertyId)?.name || 'Your home'
     : d.dashboard?.propertyName || d.properties?.[0]?.name || 'Mirembe Court';
-  const todayKey = localDateKey(new Date());
-  const occupiedUnits = d.units.filter(unit => unit.tenantId != null);
-  const collectedUnitIds = new Set(d.payments.filter(payment => payment.status !== 'pending' && payment.recordedAt.slice(0, 10) === todayKey).map(payment => payment.unitId));
-  const collectionProgress = occupiedUnits.length ? Math.round(occupiedUnits.filter(unit => collectedUnitIds.has(unit.id)).length / occupiedUnits.length * 100) : 0;
   const sidebar = <aside id="workspace-sidebar" className={classes('sidebar', drawer && 'sidebar-open')} aria-label="Rentwise workspace sidebar">
     <div className="brand-lockup"><span className="brand-mark"><House size={19}/></span><span><b>rentwise</b><small>PROPERTY LEDGER</small></span><button className="sidebar-collapse-button" type="button" onClick={() => setSidebarCollapsed(value => !value)} aria-label={sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={!sidebarCollapsed} aria-controls="workspace-sidebar" title={sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'} data-testid="button-sidebar-collapse"><ChevronLeft size={17}/></button><button className="sidebar-close" onClick={() => setDrawer(false)} aria-label="Close navigation"><X size={19}/></button></div>
     <div className="workspace-label">{d.role === 'Landlord' ? 'MANAGEMENT DESK' : d.role === 'Caretaker' ? 'ON-SITE DESK' : c.deskLabel}</div>
@@ -600,7 +596,6 @@ function AppShell() {
      </div>
   </aside>;
   return <div className={classes('app-shell', `role-${d.role.toLowerCase()}`)}><div className={classes('shell-layout', sidebarCollapsed && 'sidebar-is-collapsed')}>{sidebar}{drawer && <button className="scrim" onClick={() => setDrawer(false)} aria-label="Close menu"/>}<main className="main-area">
-    {d.role !== 'Tenant' && <div className="ambient-status" role="progressbar" aria-label="Today’s collection progress" aria-valuenow={collectionProgress} aria-valuemin={0} aria-valuemax={100} title={`${collectionProgress}% of occupied homes recorded a payment today`}><i style={{ width: `${collectionProgress}%`, backgroundColor: `hsl(${Math.round(collectionProgress * 1.2)} 43% 46%)` }}/></div>}
     <header className="topbar"><button className="mobile-menu icon-button" onClick={() => setDrawer(true)} aria-label="Open menu"><Menu size={20}/></button><div className="crumb"><span>{isTenant ? c.crumbHome : 'Workspace'}</span><span>/</span><b>{title}</b></div><div className="top-actions"><span className="connection"><span/>{isTenant ? c.connectionLabel : 'Browser-only'}</span><button className="icon-button" aria-label={isTenant ? c.refreshLabel : 'Refresh workspace'} onClick={d.refresh} data-testid="button-refresh"><RefreshCw size={17}/></button><Link href="/notifications" className="icon-button notify-button" aria-label={tenantUnreadMessages > 0 ? c.unreadNavAria(isTenant ? c.activityAria : 'Receipts and activity', tenantUnreadMessages) : (isTenant ? c.activityAria : 'Receipts and activity')} data-testid="link-top-activity"><Bell size={18}/>{d.role === 'Tenant' ? (tenantUnreadMessages > 0 && <i/>) : <i/>}</Link><span className="top-divider"/><DropdownMenu>
         <DropdownMenuTrigger asChild><button className="profile-button" data-testid="button-profile" aria-label="Open account menu"><span className="avatar small-avatar">{initials(displayName)}</span><span>{displayName}</span><ChevronDown size={14}/></button></DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
