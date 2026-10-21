@@ -154,3 +154,6 @@ overrides:
   "@expo/ngrok-bin>@expo/ngrok-bin-win32-ia32": "-"
   "@expo/ngrok-bin>@expo/ngrok-bin-win32-x64": "-"
   esbuild: "0.28.2"
+
+allowBuilds:
+  esbuild: true
